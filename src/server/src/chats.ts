@@ -1,0 +1,82 @@
+import { Pool, PoolClient } from 'pg';
+
+type Db = Pool | PoolClient;
+
+export interface ChatView {
+  chatId: string;
+  type: 'direct' | 'group';
+  title: string | null;
+  participants: { userId: string; username: string }[];
+  lastMessage: {
+    messageId: string;
+    senderId: string;
+    ciphertext: string;
+    ts: string;
+  } | null;
+  unreadCount: number;
+  updatedAt: string;
+}
+
+// Единый вид чата для POST /chats, GET /chats, GET /chats/{id}.
+// Предполагается, что userId — участник чата.
+export async function loadChat(
+  db: Db,
+  chatId: string,
+  userId: string,
+): Promise<ChatView | null> {
+  const chat = await db.query(
+    'SELECT chat_id, type, title, updated_at FROM chats WHERE chat_id = $1',
+    [chatId],
+  );
+  if (chat.rowCount === 0) return null;
+  const row = chat.rows[0];
+
+  const members = await db.query(
+    `SELECT a.user_id, a.username FROM chat_members m
+     JOIN accounts a ON a.user_id = m.user_id
+     WHERE m.chat_id = $1 ORDER BY a.username`,
+    [chatId],
+  );
+
+  const lastRead = await db.query(
+    'SELECT last_read_message_id FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+    [chatId, userId],
+  );
+  const lastReadId: string | null =
+    lastRead.rows[0]?.last_read_message_id ?? null;
+
+  const lastMsg = await db.query(
+    `SELECT message_id, sender_id, ciphertext, created_at FROM messages
+     WHERE chat_id = $1 AND deleted = false
+     ORDER BY message_id DESC LIMIT 1`,
+    [chatId],
+  );
+
+  const unread = await db.query(
+    `SELECT count(*)::int AS c FROM messages
+     WHERE chat_id = $1 AND deleted = false AND sender_id <> $2
+       AND message_id > COALESCE($3::bigint, 0)`,
+    [chatId, userId, lastReadId],
+  );
+
+  const lm = lastMsg.rows[0];
+  return {
+    chatId: row.chat_id,
+    type: row.type,
+    title: row.title,
+    participants: members.rows.map((m) => ({
+      userId: m.user_id,
+      username: m.username,
+    })),
+    lastMessage: lm
+      ? {
+          messageId: lm.message_id,
+          senderId: lm.sender_id,
+          ciphertext: (lm.ciphertext as Buffer).toString('base64'),
+          ts: lm.created_at.toISOString(),
+        }
+      : null,
+    unreadCount: unread.rows[0].c,
+    updatedAt: row.updated_at.toISOString(),
+  };
+}

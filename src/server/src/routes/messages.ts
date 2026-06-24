@@ -1,0 +1,234 @@
+import { FastifyInstance } from 'fastify';
+import { pool } from '../db';
+import { authenticate } from '../auth';
+import { emitToMembers, isMember, markRead } from '../chat-helpers';
+
+interface SendBody {
+  clientMessageId?: string;
+  ciphertext?: string;
+}
+
+export async function messageRoutes(app: FastifyInstance): Promise<void> {
+  app.post(
+    '/chats/:chatId/messages',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      const { clientMessageId, ciphertext } = (req.body ?? {}) as SendBody;
+
+      if (!clientMessageId || !ciphertext) {
+        return reply.code(400).send({ error: 'missing fields' });
+      }
+      if (!(await isMember(chatId, userId))) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const ins = await client.query(
+          `INSERT INTO messages(chat_id, sender_id, client_message_id, ciphertext)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (chat_id, sender_id, client_message_id) DO NOTHING
+           RETURNING message_id, created_at`,
+          [chatId, userId, clientMessageId, Buffer.from(ciphertext, 'base64')],
+        );
+
+        // идемпотентность: повтор с тем же clientMessageId не создаёт дубль
+        if (ins.rowCount === 0) {
+          await client.query('ROLLBACK');
+          const ex = await pool.query(
+            `SELECT message_id, created_at FROM messages
+             WHERE chat_id = $1 AND sender_id = $2 AND client_message_id = $3`,
+            [chatId, userId, clientMessageId],
+          );
+          const row = ex.rows[0];
+          return reply.code(200).send({
+            messageId: row.message_id,
+            clientMessageId,
+            ts: row.created_at.toISOString(),
+          });
+        }
+
+        const messageId: string = ins.rows[0].message_id;
+        const ts: Date = ins.rows[0].created_at;
+        await client.query('UPDATE chats SET updated_at = now() WHERE chat_id = $1', [
+          chatId,
+        ]);
+        await emitToMembers(client, chatId, 'message.new', {
+          messageId,
+          senderId: userId,
+          clientMessageId,
+          ciphertext,
+          ts: ts.toISOString(),
+        });
+        await client.query('COMMIT');
+        return reply.code(201).send({
+          messageId,
+          clientMessageId,
+          ts: ts.toISOString(),
+        });
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  );
+
+  app.get(
+    '/chats/:chatId/messages',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      if (!(await isMember(chatId, userId))) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+
+      const q = req.query as { before?: string; limit?: string };
+      const before = q.before && /^\d+$/.test(q.before) ? q.before : null;
+      let limit = Number(q.limit ?? 50);
+      if (!Number.isFinite(limit) || limit < 1) limit = 50;
+      if (limit > 100) limit = 100;
+
+      const res = await pool.query(
+        `SELECT message_id, sender_id, ciphertext, created_at, edited_at, deleted
+         FROM messages
+         WHERE chat_id = $1 AND ($2::bigint IS NULL OR message_id < $2::bigint)
+         ORDER BY message_id DESC
+         LIMIT $3`,
+        [chatId, before, limit + 1],
+      );
+
+      const hasMore = res.rowCount! > limit;
+      const slice = res.rows.slice(0, limit);
+      const messages = slice.map((r) => ({
+        messageId: r.message_id,
+        senderId: r.sender_id,
+        ciphertext: (r.ciphertext as Buffer).toString('base64'),
+        ts: r.created_at.toISOString(),
+        editedAt: r.edited_at ? r.edited_at.toISOString() : null,
+        deleted: r.deleted,
+      }));
+      const nextBefore =
+        hasMore && slice.length > 0 ? slice[slice.length - 1].message_id : null;
+
+      return reply.send({ messages, hasMore, nextBefore });
+    },
+  );
+
+  app.patch(
+    '/messages/:messageId',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { messageId } = req.params as { messageId: string };
+      const { ciphertext } = (req.body ?? {}) as { ciphertext?: string };
+      if (!ciphertext) {
+        return reply.code(400).send({ error: 'missing ciphertext' });
+      }
+
+      const msg = await pool.query(
+        'SELECT chat_id, sender_id, deleted FROM messages WHERE message_id = $1',
+        [messageId],
+      );
+      if (msg.rowCount === 0) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      const row = msg.rows[0];
+      if (row.sender_id !== userId) {
+        return reply.code(403).send({ error: 'forbidden' });
+      }
+      if (row.deleted) {
+        return reply.code(400).send({ error: 'message deleted' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const upd = await client.query(
+          'UPDATE messages SET ciphertext = $1, edited_at = now() WHERE message_id = $2 RETURNING edited_at',
+          [Buffer.from(ciphertext, 'base64'), messageId],
+        );
+        const editedAt: Date = upd.rows[0].edited_at;
+        await emitToMembers(client, row.chat_id, 'message.edited', {
+          messageId,
+          ciphertext,
+          editedAt: editedAt.toISOString(),
+        });
+        await client.query('COMMIT');
+        return reply.send({ messageId, editedAt: editedAt.toISOString() });
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  );
+
+  app.delete(
+    '/messages/:messageId',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { messageId } = req.params as { messageId: string };
+
+      const msg = await pool.query(
+        'SELECT chat_id, sender_id, deleted FROM messages WHERE message_id = $1',
+        [messageId],
+      );
+      if (msg.rowCount === 0) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      const row = msg.rows[0];
+      if (row.sender_id !== userId) {
+        return reply.code(403).send({ error: 'forbidden' });
+      }
+      if (row.deleted) {
+        return reply.send({ messageId }); // идемпотентно
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // содержимое стирается, метка deleted ставится
+        await client.query(
+          "UPDATE messages SET deleted = true, ciphertext = ''::bytea WHERE message_id = $1",
+          [messageId],
+        );
+        await emitToMembers(client, row.chat_id, 'message.deleted', {
+          messageId,
+        });
+        await client.query('COMMIT');
+        return reply.send({ messageId });
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  );
+
+  app.post(
+    '/chats/:chatId/read',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      const { upToMessageId } = (req.body ?? {}) as { upToMessageId?: string };
+      if (!upToMessageId || !/^\d+$/.test(upToMessageId)) {
+        return reply.code(400).send({ error: 'missing upToMessageId' });
+      }
+      if (!(await isMember(chatId, userId))) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      await markRead(userId, chatId, upToMessageId);
+      return reply.send({ ok: true });
+    },
+  );
+}
