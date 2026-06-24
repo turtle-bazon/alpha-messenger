@@ -162,6 +162,16 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
           };
           register(conn);
           await drain(conn);
+          // Граница реплея: всё выше — история из outbox, всё ниже — live.
+          // Управляющий маркер без seq (не событие outbox): клиент по нему
+          // отделяет «уже было» от «происходит сейчас».
+          conn.send(
+            JSON.stringify({
+              type: 'synced',
+              ts: new Date().toISOString(),
+              payload: {},
+            }),
+          );
           return;
         }
 

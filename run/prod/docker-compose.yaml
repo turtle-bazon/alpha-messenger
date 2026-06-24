@@ -1,3 +1,7 @@
+# Prod: всё в Docker — БД, сервер и веб-клиент (статика через nginx).
+# Запуск:  cd run/prod && docker compose up -d --build
+# Клиент:  http://localhost:5173   API: http://localhost:3000
+# Invite:  ./invite.sh
 services:
   db:
     image: postgres:17-alpine
@@ -7,8 +11,6 @@ services:
       POSTGRES_DB: alpha
     volumes:
       - alpha-db:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U alpha"]
       interval: 5s
@@ -17,7 +19,7 @@ services:
 
   server:
     build:
-      context: ../src/server
+      context: ../../src/server
     environment:
       PORT: 3000
       HOST: 0.0.0.0
@@ -27,6 +29,14 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+
+  client:
+    build:
+      context: ../../src/web_client
+    depends_on:
+      - server
+    ports:
+      - "5173:80"
 
 volumes:
   alpha-db:

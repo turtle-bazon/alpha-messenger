@@ -1,0 +1,37 @@
+# Dev: БД и сервер в Docker, клиент — отдельно через `npm run dev` (Vite, HMR).
+# Запуск:  cd run/dev && docker compose up -d --build
+# Клиент:  cd src/web_client && npm run dev   (http://localhost:5173)
+# Invite:  ./invite.sh
+# Порты БД/сервера опубликованы на хост — нужны для клиента и e2e-тестов.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: alpha
+      POSTGRES_PASSWORD: alpha
+      POSTGRES_DB: alpha
+    volumes:
+      - alpha-db:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alpha"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ../../src/server
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://alpha:alpha@db:5432/alpha
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+volumes:
+  alpha-db:
