@@ -41,6 +41,10 @@ export function HomeScreen({
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
+  // Актуальный список для проверок внутри WS-обработчиков (без перезапуска
+  // эффекта и без побочных эффектов в setState-апдейтерах).
+  const chatsRef = useRef<Chat[]>([]);
+  chatsRef.current = chats;
 
   function toggleTheme(): void {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
@@ -60,26 +64,39 @@ export function HomeScreen({
     getChats()
       .then((list) => alive && setChats(list))
       .catch(() => undefined)
-      .finally(() => alive && setLoading(false));
-
-    ws.connect();
+      .finally(() => {
+        if (!alive) return;
+        setLoading(false);
+        // Коннектимся к WS только после загрузки списка из REST. Тогда реплей
+        // ложится на уже готовый список (без дозапросов getChat на каждый чат),
+        // а WsClient применяет его одним пакетом — список не «мигает» на логине.
+        ws.connect();
+      });
 
     // Новый чат создан (payload несёт только chatId) — подтягиваем объект чата.
     const offCreated = ws.on('chat.created', (ev: ServerEvent) => {
       const chatId = (ev.payload as { chatId?: string }).chatId ?? ev.chatId;
       if (!chatId) return;
-      void getChat(chatId).then((chat) =>
-        setChats((prev) =>
-          prev.some((c) => c.chatId === chat.chatId)
-            ? prev
-            : [chat, ...prev],
-        ),
-      );
-      // Появился новый со-участник, возможно уже онлайн: presence-событий о нём
-      // не будет (статус не менялся) — пересеиваем снимок онлайна.
-      void getPresence()
-        .then((p) => alive && setOnlineUsers(new Set(p.online)))
-        .catch(() => undefined);
+      // На реплее список уже авторитетен из getChats — getChat дёргаем только для
+      // реально отсутствующего чата (новый чат, созданный пока мы были офлайн).
+      if (!chatsRef.current.some((c) => c.chatId === chatId)) {
+        void getChat(chatId)
+          .then((chat) =>
+            setChats((prev) =>
+              prev.some((c) => c.chatId === chat.chatId)
+                ? prev
+                : [chat, ...prev],
+            ),
+          )
+          .catch(() => undefined);
+      }
+      // Presence: на реплее единый снимок переснимет обработчик 'synced' — здесь
+      // только для живого события (новый со-участник может быть уже онлайн).
+      if (ws.isLive()) {
+        void getPresence()
+          .then((p) => alive && setOnlineUsers(new Set(p.online)))
+          .catch(() => undefined);
+      }
     });
 
     // Новое сообщение — обновляем превью/порядок/непрочитанные в списке.
@@ -197,6 +214,9 @@ export function HomeScreen({
       const p = ev.payload as { chatId: string; userId: string };
       const chatId = p.chatId ?? ev.chatId;
       if (!chatId) return;
+      // На реплее состав и presence уже актуальны из getChats + снимка 'synced' —
+      // не дёргаем REST повторно; реагируем только на живое добавление.
+      if (!ws.isLive()) return;
       void getChat(chatId)
         .then((chat) =>
           setChats((prev) =>
@@ -220,6 +240,8 @@ export function HomeScreen({
         if (selectedRef.current === chatId) setSelectedId(null);
         return;
       }
+      // На реплее состав чата уже актуален из getChats — обновляем только вживую.
+      if (!ws.isLive()) return;
       void getChat(chatId)
         .then((chat) =>
           setChats((prev) =>

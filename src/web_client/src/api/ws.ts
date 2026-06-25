@@ -15,6 +15,12 @@ export class WsClient {
   // false на (ре)коннекте, true после маркера 'synced' — отделяет реплей
   // истории от живых событий (см. architecture.md).
   private live = false;
+  // Буфер событий реплея (до 'synced'). Сервер шлёт каждое событие отдельным
+  // WS-кадром, т.е. отдельным onmessage → отдельный setState у подписчиков →
+  // отдельный ререндер. На холодном старте/реконнекте с большой историей это
+  // даёт «мигание» списка из десятков перерисовок. Копим реплей и применяем
+  // одним синхронным пакетом на 'synced' — React 18 батчит его в один ререндер.
+  private replayBuffer: ServerEvent[] = [];
   private readonly handlers = new Map<string, Set<Handler>>();
   private readonly anyHandlers = new Set<Handler>();
 
@@ -31,6 +37,7 @@ export class WsClient {
   connect(): void {
     this.closedByUser = false;
     this.live = false;
+    this.replayBuffer = [];
     // Отвязываем предыдущий сокет: его «поздние» сообщения (буферизованный
     // реплей, 'synced') не должны портить общее состояние live/lastSeq нового
     // соединения — иначе реплей нового сокета принимается за live (двойной счёт
@@ -85,8 +92,27 @@ export class WsClient {
   }
 
   private dispatch(ev: ServerEvent): void {
-    // Маркер окончания реплея: дальше идут живые события.
-    if (ev.type === 'synced') this.live = true;
+    if (ev.type === 'synced') {
+      // Конец реплея. Применяем накопленный буфер одним синхронным пакетом
+      // (живость ещё false — подписчики трактуют его как историю), затем
+      // включаем live и отдаём сам маркер. Весь пакет батчится в один ререндер.
+      const buffered = this.replayBuffer;
+      this.replayBuffer = [];
+      for (const e of buffered) this.emit(e);
+      this.live = true;
+      this.emit(ev);
+      return;
+    }
+    // До 'synced' всё, что пришло из outbox, — это реплей: копим, не применяем.
+    if (!this.live) {
+      this.replayBuffer.push(ev);
+      return;
+    }
+    this.emit(ev);
+  }
+
+  // Применение одного события: продвижение курсора + вызов подписчиков.
+  private emit(ev: ServerEvent): void {
     // Двигаем курсор только по событиям из outbox (у транзиентных seq нет).
     if (typeof ev.seq === 'number' && ev.seq > this.lastSeq) {
       this.lastSeq = ev.seq;
