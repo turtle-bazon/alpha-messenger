@@ -54,6 +54,25 @@ export async function requestPermission(): Promise<NotificationPermission> {
   }
 }
 
+// Проактивный запрос разрешения при входе. Браузерные попапы по спецификации
+// показываются только при granted, а у нового пользователя permission='default'.
+// Раз настройка браузерных уведомлений включена (дефолт), сразу спрашиваем
+// системное разрешение — чтобы попапы заработали «из коробки», без захода в
+// настройки. Если разрешение уже дано/запрещено — ничего не делаем.
+export async function ensureBrowserPermission(): Promise<void> {
+  if (!notificationsSupported()) return;
+  if (!getNotifPrefs().browser) return;
+  if (Notification.permission !== 'default') return;
+  await requestPermission();
+}
+
+// Браузерные уведомления реально работают, только когда настройка включена И
+// системное разрешение выдано. Тумблер в UI отражает именно это (не врёт, что
+// «включено», когда попапы на деле не покажутся).
+export function browserNotificationsActive(): boolean {
+  return getNotifPrefs().browser && getPermission() === 'granted';
+}
+
 // Базовый title вкладки фиксируем при загрузке модуля — к нему приписываем
 // счётчик. Меняем только когда есть непрочитанные, иначе возвращаем как было.
 const baseTitle = typeof document !== 'undefined' ? document.title : 'alpha';

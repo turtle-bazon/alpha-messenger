@@ -44,10 +44,14 @@ export function NotificationSettings(): JSX.Element {
     setPrefs((p) => ({ ...p, sound: next }));
   }
 
+  // Браузерные попапы реально включены, только когда и настройка, и системное
+  // разрешение «за». Тумблер показывает именно это.
+  const browserActive = prefs.browser && perm === 'granted';
+
   async function toggleBrowser(): Promise<void> {
-    // Выключение — без вопросов. Включение требует системного разрешения:
-    // если ещё не дано — запрашиваем и включаем только при granted.
-    if (prefs.browser) {
+    // Выключение — просто гасим настройку. Включение требует системного
+    // разрешения: если ещё не дано — запрашиваем и включаем только при granted.
+    if (browserActive) {
       setNotifBrowser(false);
       setPrefs((p) => ({ ...p, browser: false }));
       return;
@@ -63,7 +67,14 @@ export function NotificationSettings(): JSX.Element {
     }
   }
 
-  const anyOn = prefs.sound || prefs.browser;
+  function openMenu(): void {
+    // Перечитываем разрешение при открытии — оно могло измениться (автозапрос
+    // при входе, смена в настройках браузера).
+    if (!open) setPerm(getPermission());
+    setOpen((v) => !v);
+  }
+
+  const anyOn = prefs.sound || browserActive;
   const denied = perm === 'denied';
 
   return (
@@ -75,7 +86,7 @@ export function NotificationSettings(): JSX.Element {
         aria-label="Уведомления"
         title="Уведомления"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={openMenu}
       >
         {anyOn ? <IconBell /> : <IconBellOff />}
       </button>
@@ -95,7 +106,7 @@ export function NotificationSettings(): JSX.Element {
             <input
               type="checkbox"
               data-testid="notif-browser"
-              checked={prefs.browser}
+              checked={browserActive}
               disabled={!notificationsSupported() || denied}
               onChange={() => void toggleBrowser()}
             />

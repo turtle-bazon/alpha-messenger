@@ -16,7 +16,11 @@ import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
-import { notifyIncoming, setUnreadBadge } from './util/notifications';
+import {
+  ensureBrowserPermission,
+  notifyIncoming,
+  setUnreadBadge,
+} from './util/notifications';
 import { IconMoon, IconSun } from './util/icons';
 
 // Главный экран: владеет списком чатов, WS-соединением и выбором чата.
@@ -59,6 +63,9 @@ export function HomeScreen({
     getMe()
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
+    // Сразу просим системное разрешение на уведомления (если включено и ещё не
+    // спрашивали) — иначе браузерные попапы молча не работают из коробки.
+    void ensureBrowserPermission();
   }, []);
 
   // Счётчик непрочитанных в title вкладки (известная проблема №8): сумма по всем
