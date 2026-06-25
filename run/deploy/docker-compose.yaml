@@ -1,28 +1,19 @@
 # Deploy: тянет готовые образы из ghcr.io, без локальной сборки.
 # Запуск:  cd run/deploy && podman-compose up -d
 # Клиент:  http://localhost:5173   API: http://localhost:3000
-
-version: '3.8'
-
 networks:
   alpha-messenger-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 10.89.10.0/24
 
 services:
   db:
     image: docker.io/library/postgres:17-alpine
-    container_name: alpha-messenger-db
     networks:
       - alpha-messenger-net
-    # We pass the static IP to Podman via environment variables that podman-compose respects
     environment:
       POSTGRES_USER: alpha
       POSTGRES_PASSWORD: alpha
       POSTGRES_DB: alpha
-      PODMAN_SYSTEMD_IP: 10.89.10.10
     volumes:
       - /srv/alpha-messenger/db:/var/lib/postgresql/data
     healthcheck:
@@ -33,14 +24,12 @@ services:
 
   server:
     image: ghcr.io/gilmullin/alpha_messenger-server:latest
-    container_name: alpha-messenger-server
     networks:
       - alpha-messenger-net
     environment:
       PORT: 3000
       HOST: 0.0.0.0
-      DATABASE_URL: postgres://alpha:alpha@10.89.10.10:5432/alpha
-      PODMAN_SYSTEMD_IP: 10.89.10.20
+      DATABASE_URL: postgres://alpha:alpha@db:5432/alpha
     depends_on:
       db:
         condition: service_healthy
@@ -49,11 +38,8 @@ services:
 
   client:
     image: ghcr.io/gilmullin/alpha_messenger-client:latest
-    container_name: alpha-messenger-client
     networks:
       - alpha-messenger-net
-    environment:
-      PODMAN_SYSTEMD_IP: 10.89.10.30
     depends_on:
       - server
     ports:
