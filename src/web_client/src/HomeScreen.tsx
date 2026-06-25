@@ -11,9 +11,12 @@ import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
 import type { Chat, ServerEvent } from './api/types';
 import { AccountNotifications } from './account/AccountNotifications';
+import { NotificationSettings } from './notifications/NotificationSettings';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
+import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
+import { notifyIncoming, setUnreadBadge } from './util/notifications';
 import { IconMoon, IconSun } from './util/icons';
 
 // Главный экран: владеет списком чатов, WS-соединением и выбором чата.
@@ -57,6 +60,14 @@ export function HomeScreen({
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
   }, []);
+
+  // Счётчик непрочитанных в title вкладки (известная проблема №8): сумма по всем
+  // чатам. Сбрасываем title при размонтировании (логаут).
+  useEffect(() => {
+    const total = chats.reduce((sum, c) => sum + c.unreadCount, 0);
+    setUnreadBadge(total);
+  }, [chats]);
+  useEffect(() => () => setUnreadBadge(0), []);
 
   // Подъём списка чатов + WS-соединение на время сессии.
   useEffect(() => {
@@ -114,6 +125,17 @@ export function HomeScreen({
       // ws.isLive() стало бы true — тогда реплей считался бы за live и накручивал
       // непрочитанное (двойной счёт на холодном старте/переподключении).
       const live = ws.isLive();
+      // Уведомление о входящем (известная проблема №8): только живое чужое
+      // сообщение; звук/попап сработают, лишь если вкладка не активна (решает
+      // notifyIncoming). Имя чата берём из актуального списка (chatsRef).
+      if (live && p.senderId !== myId) {
+        const chat = chatsRef.current.find((c) => c.chatId === chatId);
+        notifyIncoming({
+          title: chat ? chatTitle(chat, myId) : 'Новое сообщение',
+          ciphertext: p.ciphertext,
+          onOpen: () => setSelectedId(chatId),
+        });
+      }
       setChats((prev) => {
         const idx = prev.findIndex((c) => c.chatId === chatId);
         if (idx < 0) {
@@ -300,6 +322,7 @@ export function HomeScreen({
         <header className="home-header">
           <span data-testid="home-username">{username ?? '...'}</span>
           <span className="home-header-actions">
+            <NotificationSettings />
             <button
               type="button"
               className="icon-button"

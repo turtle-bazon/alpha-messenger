@@ -305,6 +305,54 @@ body {
   color: var(--text-muted);
 }
 
+/* Настройки уведомлений: колокольчик в шапке + выпадающее меню под ним. */
+.notif-settings {
+  position: relative;
+  display: inline-flex;
+}
+
+.notif-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 240px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.notif-row:hover {
+  background: var(--bg-hover);
+}
+
+.notif-row input {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.notif-hint {
+  padding: 6px 10px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .conversation {
   flex: 1;
   display: flex;
