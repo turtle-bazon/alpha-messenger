@@ -6,6 +6,7 @@ export interface ChatView {
   chatId: string;
   type: 'direct' | 'group';
   title: string | null;
+  createdBy: string | null;
   participants: { userId: string; username: string }[];
   lastMessage: {
     messageId: string;
@@ -25,7 +26,7 @@ export async function loadChat(
   userId: string,
 ): Promise<ChatView | null> {
   const chat = await db.query(
-    'SELECT chat_id, type, title, updated_at FROM chats WHERE chat_id = $1',
+    'SELECT chat_id, type, title, created_by, updated_at FROM chats WHERE chat_id = $1',
     [chatId],
   );
   if (chat.rowCount === 0) return null;
@@ -64,6 +65,7 @@ export async function loadChat(
     chatId: row.chat_id,
     type: row.type,
     title: row.title,
+    createdBy: row.created_by,
     participants: members.rows.map((m) => ({
       userId: m.user_id,
       username: m.username,

@@ -23,6 +23,19 @@ import {
 import { formatTime } from '../util/time';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
+import { MembersDialog } from './MembersDialog';
+
+// Склонение слова «участник» по числу (1 участник, 2 участника, 5 участников).
+function pluralMembers(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  let word: string;
+  if (mod10 === 1 && mod100 !== 11) word = 'участник';
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+    word = 'участника';
+  else word = 'участников';
+  return `${n} ${word}`;
+}
 
 const PAGE = 50;
 const TYPING_HIDE_MS = 6000;
@@ -82,14 +95,17 @@ export function Conversation({
   chat,
   ws,
   myId,
+  onlineUsers,
   onBack,
 }: {
   chat: Chat;
   ws: WsClient;
   myId: string | null;
+  onlineUsers: Set<string>;
   onBack: () => void;
 }): JSX.Element {
   const chatId = chat.chatId;
+  const [membersOpen, setMembersOpen] = useState(false);
   const [messages, setMessages] = useState<MsgVM[]>([]);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -114,6 +130,7 @@ export function Conversation({
     setEditing(null);
     setInput('');
     setPendingImage(null);
+    setMembersOpen(false);
     getMessages(chatId, { limit: PAGE })
       .then((page) => {
         if (!alive) return;
@@ -350,6 +367,21 @@ export function Conversation({
     }
   }
 
+  // Подзаголовок под названием: для группы — «N участников, M в сети»,
+  // для direct — статус собеседника. Себя считаем онлайн (мы подключены).
+  const onlineCount = chat.participants.filter(
+    (p) => p.userId === myId || onlineUsers.has(p.userId),
+  ).length;
+  let subtitle: string | null = null;
+  if (chat.type === 'group') {
+    subtitle = pluralMembers(chat.participants.length);
+    if (onlineCount > 0) subtitle += `, ${onlineCount} в сети`;
+  } else {
+    const other = chat.participants.find((p) => p.userId !== myId);
+    if (other) subtitle = onlineUsers.has(other.userId) ? 'в сети' : 'не в сети';
+  }
+  const isGroup = chat.type === 'group';
+
   return (
     <div className="conv" data-testid="conversation-open">
       <header className="conv-header">
@@ -362,7 +394,26 @@ export function Conversation({
         >
           ‹
         </button>
-        <span className="conv-title">{chatTitle(chat, myId)}</span>
+        <button
+          type="button"
+          className={'conv-headline' + (isGroup ? ' conv-headline--clickable' : '')}
+          data-testid="conv-header-info"
+          disabled={!isGroup}
+          onClick={() => isGroup && setMembersOpen(true)}
+        >
+          <span className="conv-title">{chatTitle(chat, myId)}</span>
+          {subtitle && (
+            <span
+              className={
+                'conv-subtitle' +
+                (subtitle === 'в сети' ? ' conv-subtitle--online' : '')
+              }
+              data-testid="conv-subtitle"
+            >
+              {subtitle}
+            </span>
+          )}
+        </button>
         {typingFrom && (
           <span className="conv-typing" data-testid="typing-indicator">
             печатает…
@@ -493,6 +544,14 @@ export function Conversation({
             setPendingImage(null);
             void sendContent(content);
           }}
+        />
+      )}
+      {membersOpen && (
+        <MembersDialog
+          chat={chat}
+          myId={myId}
+          onlineUsers={onlineUsers}
+          onClose={() => setMembersOpen(false)}
         />
       )}
     </div>

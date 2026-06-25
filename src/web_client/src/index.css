@@ -204,6 +204,51 @@ body {
   color: var(--accent);
 }
 
+/* Заголовок чата: название + подзаголовок (участники/онлайн). Для группы —
+   кликабельный (открывает окно участников). */
+.conv-headline {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.conv-headline--clickable {
+  cursor: pointer;
+}
+
+.conv-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conv-subtitle {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.conv-subtitle--online {
+  color: var(--accent);
+}
+
+.conv-headline--clickable:hover .conv-title {
+  color: var(--accent);
+}
+
 .conv-scroll {
   flex: 1;
   overflow-y: auto;
@@ -860,4 +905,146 @@ body {
   .account-notices {
     width: 92vw;
   }
+}
+
+/* ---- Окно участников чата ---- */
+.members-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+}
+
+.members-dialog {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px;
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.members-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.members-head-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.members-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.members-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.members-close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.members-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+}
+
+.member-avatar {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-online-dot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #4dcd5e;
+  border: 2px solid var(--bg);
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.member-remove {
+  flex: none;
+  border: none;
+  background: none;
+  color: #e0533d;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.member-remove:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.members-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.members-error {
+  color: #e0533d;
+  font-size: 13px;
+  margin: 0;
 }

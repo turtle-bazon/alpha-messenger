@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { createDirect, createGroup, getChat, getChats, getMe } from './api/rest';
+import {
+  createDirect,
+  createGroup,
+  getChat,
+  getChats,
+  getMe,
+  getPresence,
+} from './api/rest';
 import { getToken, getUserId } from './api/session';
 import { WsClient } from './api/ws';
 import type { Chat, ServerEvent } from './api/types';
@@ -20,6 +27,9 @@ export function HomeScreen({
   const [username, setUsername] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  // Онлайн со-участников (множество userId). Сид — GET /presence после реплея,
+  // дальше актуализируется транзиентными событиями presence из WS.
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
@@ -51,6 +61,11 @@ export function HomeScreen({
             : [chat, ...prev],
         ),
       );
+      // Появился новый со-участник, возможно уже онлайн: presence-событий о нём
+      // не будет (статус не менялся) — пересеиваем снимок онлайна.
+      void getPresence()
+        .then((p) => alive && setOnlineUsers(new Set(p.online)))
+        .catch(() => undefined);
     });
 
     // Новое сообщение — обновляем превью/порядок/непрочитанные в списке.
@@ -117,12 +132,54 @@ export function HomeScreen({
       );
     });
 
+    // После окончания реплея (synced) берём снимок онлайна; покрывает и
+    // переподключения — на каждом synced пересеиваем множество.
+    const offSynced = ws.on('synced', () => {
+      void getPresence()
+        .then((p) => alive && setOnlineUsers(new Set(p.online)))
+        .catch(() => undefined);
+    });
+
+    // Живая смена статуса со-участника.
+    const offPresence = ws.on('presence', (ev: ServerEvent) => {
+      const p = ev.payload as { userId: string; online: boolean };
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        if (p.online) next.add(p.userId);
+        else next.delete(p.userId);
+        return next;
+      });
+    });
+
+    // Участника удалили из чата. Если удалили меня — убираем чат из списка и
+    // снимаем выбор. Иначе — обновляем участников чата из REST.
+    const offRemoved = ws.on('chat.member_removed', (ev: ServerEvent) => {
+      const p = ev.payload as { chatId: string; userId: string };
+      const chatId = p.chatId ?? ev.chatId;
+      if (!chatId) return;
+      if (p.userId === myId) {
+        setChats((prev) => prev.filter((c) => c.chatId !== chatId));
+        if (selectedRef.current === chatId) setSelectedId(null);
+        return;
+      }
+      void getChat(chatId)
+        .then((chat) =>
+          setChats((prev) =>
+            prev.map((c) => (c.chatId === chat.chatId ? chat : c)),
+          ),
+        )
+        .catch(() => undefined);
+    });
+
     return () => {
       alive = false;
       offCreated();
       offNew();
       offEdited();
       offDeleted();
+      offSynced();
+      offPresence();
+      offRemoved();
       ws.close();
     };
   }, [ws]);
@@ -179,6 +236,7 @@ export function HomeScreen({
             chat={selectedChat}
             ws={ws}
             myId={myId}
+            onlineUsers={onlineUsers}
             onBack={() => setSelectedId(null)}
           />
         ) : (

@@ -3,6 +3,8 @@ import { pool } from '../db';
 import { authenticate } from '../auth';
 import { emitEvent } from '../events';
 import { loadChat } from '../chats';
+import { emitToMembers } from '../chat-helpers';
+import { isOnline } from '../ws';
 
 interface CreateChatBody {
   type?: string;
@@ -47,7 +49,8 @@ async function createDirect(
   try {
     await client.query('BEGIN');
     const c = await client.query(
-      "INSERT INTO chats(type) VALUES ('direct') RETURNING chat_id",
+      "INSERT INTO chats(type, created_by) VALUES ('direct', $1) RETURNING chat_id",
+      [userId],
     );
     const chatId: string = c.rows[0].chat_id;
     await client.query(
@@ -97,8 +100,8 @@ async function createGroup(
   try {
     await client.query('BEGIN');
     const c = await client.query(
-      "INSERT INTO chats(type, title) VALUES ('group', $1) RETURNING chat_id",
-      [title ?? null],
+      "INSERT INTO chats(type, title, created_by) VALUES ('group', $1, $2) RETURNING chat_id",
+      [title ?? null, userId],
     );
     const chatId: string = c.rows[0].chat_id;
     for (const id of allIds) {
@@ -147,6 +150,109 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
     return loadChat(pool, chatId, userId);
   });
+
+  // Список участников чата с признаком онлайн и указанием создателя.
+  // Снимок онлайна на момент запроса; живые изменения — события presence из /ws.
+  app.get(
+    '/chats/:chatId/members',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      const chat = await pool.query(
+        'SELECT created_by FROM chats WHERE chat_id = $1',
+        [chatId],
+      );
+      if (chat.rowCount === 0) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      const members = await pool.query(
+        `SELECT a.user_id, a.username FROM chat_members m
+         JOIN accounts a ON a.user_id = m.user_id
+         WHERE m.chat_id = $1 ORDER BY a.username`,
+        [chatId],
+      );
+      if (!members.rows.some((m) => m.user_id === userId)) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      return {
+        createdBy: chat.rows[0].created_by as string | null,
+        members: members.rows.map((m) => ({
+          userId: m.user_id,
+          username: m.username,
+          online: isOnline(m.user_id),
+        })),
+      };
+    },
+  );
+
+  // Удаление участника из группы. Право — только у создателя чата; нельзя
+  // удалить самого создателя и не-группу. Событие chat.member_removed идёт
+  // оставшимся участникам и самому удалённому (он убирает чат из списка).
+  app.delete(
+    '/chats/:chatId/members/:userId',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const callerId = req.user!.userId;
+      const { chatId, userId: targetId } = req.params as {
+        chatId: string;
+        userId: string;
+      };
+      const chat = await pool.query(
+        'SELECT type, created_by FROM chats WHERE chat_id = $1',
+        [chatId],
+      );
+      if (chat.rowCount === 0) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      const { type, created_by: createdBy } = chat.rows[0];
+      if (createdBy !== callerId) {
+        return reply.code(403).send({ error: 'not chat owner' });
+      }
+      if (type !== 'group') {
+        return reply.code(400).send({ error: 'not a group' });
+      }
+      if (targetId === createdBy) {
+        return reply.code(400).send({ error: 'cannot remove owner' });
+      }
+      const member = await pool.query(
+        'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+        [chatId, targetId],
+      );
+      if (member.rowCount === 0) {
+        return reply.code(404).send({ error: 'not a member' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          'DELETE FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+          [chatId, targetId],
+        );
+        // оставшимся — обновить список участников; всем им emitToMembers
+        await emitToMembers(client, chatId, 'chat.member_removed', {
+          chatId,
+          userId: targetId,
+        });
+        // и самому удалённому — чтобы он убрал чат из своего списка
+        await emitEvent(
+          client,
+          targetId,
+          'chat.member_removed',
+          { chatId, userId: targetId },
+          chatId,
+        );
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+      return reply.code(200).send({ chatId, userId: targetId });
+    },
+  );
 
   app.post('/chats', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;

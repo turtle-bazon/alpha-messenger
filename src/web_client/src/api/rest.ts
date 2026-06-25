@@ -1,6 +1,6 @@
 import { apiUrl } from './config';
 import { getToken } from './session';
-import type { AuthResult, Chat, Me, Message } from './types';
+import type { AuthResult, Chat, ChatMembers, Me, Message } from './types';
 
 // Ошибка с HTTP-статусом и распарсенным телом — экраны различают 400/404/409 и т.п.
 export class ApiError extends Error {
@@ -93,6 +93,24 @@ export function createGroup(title: string, members: string[]): Promise<Chat> {
 
 export function getChat(chatId: string): Promise<Chat> {
   return rest.get<Chat>(`/chats/${chatId}`);
+}
+
+// Список участников чата с признаком онлайн и указанием создателя.
+export function getMembers(chatId: string): Promise<ChatMembers> {
+  return rest.get<ChatMembers>(`/chats/${chatId}/members`);
+}
+
+// Удаление участника из группы (право — у создателя чата).
+export function removeMember(
+  chatId: string,
+  userId: string,
+): Promise<{ chatId: string; userId: string }> {
+  return rest.del(`/chats/${chatId}/members/${userId}`);
+}
+
+// Снимок онлайна со-участников для сидирования presence после коннекта.
+export function getPresence(): Promise<{ online: string[] }> {
+  return rest.get<{ online: string[] }>('/presence');
 }
 
 // ---- Сообщения ----

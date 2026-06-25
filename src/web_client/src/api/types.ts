@@ -24,6 +24,18 @@ export interface Participant {
   username: string;
 }
 
+// Участник в окне списка: к username добавлен признак онлайн на момент запроса.
+export interface ChatMember {
+  userId: string;
+  username: string;
+  online: boolean;
+}
+
+export interface ChatMembers {
+  createdBy: string | null;
+  members: ChatMember[];
+}
+
 export interface MessagePreview {
   messageId: string;
   senderId: string;
@@ -35,6 +47,7 @@ export interface Chat {
   chatId: string;
   type: 'direct' | 'group';
   title: string | null;
+  createdBy: string | null;
   participants: Participant[];
   lastMessage: MessagePreview | null;
   unreadCount: number;

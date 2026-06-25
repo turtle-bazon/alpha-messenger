@@ -19,20 +19,55 @@ interface Conn {
 // устройств у аккаунта может быть несколько).
 const byUser = new Map<string, Set<Conn>>();
 
+// Онлайн = есть хотя бы один живой сокет аккаунта (in-process; одна реплика
+// сервера). Бинарный статус, без «был в сети N назад».
+export function isOnline(userId: string): boolean {
+  const set = byUser.get(userId);
+  return !!set && set.size > 0;
+}
+
+// Кому видна смена статуса userId — со-участникам (всем, с кем он делит хотя бы
+// один чат). Транзиентно (мимо outbox) рассылаем тем из них, кто сейчас онлайн.
+async function broadcastPresence(userId: string, online: boolean): Promise<void> {
+  const res = await pool.query(
+    `SELECT DISTINCT m2.user_id FROM chat_members m1
+     JOIN chat_members m2 ON m2.chat_id = m1.chat_id
+     WHERE m1.user_id = $1 AND m2.user_id <> $1`,
+    [userId],
+  );
+  for (const r of res.rows) {
+    sendTransient(r.user_id, {
+      type: 'presence',
+      payload: { userId, online },
+    });
+  }
+}
+
 function register(conn: Conn): void {
   let set = byUser.get(conn.userId);
   if (!set) {
     set = new Set();
     byUser.set(conn.userId, set);
   }
+  const wasOffline = set.size === 0;
   set.add(conn);
+  if (wasOffline) {
+    void broadcastPresence(conn.userId, true).catch((err) =>
+      console.error('presence online failed', err),
+    );
+  }
 }
 
 function unregister(conn: Conn): void {
   const set = byUser.get(conn.userId);
   if (!set) return;
   set.delete(conn);
-  if (set.size === 0) byUser.delete(conn.userId);
+  if (set.size === 0) {
+    byUser.delete(conn.userId);
+    void broadcastPresence(conn.userId, false).catch((err) =>
+      console.error('presence offline failed', err),
+    );
+  }
 }
 
 // Доставляет получателю все события из outbox с seq > conn.lastSeq.
