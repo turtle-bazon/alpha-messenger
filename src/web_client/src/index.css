@@ -1,21 +1,107 @@
 /* Базовые стили и токены. Ориентир — десктопный Telegram (см. doc/ui.md):
-   список чатов слева, переписка справа, центрирование с max-width. */
+   список чатов слева, переписка справа, центрирование с max-width.
+   Вся палитра вынесена в переменные — это единая точка смены темы (см. блок
+   [data-theme='dark'] ниже). Значения цветов подобраны по day-палитре tdesktop. */
 :root {
-  --bg: #ffffff;
+  color-scheme: light;
+
+  /* Акцент (синий Telegram) и его состояния */
+  --accent: #3390ec;
+  --accent-hover: #2b7fd4;
+  --accent-active: #2674c2;
+  --on-accent: #ffffff;
+
+  /* Фоны */
+  --bg: #ffffff; /* основной фон панелей (сайдбар, шапки, композер) */
   --bg-side: #ffffff;
-  --bg-chat: #e6ebee;
+  --bg-chat: #ccd5dd; /* база области переписки (поверх — мягкий градиент) */
+  --bg-chat-grad-a: #d3dce4; /* верхний стоп градиента фона чата */
+  --bg-chat-grad-b: #c3cfd9; /* нижний стоп */
+  --chat-dot: rgba(255, 255, 255, 0.45); /* цвет точек узора фона чата */
+  --bg-hover: #f2f3f5; /* мягкая подсветка элементов списка */
+  --bg-active: #e9eaec;
+  --bg-input: #f1f3f5; /* заливка поля поиска/ввода */
   /* Фон самой страницы — заметно темнее области чата, чтобы границы
      центрированного клиента были видны на широких мониторах. */
-  --page-bg: #cfd6dc;
+  --page-bg: #c6cdd3;
+
+  /* Текст */
   --text: #000000;
   --text-muted: #707991;
-  --accent: #3390ec;
-  --divider: #e6e6e6;
+  /* Алиасы для правил, исторически писавших var(--muted)/var(--border). */
+  --muted: var(--text-muted);
+  --border: var(--divider);
+
+  /* Разделители и пузыри */
+  --divider: #e7e8ea;
+  --bubble-in: #ffffff;
+  --bubble-out: #effdde; /* светло-зелёный исходящих, как в Telegram */
+  --bubble-out-grad: #e4f7cf; /* нижний стоп лёгкого градиента исходящих */
+  --bubble-meta: rgba(0, 0, 0, 0.38); /* время на чужих пузырях */
+  --bubble-meta-out: #5aab6e; /* приглушённо-зелёное время исходящих */
+  --check-read: #4fa3e3; /* синий ✓✓ (прочитано), как просит дизайн */
+
+  /* Радиусы */
+  --radius-bubble: 14px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --avatar-radius: 50%; /* круглые аватары, как в Telegram Desktop */
+
+  /* Тени */
+  --shadow-bubble: 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-pop: 0 2px 10px rgba(0, 0, 0, 0.16);
+  --shadow-panel: 0 0 24px rgba(0, 0, 0, 0.14);
+  /* Граница сайдбара: линия + мягкая тень вправо, чтобы он не сливался с чатом */
+  --shadow-sidebar: 1px 0 0 var(--divider), 4px 0 12px rgba(0, 0, 0, 0.04);
+
+  /* Анимации */
+  --t-fast: 120ms ease;
+  --t: 170ms ease;
+
   --app-max-width: 1280px;
 
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
   color: var(--text);
+}
+
+/* Тёмная тема — переопределяет только палитру (значения по night-палитре
+   Telegram Desktop). Переключатель в шапке выставляет data-theme на <html>;
+   начальное значение — из localStorage или системного prefers-color-scheme
+   (см. util/theme.ts). Вся остальная вёрстка опирается на эти переменные. */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --accent: #5aa7ef;
+  --accent-hover: #6fb3f2;
+  --accent-active: #4e98e0;
+
+  --bg: #17212b;
+  --bg-side: #17212b;
+  --bg-chat: #0e1621;
+  --bg-chat-grad-a: #0f1a25;
+  --bg-chat-grad-b: #0b131c;
+  --bg-hover: #202b36;
+  --bg-active: #2b3743;
+  --bg-input: #242f3d;
+  --page-bg: #0a0f14;
+  --chat-dot: rgba(255, 255, 255, 0.035);
+
+  --text: #ffffff;
+  --text-muted: #7d8e9e;
+
+  --divider: #0d161f;
+  --bubble-in: #182533;
+  --bubble-out: #2b5278; /* синие исходящие, как в тёмной теме Telegram */
+  --bubble-out-grad: #2b5278;
+  --bubble-meta: rgba(255, 255, 255, 0.4);
+  --bubble-meta-out: rgba(255, 255, 255, 0.5);
+  --check-read: #6fcaff;
+
+  --shadow-bubble: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 2px 12px rgba(0, 0, 0, 0.5);
+  --shadow-panel: 0 0 24px rgba(0, 0, 0, 0.5);
+  --shadow-sidebar: 1px 0 0 var(--divider), 4px 0 12px rgba(0, 0, 0, 0.25);
 }
 
 * {
@@ -46,7 +132,7 @@ body {
   /* Выделяем границы центрированного клиента на фоне страницы. */
   border-left: 1px solid var(--divider);
   border-right: 1px solid var(--divider);
-  box-shadow: 0 0 24px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--shadow-panel);
 }
 
 @media (max-width: 600px) {
@@ -164,16 +250,46 @@ body {
   min-width: 260px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--divider);
+  background: var(--bg-side);
+  /* Линия + мягкая тень: сайдбар отделён от области чата, не сливается. */
+  box-shadow: var(--shadow-sidebar);
+  z-index: 1; /* чтобы тень легла поверх области переписки */
 }
 
 .home-header {
   display: flex;
   align-items: center;
+  gap: 8px;
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid var(--divider);
   font-weight: 600;
+}
+
+/* Кнопка-иконка в шапке (переключатель темы) — нейтральная, подсветка на hover. */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.icon-button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.home-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .home-header button {
@@ -184,18 +300,29 @@ body {
   font-weight: 400;
 }
 
+/* Кнопка-иконка (тема) в шапке — нейтральный цвет, не акцентный. */
+.home-header .icon-button {
+  color: var(--text-muted);
+}
+
 .conversation {
   flex: 1;
   display: flex;
-  background: var(--bg-chat);
+  /* Мягкий фон области переписки: лёгкий диагональный градиент поверх базового
+     цвета + ненавязчивый точечный узор (как в Telegram, но сдержанно). Чистый
+     CSS, без картинок. */
+  background-color: var(--bg-chat);
+  background-image: radial-gradient(var(--chat-dot) 1px, transparent 1.5px),
+    linear-gradient(135deg, var(--bg-chat-grad-a), var(--bg-chat-grad-b));
+  background-size: 22px 22px, 100% 100%;
 }
 
 .conversation-empty {
   margin: auto;
   padding: 7px 16px;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.06);
-  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.18);
+  color: #fff;
   font-size: 14px;
 }
 
@@ -230,9 +357,50 @@ body {
 }
 
 .conv-typing {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
   font-weight: 400;
   font-size: 13px;
   color: var(--accent);
+}
+
+/* Анимированные точки «печатает» — пульсация с волной (как в Telegram). */
+.typing-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: 4px;
+  margin-bottom: 2px;
+}
+
+.typing-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: typing-pulse 1.2s infinite ease-in-out;
+}
+
+.typing-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-pulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
 }
 
 /* Заголовок чата: название + подзаголовок (участники/онлайн). Для группы —
@@ -258,7 +426,7 @@ body {
 
 .conv-title {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text);
   max-width: 100%;
   overflow: hidden;
@@ -296,7 +464,23 @@ body {
 .conv-messages {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px; /* плотно внутри группы; между группами — margin у is-group-start */
+}
+
+/* Разделитель дат: подпись по центру на полупрозрачной «таблетке». */
+.date-divider {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 10px;
+}
+
+.date-divider span {
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .bubble {
@@ -305,19 +489,55 @@ body {
   align-self: flex-start;
   display: flex;
   flex-direction: column;
-  padding: 5px 9px;
-  border-radius: 12px;
-  background: var(--bg);
+  padding: 6px 10px;
+  border-radius: var(--radius-bubble);
+  background: var(--bubble-in);
+  color: var(--text);
   font-size: 15px;
-  line-height: 1.3;
+  line-height: 1.34;
   word-wrap: break-word;
   overflow-wrap: anywhere;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-bubble);
+}
+
+/* Первое сообщение группы — больший верхний отступ (разделение групп). */
+.bubble.is-group-start {
+  margin-top: 8px;
 }
 
 .bubble-own {
   align-self: flex-end;
-  background: #effdde; /* светло-зелёный пузырь исходящих, как в Telegram */
+  /* лёгкий градиент исходящих вместо плоского зелёного */
+  background: linear-gradient(var(--bubble-out), var(--bubble-out-grad));
+}
+
+/* Хвостик у последнего сообщения группы (как в Telegram). Чистый CSS: срезаем
+   нижний угол со стороны хвоста и дорисовываем треугольник псевдоэлементом
+   цвета пузыря — указывает в сторону отправителя. */
+.bubble.is-tail:not(.bubble-own) {
+  border-bottom-left-radius: 5px;
+}
+
+.bubble.is-tail:not(.bubble-own)::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  bottom: 0;
+  border-right: 8px solid var(--bubble-in);
+  border-top: 11px solid transparent;
+}
+
+.bubble-own.is-tail {
+  border-bottom-right-radius: 5px;
+}
+
+.bubble-own.is-tail::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  border-left: 8px solid var(--bubble-out-grad);
+  border-top: 11px solid transparent;
 }
 
 .bubble-pending {
@@ -341,7 +561,7 @@ body {
   margin-top: 2px;
   font-size: 11px;
   line-height: 1;
-  color: var(--text-muted);
+  color: var(--bubble-meta);
   user-select: none;
   /* мета-строка (время/статус) — всегда в одну строку: иначе overflow-wrap:
      anywhere у пузыря ломает время посимвольно («20:1 / 3»). */
@@ -349,11 +569,17 @@ body {
 }
 
 .bubble-own .bubble-meta {
-  color: #62a368; /* приглушённо-зелёный таймстамп исходящих, как в Telegram */
+  color: var(--bubble-meta-out); /* приглушённый таймстамп исходящих */
 }
 
 .bubble-status {
   letter-spacing: -1px;
+}
+
+/* Прочитано (✓✓) — синий, как просит дизайн; не прочитано (✓) — цвет меты. */
+.bubble-status.is-read,
+.bubble-own .bubble-status.is-read {
+  color: var(--check-read);
 }
 
 /* Действия над своим сообщением — всплывают слева при наведении, вне потока. */
@@ -407,13 +633,25 @@ body {
   margin-top: 4px;
 }
 
-/* Кнопка вложения в композере. */
+/* Кнопка вложения в композере (внутри округлённого поля). */
 .conv-attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
   border: none;
+  border-radius: 50%;
   background: none;
-  font-size: 20px;
+  color: var(--text-muted);
   cursor: pointer;
-  padding: 0 4px;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.conv-attach:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--bg-hover);
 }
 
 .conv-attach:disabled {
@@ -449,7 +687,7 @@ body {
   min-height: 240px;
   max-height: 60vh;
   overflow: hidden;
-  background: #f4f4f5;
+  background: var(--bg-input);
   border-radius: 8px;
 }
 
@@ -483,7 +721,7 @@ body {
   border-radius: 8px;
   padding: 8px 14px;
   cursor: pointer;
-  background: #f4f4f5;
+  background: var(--bg-input);
   color: var(--text);
 }
 
@@ -502,7 +740,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 6px 16px;
-  background: #f4f4f5;
+  background: var(--bg-hover);
   border-top: 1px solid var(--divider);
   font-size: 13px;
   color: var(--text-muted);
@@ -515,39 +753,81 @@ body {
   cursor: pointer;
 }
 
+/* Композер: округлённое поле (скрепка + текст) + круглая кнопка отправки. */
 .conv-input {
   display: flex;
+  align-items: flex-end;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 12px;
   background: var(--bg);
   border-top: 1px solid var(--divider);
 }
 
-.conv-input input {
+.conv-input-field {
   flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--divider);
-  border-radius: 18px;
-  outline: none;
-  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 8px;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  transition: border-color var(--t-fast), background var(--t-fast);
 }
 
-.conv-input input:focus {
+.conv-input-field:focus-within {
+  background: var(--bg);
   border-color: var(--accent);
 }
 
-.conv-input button {
-  padding: 0 16px;
+.conv-input-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 6px;
   border: none;
-  border-radius: 18px;
+  background: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.conv-input-field input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Кнопка отправки — круглая, акцентная; появляется только при наличии текста
+   (анимация opacity + scale). Место под неё зарезервировано, чтобы поле ввода
+   не дёргалось по ширине при появлении кнопки. */
+.conv-send {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
   background: var(--accent);
   color: #fff;
   cursor: pointer;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--t), transform var(--t), background var(--t-fast);
 }
 
-.conv-input button:disabled {
-  opacity: 0.5;
+.conv-send.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.conv-send:disabled {
   cursor: default;
+}
+
+/* Оптическое центрирование самолётика в круге. */
+.conv-send svg {
+  transform: translateX(1px);
 }
 
 /* ---- Уведомления уровня аккаунта (вход/новое устройство) ---- */
@@ -635,6 +915,55 @@ body {
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+
+.chat-list-compose:active {
+  transform: scale(0.94);
+}
+
+/* Поле поиска чатов: округлённая заливка с иконкой-лупой слева. */
+.chat-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6px 12px 8px;
+}
+
+.chat-search-icon {
+  position: absolute;
+  left: 24px;
+  display: inline-flex;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.chat-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px 0 38px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: var(--bg-input);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.chat-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.chat-search-input:focus {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+/* Скрыть нативный крестик у type=search (Chrome/Safari). */
+.chat-search-input::-webkit-search-cancel-button {
+  appearance: none;
 }
 
 /* ---- Модалка «новый чат» ---- */
@@ -729,7 +1058,7 @@ body {
 }
 
 .new-group-option:hover {
-  background: #f4f4f5;
+  background: var(--bg-hover);
 }
 
 .new-group-hint {
@@ -750,7 +1079,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px 6px 4px 10px;
-  background: #f4f4f5;
+  background: var(--bg-input);
   border-radius: 14px;
   font-size: 13px;
 }
@@ -805,7 +1134,7 @@ body {
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 10px;
+  column-gap: 12px;
   row-gap: 2px;
   width: 100%;
   padding: 8px 12px;
@@ -813,34 +1142,36 @@ body {
   background: none;
   text-align: left;
   cursor: pointer;
+  transition: background var(--t-fast);
 }
 
 .chat-item:hover {
-  background: #f4f4f5;
+  background: var(--bg-hover);
 }
 
 .chat-item:active {
-  background: #ececed;
+  background: var(--bg-active);
 }
 
 .chat-item.is-selected {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .chat-avatar {
   grid-column: 1;
   grid-row: 1 / span 2;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--avatar-radius);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 600;
   flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .chat-item-row {
@@ -899,6 +1230,7 @@ body {
   background: var(--accent);
   color: #fff;
   font-size: 12px;
+  font-weight: 600;
   line-height: 20px;
   text-align: center;
 }
@@ -909,18 +1241,26 @@ body {
 }
 
 /* ---- Hover/active акцентных кнопок ---- */
+.auth-card button[type='submit'],
+.new-chat-form button[type='submit'],
+.members-add-btn {
+  transition: background var(--t-fast);
+}
+
 .auth-card button[type='submit']:hover:not(:disabled),
-.conv-input button[type='submit']:hover:not(:disabled),
+.conv-send:hover:not(:disabled),
 .chat-list-compose:hover,
+.members-add-btn:hover:not(:disabled),
 .new-chat-form button[type='submit']:hover:not(:disabled) {
-  background: #2b7fd4;
+  background: var(--accent-hover);
 }
 
 .auth-card button[type='submit']:active:not(:disabled),
-.conv-input button[type='submit']:active:not(:disabled),
+.conv-send:active:not(:disabled),
 .chat-list-compose:active,
+.members-add-btn:active:not(:disabled),
 .new-chat-form button[type='submit']:active:not(:disabled) {
-  background: #2674c2;
+  background: var(--accent-active);
 }
 
 .home-header button:hover,

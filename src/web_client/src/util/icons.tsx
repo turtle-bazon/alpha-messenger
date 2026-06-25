@@ -1,0 +1,66 @@
+// Линейные иконки (inline SVG, красятся через currentColor) — единый стиль,
+// тонкая линия как в Telegram Desktop. Эмодзи намеренно не используем: их глифы
+// различаются между ОС. Декоративные, поэтому aria-hidden.
+
+interface IconProps {
+  size?: number;
+}
+
+function svgProps(size: number) {
+  return {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  };
+}
+
+export function IconSearch({ size = 18 }: IconProps): JSX.Element {
+  return (
+    <svg {...svgProps(size)}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+// Бумажный самолётик (отправка).
+export function IconSend({ size = 22 }: IconProps): JSX.Element {
+  return (
+    <svg {...svgProps(size)}>
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+    </svg>
+  );
+}
+
+// Скрепка (вложение).
+export function IconAttach({ size = 22 }: IconProps): JSX.Element {
+  return (
+    <svg {...svgProps(size)}>
+      <path d="M21.44 11.05 12 20.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+export function IconMoon({ size = 18 }: IconProps): JSX.Element {
+  return (
+    <svg {...svgProps(size)}>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
+export function IconSun({ size = 18 }: IconProps): JSX.Element {
+  return (
+    <svg {...svgProps(size)}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  );
+}

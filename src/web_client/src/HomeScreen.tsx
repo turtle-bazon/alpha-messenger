@@ -13,6 +13,8 @@ import type { Chat, ServerEvent } from './api/types';
 import { AccountNotifications } from './account/AccountNotifications';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
+import { getTheme, setTheme, type Theme } from './util/theme';
+import { IconMoon, IconSun } from './util/icons';
 
 // Главный экран: владеет списком чатов, WS-соединением и выбором чата.
 // Живые события (chat.created, message.new) обновляют список здесь — из одного
@@ -36,8 +38,15 @@ export function HomeScreen({
   // дальше актуализируется транзиентными событиями presence из WS.
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
+
+  function toggleTheme(): void {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    setThemeState(next);
+  }
 
   useEffect(() => {
     getMe()
@@ -268,9 +277,23 @@ export function HomeScreen({
       <div className="sidebar">
         <header className="home-header">
           <span data-testid="home-username">{username ?? '...'}</span>
-          <button type="button" onClick={onLogout}>
-            Выйти
-          </button>
+          <span className="home-header-actions">
+            <button
+              type="button"
+              className="icon-button"
+              data-testid="theme-toggle"
+              aria-label={
+                theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'
+              }
+              title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+              onClick={toggleTheme}
+            >
+              {theme === 'dark' ? <IconSun /> : <IconMoon />}
+            </button>
+            <button type="button" onClick={onLogout}>
+              Выйти
+            </button>
+          </span>
         </header>
         <ChatList
           chats={chats}

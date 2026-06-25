@@ -3,6 +3,7 @@ import { getUserId } from '../api/session';
 import type { Chat, Participant } from '../api/types';
 import { decodeContent, previewText } from '../util/content';
 import { formatListTime } from '../util/time';
+import { IconSearch } from '../util/icons';
 import { chatTitle } from './chatTitle';
 import { colorFor, initialFor } from './avatar';
 import { NewChatDialog } from './NewChatDialog';
@@ -27,6 +28,14 @@ export function ChatList({
 }): JSX.Element {
   const myId = getUserId();
   const [composing, setComposing] = useState(false);
+  const [query, setQuery] = useState('');
+
+  // Фильтрация списка по названию чата (как поиск в Telegram, локально).
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return chats;
+    return chats.filter((c) => chatTitle(c, myId).toLowerCase().includes(q));
+  }, [chats, query, myId]);
 
   // Кандидаты в участники группы — собеседники из существующих личных чатов
   // (с кем уже есть переписка). Себя исключаем: создатель входит в группу
@@ -60,6 +69,20 @@ export function ChatList({
           +
         </button>
       </div>
+      <div className="chat-search">
+        <span className="chat-search-icon" aria-hidden="true">
+          <IconSearch />
+        </span>
+        <input
+          className="chat-search-input"
+          type="search"
+          data-testid="chat-search"
+          aria-label="Поиск чатов"
+          placeholder="Поиск"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
       {composing && (
         <NewChatDialog
           knownUsers={knownUsers}
@@ -73,8 +96,10 @@ export function ChatList({
           <p className="chat-list-empty">Загрузка…</p>
         ) : chats.length === 0 ? (
           <p className="chat-list-empty">Чатов пока нет</p>
+        ) : filtered.length === 0 ? (
+          <p className="chat-list-empty">Ничего не найдено</p>
         ) : (
-          chats.map((chat) => {
+          filtered.map((chat) => {
             const title = chatTitle(chat, myId);
             return (
               <button

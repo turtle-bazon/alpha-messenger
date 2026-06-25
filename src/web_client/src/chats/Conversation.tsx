@@ -1,5 +1,6 @@
 import {
   ChangeEvent,
+  Fragment,
   FormEvent,
   useEffect,
   useLayoutEffect,
@@ -20,7 +21,8 @@ import {
   imageDataUrl,
   type MessageContent,
 } from '../util/content';
-import { formatTime } from '../util/time';
+import { formatTime, formatDateDivider, sameDay } from '../util/time';
+import { IconAttach, IconSend } from '../util/icons';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
 import { MembersDialog } from './MembersDialog';
@@ -421,24 +423,48 @@ export function Conversation({
         </button>
         {typingFrom && (
           <span className="conv-typing" data-testid="typing-indicator">
-            печатает…
+            печатает
+            <span className="typing-dots" aria-hidden="true">
+              <i></i>
+              <i></i>
+              <i></i>
+            </span>
           </span>
         )}
       </header>
       <div className="conv-scroll" ref={scrollRef} onScroll={onScroll}>
         {loadingMore && <div className="conv-loading">Загрузка…</div>}
         <div className="conv-messages" data-testid="messages">
-          {messages.map((m) => {
+          {messages.map((m, i) => {
             const own = m.senderId === myId;
             const read =
               own && m.messageId ? Number(m.messageId) <= readUpTo : false;
+            const prev = messages[i - 1];
+            const next = messages[i + 1];
+            // Новый календарный день — разделитель дат перед сообщением.
+            const showDate = !prev || !sameDay(prev.ts, m.ts);
+            // Группировка подряд идущих сообщений одного автора в пределах дня:
+            // хвостик — только у последнего в группе, верхний отступ — у первого.
+            const groupStart =
+              !prev || prev.senderId !== m.senderId || showDate;
+            const groupEnd =
+              !next ||
+              next.senderId !== m.senderId ||
+              !sameDay(m.ts, next.ts);
             return (
+              <Fragment key={m.messageId ?? `pending:${m.clientMessageId}`}>
+                {showDate && (
+                  <div className="date-divider" data-testid="date-divider">
+                    <span>{formatDateDivider(m.ts)}</span>
+                  </div>
+                )}
               <div
-                key={m.messageId ?? `pending:${m.clientMessageId}`}
                 data-testid="message"
                 className={
                   'bubble' +
                   (own ? ' bubble-own' : '') +
+                  (groupStart ? ' is-group-start' : '') +
+                  (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
                   (m.failed ? ' bubble-failed' : '')
                 }
@@ -468,7 +494,10 @@ export function Conversation({
                     {m.edited && <span className="bubble-edited">ред.</span>}
                     <span className="bubble-time">{formatTime(m.ts)}</span>
                     {own && m.messageId && (
-                      <span className="bubble-status" data-testid="msg-status">
+                      <span
+                        className={'bubble-status' + (read ? ' is-read' : '')}
+                        data-testid="msg-status"
+                      >
                         {read ? '✓✓' : '✓'}
                       </span>
                     )}
@@ -495,6 +524,7 @@ export function Conversation({
                   </span>
                 )}
               </div>
+              </Fragment>
             );
           })}
         </div>
@@ -516,29 +546,33 @@ export function Conversation({
           data-testid="image-input"
           onChange={onPickFile}
         />
-        <button
-          type="button"
-          className="conv-attach"
-          data-testid="attach-image"
-          aria-label="Прикрепить изображение"
-          disabled={!!editing}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          📎
-        </button>
-        <input
-          data-testid="message-input"
-          aria-label="Сообщение"
-          placeholder="Сообщение…"
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-        />
+        <div className="conv-input-field">
+          <button
+            type="button"
+            className="conv-attach"
+            data-testid="attach-image"
+            aria-label="Прикрепить изображение"
+            disabled={!!editing}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <IconAttach />
+          </button>
+          <input
+            data-testid="message-input"
+            aria-label="Сообщение"
+            placeholder="Сообщение…"
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+          />
+        </div>
         <button
           type="submit"
+          className={'conv-send' + (input.trim() ? ' is-visible' : '')}
           data-testid="message-send"
+          aria-label={editing ? 'Сохранить' : 'Отправить'}
           disabled={!input.trim()}
         >
-          {editing ? 'Сохранить' : 'Отправить'}
+          <IconSend />
         </button>
       </form>
       {pendingImage && (
