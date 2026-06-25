@@ -91,6 +91,37 @@ body {
   border-color: var(--accent);
 }
 
+/* Поле пароля с глазиком: input занимает всю ширину, кнопка-иконка поверх справа. */
+.password-field {
+  position: relative;
+  display: flex;
+}
+
+.password-field input {
+  flex: 1;
+  padding-right: 42px; /* место под глазик */
+}
+
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--muted, #707579);
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: var(--text);
+}
+
 .auth-card button[type='submit'] {
   padding: 11px 12px;
   border: none;
@@ -673,23 +704,39 @@ body {
   border-color: var(--accent);
 }
 
-.new-group-add {
+.new-group-options {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
 }
 
-.new-group-add input {
-  flex: 1;
-}
-
-.new-group-add button {
-  width: 38px;
+.new-group-option {
+  text-align: left;
   border: none;
-  border-radius: 50%;
-  background: #f4f4f5;
+  background: none;
+  padding: 9px 12px;
+  font-size: 14px;
   color: var(--text);
-  font-size: 20px;
   cursor: pointer;
+  border-bottom: 1px solid var(--divider);
+}
+
+.new-group-option:last-child {
+  border-bottom: none;
+}
+
+.new-group-option:hover {
+  background: #f4f4f5;
+}
+
+.new-group-hint {
+  margin: 0;
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--muted, #707579);
 }
 
 .new-group-members {

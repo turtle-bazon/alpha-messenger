@@ -1,14 +1,19 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../api/rest';
+import type { Participant } from '../api/types';
 
 // Модалка «новый чат» — точка входа из синей «+» (как кнопка compose в Telegram).
 // Две вкладки: личный чат по username и группа (название + участники).
-// Создание выполняют переданные колбэки HomeScreen; успех — закрывает модалку.
+// Участников группы выбирают из уже знакомых пользователей (собеседники личных
+// чатов) — свободный ввод username убран (известная проблема №4): нельзя добавить
+// того, с кем ещё нет переписки. Создание выполняют переданные колбэки HomeScreen.
 export function NewChatDialog({
+  knownUsers,
   onCreateDirect,
   onCreateGroup,
   onClose,
 }: {
+  knownUsers: Participant[];
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;
   onClose: () => void;
@@ -16,7 +21,9 @@ export function NewChatDialog({
   const [mode, setMode] = useState<'direct' | 'group'>('direct');
   const [username, setUsername] = useState('');
   const [title, setTitle] = useState('');
-  const [member, setMember] = useState('');
+  const [search, setSearch] = useState('');
+  // Выбранные участники — по username (их ждёт onCreateGroup; сервер добавит
+  // создателя сам).
   const [members, setMembers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,6 +36,17 @@ export function NewChatDialog({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Доступные кандидаты: знакомые пользователи, ещё не выбранные, отфильтрованные
+  // по строке поиска (подстрока, регистр не важен).
+  const candidates = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return knownUsers.filter(
+      (u) =>
+        !members.includes(u.username) &&
+        (!q || u.username.toLowerCase().includes(q)),
+    );
+  }, [knownUsers, members, search]);
 
   function mapError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -64,37 +82,26 @@ export function NewChatDialog({
     }
   }
 
-  function addMember(): void {
-    const u = member.trim();
-    if (!u) return;
-    setMembers((m) => (m.includes(u) ? m : [...m, u]));
-    setMember('');
-  }
-
-  function removeMember(u: string): void {
-    setMembers((m) => m.filter((x) => x !== u));
+  function toggleMember(u: string): void {
+    setMembers((m) => (m.includes(u) ? m.filter((x) => x !== u) : [...m, u]));
   }
 
   async function submitGroup(e: FormEvent): Promise<void> {
     e.preventDefault();
     if (busy) return;
     const t = title.trim();
-    // Учитываем участника, набранного, но не добавленного кнопкой.
-    const pending = member.trim();
-    const all =
-      pending && !members.includes(pending) ? [...members, pending] : members;
     if (!t) {
       setError('Введите название группы');
       return;
     }
-    if (all.length === 0) {
+    if (members.length === 0) {
       setError('Добавьте хотя бы одного участника');
       return;
     }
     setError(null);
     setBusy(true);
     try {
-      await onCreateGroup(t, all);
+      await onCreateGroup(t, members);
       onClose();
     } catch (err) {
       setError(mapError(err));
@@ -164,28 +171,6 @@ export function NewChatDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            <div className="new-group-add">
-              <input
-                data-testid="new-group-member"
-                aria-label="Добавить участника"
-                placeholder="Имя участника…"
-                value={member}
-                onChange={(e) => setMember(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addMember();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                data-testid="new-group-add"
-                onClick={addMember}
-              >
-                +
-              </button>
-            </div>
             {members.length > 0 && (
               <div className="new-group-members">
                 {members.map((u) => (
@@ -194,13 +179,46 @@ export function NewChatDialog({
                     <button
                       type="button"
                       aria-label={`Убрать ${u}`}
-                      onClick={() => removeMember(u)}
+                      onClick={() => toggleMember(u)}
                     >
                       ✕
                     </button>
                   </span>
                 ))}
               </div>
+            )}
+            {knownUsers.length === 0 ? (
+              <p className="new-group-hint" data-testid="new-group-hint">
+                Сначала создайте личные чаты — участников группы выбирают из тех,
+                с кем уже есть переписка.
+              </p>
+            ) : (
+              <>
+                <input
+                  data-testid="new-group-search"
+                  aria-label="Поиск участников"
+                  placeholder="Поиск участников…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <div className="new-group-options" data-testid="new-group-options">
+                  {candidates.length === 0 ? (
+                    <p className="new-group-hint">Никого не найдено</p>
+                  ) : (
+                    candidates.map((u) => (
+                      <button
+                        key={u.userId}
+                        type="button"
+                        className="new-group-option"
+                        data-testid="new-group-option"
+                        onClick={() => toggleMember(u.username)}
+                      >
+                        {u.username}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </>
             )}
             <button type="submit" data-testid="new-group-submit" disabled={busy}>
               Создать группу

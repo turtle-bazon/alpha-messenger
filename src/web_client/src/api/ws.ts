@@ -18,9 +18,12 @@ export class WsClient {
   private readonly handlers = new Map<string, Set<Handler>>();
   private readonly anyHandlers = new Set<Handler>();
 
+  // onSeqAdvance вызывается при продвижении lastSeq — владелец (HomeScreen)
+  // сохраняет курсор между сессиями, чтобы reconnect/reload не реплеил всё с нуля.
   constructor(
     private readonly token: string,
     lastSeq = 0,
+    private readonly onSeqAdvance?: (seq: number) => void,
   ) {
     this.lastSeq = lastSeq;
   }
@@ -87,6 +90,7 @@ export class WsClient {
     // Двигаем курсор только по событиям из outbox (у транзиентных seq нет).
     if (typeof ev.seq === 'number' && ev.seq > this.lastSeq) {
       this.lastSeq = ev.seq;
+      this.onSeqAdvance?.(this.lastSeq);
     }
     const set = this.handlers.get(ev.type);
     if (set) for (const h of set) h(ev);

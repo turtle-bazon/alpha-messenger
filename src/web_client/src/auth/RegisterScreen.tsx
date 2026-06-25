@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { ApiError, register } from '../api/rest';
 import { getDeviceId, setSession } from '../api/session';
+import { PasswordInput } from './PasswordInput';
 
 // Регистрация по инвайт-ссылке (/register?invite=CODE). Без валидного кода
 // саморегистрации нет (см. architecture.md) — поле invite приходит из URL.
@@ -61,13 +62,10 @@ export function RegisterScreen({
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
-        <input
-          aria-label="Пароль"
-          placeholder="Пароль"
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
         />
         {error && <p className="auth-error">{error}</p>}
         <button type="submit" disabled={busy || !invite || !username || !password}>

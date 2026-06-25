@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { ApiError, login } from '../api/rest';
 import { getDeviceId, setSession } from '../api/session';
+import { PasswordInput } from './PasswordInput';
 
 export function LoginScreen({
   onAuthed,
@@ -46,13 +47,10 @@ export function LoginScreen({
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
-        <input
-          aria-label="Пароль"
-          placeholder="Пароль"
-          type="password"
+        <PasswordInput
           autoComplete="current-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
         />
         {error && <p className="auth-error">{error}</p>}
         <button type="submit" disabled={busy || !username || !password}>

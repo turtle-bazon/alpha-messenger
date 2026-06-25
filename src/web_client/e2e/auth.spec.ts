@@ -29,3 +29,20 @@ test('регистрация по инвайту, выход и повторны
   await expect(page.getByTestId('app-home')).toBeVisible();
   await expect(page.getByTestId('home-username')).toHaveText(username);
 });
+
+test('глазик показывает и скрывает введённый пароль', async ({ page }) => {
+  const invite = await createInvite();
+  await page.goto(`/register?invite=${invite}`);
+  const pwd = page.getByLabel('Пароль');
+  await pwd.fill('secret-123');
+
+  // По умолчанию пароль скрыт
+  await expect(pwd).toHaveAttribute('type', 'password');
+
+  // Клик по глазику показывает текст, повторный — снова скрывает
+  const toggle = page.getByTestId('password-toggle');
+  await toggle.click();
+  await expect(pwd).toHaveAttribute('type', 'text');
+  await toggle.click();
+  await expect(pwd).toHaveAttribute('type', 'password');
+});

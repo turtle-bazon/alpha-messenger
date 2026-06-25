@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { getUserId } from '../api/session';
-import type { Chat } from '../api/types';
+import type { Chat, Participant } from '../api/types';
 import { decodeContent, previewText } from '../util/content';
 import { formatListTime } from '../util/time';
 import { chatTitle } from './chatTitle';
@@ -28,6 +28,23 @@ export function ChatList({
   const myId = getUserId();
   const [composing, setComposing] = useState(false);
 
+  // Кандидаты в участники группы — собеседники из существующих личных чатов
+  // (с кем уже есть переписка). Себя исключаем: создатель входит в группу
+  // автоматически на сервере (известная проблема №4). Уникальны по userId.
+  const knownUsers = useMemo<Participant[]>(() => {
+    const map = new Map<string, string>();
+    for (const c of chats) {
+      if (c.type !== 'direct') continue;
+      for (const p of c.participants) {
+        if (p.userId !== myId) map.set(p.userId, p.username);
+      }
+    }
+    return [...map.entries()].map(([userId, username]) => ({
+      userId,
+      username,
+    }));
+  }, [chats, myId]);
+
   return (
     <aside className="chat-list" data-testid="chat-list">
       <div className="chat-list-bar">
@@ -45,6 +62,7 @@ export function ChatList({
       </div>
       {composing && (
         <NewChatDialog
+          knownUsers={knownUsers}
           onCreateDirect={onCreateDirect}
           onCreateGroup={onCreateGroup}
           onClose={() => setComposing(false)}

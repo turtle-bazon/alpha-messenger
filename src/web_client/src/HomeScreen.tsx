@@ -7,7 +7,7 @@ import {
   getMe,
   getPresence,
 } from './api/rest';
-import { getToken, getUserId } from './api/session';
+import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
 import type { Chat, ServerEvent } from './api/types';
 import { AccountNotifications } from './account/AccountNotifications';
@@ -23,7 +23,12 @@ export function HomeScreen({
   onLogout: () => void;
 }): JSX.Element {
   const myId = getUserId();
-  const [ws] = useState(() => new WsClient(getToken() ?? '', 0));
+  // Курсор потока seed-ится из localStorage (resume между сессиями) и сохраняется
+  // при каждом продвижении — после reload реплеится только пропущенное, история не
+  // принимается за live повторно (известная проблема №8).
+  const [ws] = useState(
+    () => new WsClient(getToken() ?? '', getLastSeq(), setLastSeq),
+  );
   const [username, setUsername] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);

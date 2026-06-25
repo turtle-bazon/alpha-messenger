@@ -2,18 +2,22 @@ import { expect, test } from '@playwright/test';
 import { registerViaApi } from './helpers/api';
 import { createDirectViaUi, registerViaUi } from './helpers/ui';
 
-// Утилита: A создаёт группу через UI с уже существующими участниками.
+// Утилита: A создаёт группу через UI. Участников выбирают из знакомых (тех, с кем
+// уже есть личный чат) — поэтому сперва заводим личные чаты, затем отмечаем их в
+// списке кандидатов вкладки «Новая группа».
 async function createGroupViaUi(
   page: import('@playwright/test').Page,
   title: string,
   usernames: string[],
 ): Promise<void> {
+  for (const u of usernames) {
+    await createDirectViaUi(page, u);
+  }
   await page.getByTestId('new-chat-button').click();
   await page.getByTestId('new-chat-tab-group').click();
   await page.getByTestId('new-group-title').fill(title);
   for (const u of usernames) {
-    await page.getByTestId('new-group-member').fill(u);
-    await page.getByTestId('new-group-add').click();
+    await page.getByTestId('new-group-option').filter({ hasText: u }).click();
   }
   await page.getByTestId('new-group-submit').click();
   await expect(page.getByTestId('new-chat-dialog')).toHaveCount(0);
