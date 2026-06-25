@@ -3,7 +3,7 @@ import { pool } from '../db';
 import { authenticate } from '../auth';
 import { emitEvent } from '../events';
 import { loadChat } from '../chats';
-import { emitToMembers } from '../chat-helpers';
+import { emitToMembers, getMemberIds } from '../chat-helpers';
 import { isOnline } from '../ws';
 
 interface CreateChatBody {
@@ -251,6 +251,86 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         client.release();
       }
       return reply.code(200).send({ chatId, userId: targetId });
+    },
+  );
+
+  // Добавление участника в группу. Право — только у создателя чата; добавлять
+  // можно лишь в группу и лишь того, кого ещё нет в чате. Новому участнику идёт
+  // chat.created (он подтягивает чат в список), уже состоящим — chat.member_added
+  // (обновляют состав/счётчик участников).
+  app.post(
+    '/chats/:chatId/members',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const callerId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      const { username } = (req.body ?? {}) as { username?: string };
+      if (!username) {
+        return reply.code(400).send({ error: 'missing username' });
+      }
+      const chat = await pool.query(
+        'SELECT type, created_by FROM chats WHERE chat_id = $1',
+        [chatId],
+      );
+      if (chat.rowCount === 0) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      const { type, created_by: createdBy } = chat.rows[0];
+      if (createdBy !== callerId) {
+        return reply.code(403).send({ error: 'not chat owner' });
+      }
+      if (type !== 'group') {
+        return reply.code(400).send({ error: 'not a group' });
+      }
+      const target = await pool.query(
+        'SELECT user_id FROM accounts WHERE username = $1',
+        [username],
+      );
+      if (target.rowCount === 0) {
+        return reply.code(404).send({ error: 'user not found' });
+      }
+      const targetId: string = target.rows[0].user_id;
+      const already = await pool.query(
+        'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+        [chatId, targetId],
+      );
+      if (already.rowCount! > 0) {
+        return reply.code(409).send({ error: 'already a member' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Состав ДО вставки — им шлём member_added, новому — chat.created.
+        const existingIds = await getMemberIds(client, chatId);
+        await client.query(
+          'INSERT INTO chat_members(chat_id, user_id) VALUES ($1, $2)',
+          [chatId, targetId],
+        );
+        await emitEvent(
+          client,
+          targetId,
+          'chat.created',
+          { chatId },
+          chatId,
+        );
+        for (const id of existingIds) {
+          await emitEvent(
+            client,
+            id,
+            'chat.member_added',
+            { chatId, userId: targetId },
+            chatId,
+          );
+        }
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+      return reply.code(201).send({ chatId, userId: targetId });
     },
   );
 

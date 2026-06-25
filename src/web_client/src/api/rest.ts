@@ -100,6 +100,14 @@ export function getMembers(chatId: string): Promise<ChatMembers> {
   return rest.get<ChatMembers>(`/chats/${chatId}/members`);
 }
 
+// Добавление участника в группу по username (право — у создателя чата).
+export function addMember(
+  chatId: string,
+  username: string,
+): Promise<{ chatId: string; userId: string }> {
+  return rest.post(`/chats/${chatId}/members`, { username });
+}
+
 // Удаление участника из группы (право — у создателя чата).
 export function removeMember(
   chatId: string,

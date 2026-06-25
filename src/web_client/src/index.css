@@ -1046,6 +1046,37 @@ body {
   margin: 8px 0;
 }
 
+.members-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.members-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.members-add-btn {
+  flex: none;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent, #3390ec);
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.members-add-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .members-error {
   color: #e0533d;
   font-size: 13px;

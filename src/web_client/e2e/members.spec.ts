@@ -62,6 +62,60 @@ test('заголовок группы: число участников и онл
   );
 });
 
+// Добавление участника создателем (как в Telegram). A создаёт группу с B,
+// затем добавляет живого клиента C — у C группа появляется в списке, у A растёт
+// счётчик участников. Не-создатель C формы добавления не видит.
+test('окно участников: добавление участника создателем', async ({ browser }) => {
+  const ctxA = await browser.newContext();
+  const ctxC = await browser.newContext();
+  const pageA = await ctxA.newPage();
+  const pageC = await ctxC.newPage();
+
+  await registerViaUi(pageA); // создатель
+  const b = await registerViaApi();
+  const c = await registerViaUi(pageC); // живой клиент, добавим его позже
+
+  // A создаёт группу пока только с B
+  await createGroupViaUi(pageA, 'Экипаж', [b.username]);
+  await pageA.getByTestId('chat-item').first().click();
+  await expect(pageA.getByTestId('conversation-open')).toBeVisible();
+  await expect(pageA.getByTestId('conv-subtitle')).toContainText('2 участника');
+
+  // C пока не видит этой группы
+  await expect(
+    pageC.getByTestId('chat-item').filter({ hasText: 'Экипаж' }),
+  ).toHaveCount(0);
+
+  // A открывает окно участников и добавляет C по username
+  await pageA.getByTestId('conv-header-info').click();
+  await expect(pageA.getByTestId('members-dialog')).toBeVisible();
+  await expect(pageA.getByTestId('member-row')).toHaveCount(2);
+  await pageA.getByTestId('member-add-input').fill(c.username);
+  await pageA.getByTestId('member-add-submit').click();
+
+  // Список вырос до трёх, среди них C
+  await expect(pageA.getByTestId('member-row')).toHaveCount(3);
+  await expect(pageA.getByTestId('members-list')).toContainText(c.username);
+  await pageA.getByTestId('members-close').click();
+
+  // Заголовок A обновился до 3 участников
+  await expect(pageA.getByTestId('conv-subtitle')).toContainText('3 участника');
+
+  // У C группа появилась в списке вживую, он может её открыть
+  const cItem = pageC.getByTestId('chat-item').filter({ hasText: 'Экипаж' });
+  await expect(cItem).toHaveCount(1);
+  await cItem.click();
+  await expect(pageC.getByTestId('conversation-open')).toBeVisible();
+
+  // C — не создатель: формы добавления в окне участников нет
+  await pageC.getByTestId('conv-header-info').click();
+  await expect(pageC.getByTestId('members-dialog')).toBeVisible();
+  await expect(pageC.getByTestId('member-add-input')).toHaveCount(0);
+
+  await ctxA.close();
+  await ctxC.close();
+});
+
 // Отдельный сценарий окна: открыть диалог участников и проверить его содержимое,
 // затем — удаление участника создателем.
 test('окно участников: открытие, список и удаление создателем', async ({

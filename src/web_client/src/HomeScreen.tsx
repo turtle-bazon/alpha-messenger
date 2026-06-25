@@ -176,6 +176,25 @@ export function HomeScreen({
       });
     });
 
+    // Участника добавили в чат (приходит уже состоящим участникам) — обновляем
+    // объект чата из REST, чтобы в заголовке поехал счётчик участников. Новый
+    // со-участник может быть онлайн — пересеиваем снимок присутствия.
+    const offAdded = ws.on('chat.member_added', (ev: ServerEvent) => {
+      const p = ev.payload as { chatId: string; userId: string };
+      const chatId = p.chatId ?? ev.chatId;
+      if (!chatId) return;
+      void getChat(chatId)
+        .then((chat) =>
+          setChats((prev) =>
+            prev.map((c) => (c.chatId === chat.chatId ? chat : c)),
+          ),
+        )
+        .catch(() => undefined);
+      void getPresence()
+        .then((pr) => alive && setOnlineUsers(new Set(pr.online)))
+        .catch(() => undefined);
+    });
+
     // Участника удалили из чата. Если удалили меня — убираем чат из списка и
     // снимаем выбор. Иначе — обновляем участников чата из REST.
     const offRemoved = ws.on('chat.member_removed', (ev: ServerEvent) => {
@@ -205,6 +224,7 @@ export function HomeScreen({
       offReadMarker();
       offSynced();
       offPresence();
+      offAdded();
       offRemoved();
       ws.close();
     };

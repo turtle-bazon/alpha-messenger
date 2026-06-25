@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ApiError, getMembers, removeMember } from '../api/rest';
+import { addMember, ApiError, getMembers, removeMember } from '../api/rest';
 import type { Chat, ChatMember } from '../api/types';
 import { colorFor, initialFor } from './avatar';
 
@@ -23,6 +23,8 @@ export function MembersDialog({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
+  const [addName, setAddName] = useState('');
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -72,6 +74,33 @@ export function MembersDialog({
         next.delete(userId);
         return next;
       });
+    }
+  }
+
+  async function onAdd(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    const username = addName.trim();
+    if (!username || adding) return;
+    setError(null);
+    setAdding(true);
+    try {
+      await addMember(chat.chatId, username);
+      // Перечитываем состав — придёт корректный userId и онлайн нового участника.
+      const res = await getMembers(chat.chatId);
+      setMembers(res.members);
+      setAddName('');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setError('Пользователь не найден');
+      } else if (err instanceof ApiError && err.status === 409) {
+        setError('Уже участник');
+      } else if (err instanceof ApiError && err.status === 403) {
+        setError('Недостаточно прав');
+      } else {
+        setError('Не удалось добавить');
+      }
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -156,6 +185,27 @@ export function MembersDialog({
               );
             })}
           </ul>
+        )}
+
+        {chat.type === 'group' && amOwner && (
+          <form className="members-add" onSubmit={onAdd}>
+            <input
+              className="members-add-input"
+              data-testid="member-add-input"
+              placeholder="Добавить по username"
+              value={addName}
+              onChange={(e) => setAddName(e.target.value)}
+              disabled={adding}
+            />
+            <button
+              type="submit"
+              className="members-add-btn"
+              data-testid="member-add-submit"
+              disabled={adding || addName.trim() === ''}
+            >
+              Добавить
+            </button>
+          </form>
         )}
 
         {error && (

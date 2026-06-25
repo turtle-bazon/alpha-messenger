@@ -126,6 +126,97 @@ test('members list, creator, removal permissions', async () => {
   assert.equal(res.statusCode, 400);
 });
 
+test('add member permissions and effects', async () => {
+  const a = await registerUser(app); // создатель
+  const b = await registerUser(app);
+  const c = await registerUser(app); // добавляем позже
+  const d = await registerUser(app); // посторонний
+
+  // A создаёт группу только с B
+  let res = await app.inject({
+    method: 'POST',
+    url: '/api/chats',
+    headers: auth(a.token),
+    payload: { type: 'group', title: 'G2', members: [b.username] },
+  });
+  assert.equal(res.statusCode, 201);
+  const chatId = res.json().chatId;
+
+  // не создатель B пытается добавить C — 403
+  res = await app.inject({
+    method: 'POST',
+    url: `/api/chats/${chatId}/members`,
+    headers: auth(b.token),
+    payload: { username: c.username },
+  });
+  assert.equal(res.statusCode, 403);
+
+  // A добавляет несуществующего — 404
+  res = await app.inject({
+    method: 'POST',
+    url: `/api/chats/${chatId}/members`,
+    headers: auth(a.token),
+    payload: { username: 'no_such_user_xyz' },
+  });
+  assert.equal(res.statusCode, 404);
+
+  // A добавляет C — 201
+  res = await app.inject({
+    method: 'POST',
+    url: `/api/chats/${chatId}/members`,
+    headers: auth(a.token),
+    payload: { username: c.username },
+  });
+  assert.equal(res.statusCode, 201);
+  assert.equal(res.json().userId, c.userId);
+
+  // теперь участников 3 и C среди них
+  res = await app.inject({
+    method: 'GET',
+    url: `/api/chats/${chatId}/members`,
+    headers: auth(a.token),
+  });
+  assert.equal(res.json().members.length, 3);
+  assert.ok(
+    res.json().members.some((m: { userId: string }) => m.userId === c.userId),
+  );
+
+  // у C группа появилась в списке чатов
+  res = await app.inject({
+    method: 'GET',
+    url: '/api/chats',
+    headers: auth(c.token),
+  });
+  assert.ok(
+    res.json().chats.some((ch: { chatId: string }) => ch.chatId === chatId),
+  );
+
+  // повторное добавление C — 409 (уже участник)
+  res = await app.inject({
+    method: 'POST',
+    url: `/api/chats/${chatId}/members`,
+    headers: auth(a.token),
+    payload: { username: c.username },
+  });
+  assert.equal(res.statusCode, 409);
+
+  // добавление в direct-чат — 400 (не группа)
+  res = await app.inject({
+    method: 'POST',
+    url: '/api/chats',
+    headers: auth(a.token),
+    payload: { type: 'direct', username: d.username },
+  });
+  const directId = res.json().chatId;
+  res = await app.inject({
+    method: 'POST',
+    url: `/api/chats/${directId}/members`,
+    headers: auth(a.token),
+    payload: { username: b.username },
+  });
+  assert.equal(res.statusCode, 400);
+});
+
 test('presence endpoint returns array', async () => {
   const a = await registerUser(app);
   const res = await app.inject({
