@@ -28,10 +28,16 @@ export class WsClient {
   connect(): void {
     this.closedByUser = false;
     this.live = false;
+    // Отвязываем предыдущий сокет: его «поздние» сообщения (буферизованный
+    // реплей, 'synced') не должны портить общее состояние live/lastSeq нового
+    // соединения — иначе реплей нового сокета принимается за live (двойной счёт
+    // непрочитанного). Актуально при reconnect и StrictMode-двойном эффекте.
+    this.detach(this.ws);
     const ws = new WebSocket(wsUrl());
     this.ws = ws;
 
     ws.onopen = () => {
+      if (this.ws !== ws) return;
       this.backoff = 1000;
       // hello с последним известным seq — сервер реплеит всё, что пропустили.
       ws.send(
@@ -44,6 +50,7 @@ export class WsClient {
     };
 
     ws.onmessage = (e) => {
+      if (this.ws !== ws) return; // игнорируем вытесненный сокет
       let ev: ServerEvent;
       try {
         ev = JSON.parse(typeof e.data === 'string' ? e.data : '');
@@ -54,9 +61,24 @@ export class WsClient {
     };
 
     ws.onclose = () => {
+      if (this.ws !== ws) return;
       if (!this.closedByUser) this.scheduleReconnect();
     };
-    ws.onerror = () => ws.close();
+    ws.onerror = () => {
+      if (this.ws === ws) ws.close();
+    };
+  }
+
+  // Снимает обработчики и закрывает сокет, чтобы его дальнейшие события не влияли
+  // на общее состояние клиента.
+  private detach(ws: WebSocket | null): void {
+    if (!ws) return;
+    ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+    try {
+      ws.close();
+    } catch {
+      /* уже закрыт */
+    }
   }
 
   private dispatch(ev: ServerEvent): void {

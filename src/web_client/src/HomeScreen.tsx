@@ -78,6 +78,11 @@ export function HomeScreen({
       };
       const chatId = ev.chatId;
       if (!chatId) return;
+      // Живость фиксируем в МОМЕНТ приёма события, а не внутри отложенного
+      // setChats-апдейтера: к моменту его выполнения мог прийти 'synced' и
+      // ws.isLive() стало бы true — тогда реплей считался бы за live и накручивал
+      // непрочитанное (двойной счёт на холодном старте/переподключении).
+      const live = ws.isLive();
       setChats((prev) => {
         const idx = prev.findIndex((c) => c.chatId === chatId);
         if (idx < 0) {
@@ -94,7 +99,7 @@ export function HomeScreen({
         // Во время реплея истории счётчик непрочитанного авторитетен из
         // GET /chats — не накручиваем его повторно, обновляем лишь превью/порядок.
         const keepUnread =
-          chatId === selectedRef.current || p.senderId === myId || !ws.isLive();
+          chatId === selectedRef.current || p.senderId === myId || !live;
         const updated: Chat = {
           ...chat,
           lastMessage: {
