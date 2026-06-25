@@ -52,6 +52,11 @@ jobs:
       with:
         context: src/web_client
         push: ${{ github.event_name != 'pull_request' }}
+        # Пустой VITE_API_URL → относительные URL: клиент шлёт запросы на тот же
+        # origin, что и страница, а Apache разводит /api и /ws. Образ не привязан
+        # к домену и переносим на любой хост за обратным прокси.
+        build-args: |
+          VITE_API_URL=
         tags: |
           ${{ env.CLIENT_IMAGE }}:latest
           ${{ env.CLIENT_IMAGE }}:${{ github.sha }}

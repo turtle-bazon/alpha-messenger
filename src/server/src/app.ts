@@ -17,13 +17,21 @@ export function buildApp(): FastifyInstance {
   // bearer-токене (не куки), поэтому отражаем любой origin без credentials.
   app.register(cors, { origin: true });
 
-  app.register(healthRoutes);
-  app.register(authRoutes);
-  app.register(deviceRoutes);
-  app.register(meRoutes);
-  app.register(chatRoutes);
-  app.register(messageRoutes);
-  app.register(pushRoutes);
+  // Все REST-эндпоинты — под общим префиксом /api/ (упрощает обратный прокси:
+  // одно правило ProxyPass /api/ вместо правила на каждую группу).
+  app.register(
+    async (api) => {
+      api.register(healthRoutes);
+      api.register(authRoutes);
+      api.register(deviceRoutes);
+      api.register(meRoutes);
+      api.register(chatRoutes);
+      api.register(messageRoutes);
+      api.register(pushRoutes);
+    },
+    { prefix: '/api' },
+  );
+  // WebSocket остаётся в корне (/ws) — у прокси для него своё правило (upgrade).
   app.register(wsRoutes);
 
   return app;

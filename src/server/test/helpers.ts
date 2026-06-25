@@ -23,7 +23,7 @@ export async function registerUser(app: FastifyInstance): Promise<TestUser> {
   const invite = await makeInvite();
   const res = await app.inject({
     method: 'POST',
-    url: '/auth/register',
+    url: '/api/auth/register',
     payload: { username, password, invite, deviceId },
   });
   const body = res.json();

@@ -68,7 +68,7 @@ test('ws: hello replay, live message.new, transient typing', async () => {
   const b = await registerUser(app);
   const res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'direct', username: b.username },
   });
@@ -91,7 +91,7 @@ test('ws: hello replay, live message.new, transient typing', async () => {
   );
   await app.inject({
     method: 'POST',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(b.token),
     payload: {
       clientMessageId: randomUUID(),

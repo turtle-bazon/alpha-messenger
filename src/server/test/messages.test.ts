@@ -24,7 +24,7 @@ const fromB64 = (s: string): string => Buffer.from(s, 'base64').toString('utf8')
 async function createDirect(token: string, username: string): Promise<string> {
   const res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(token),
     payload: { type: 'direct', username },
   });
@@ -41,7 +41,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   const cmid = randomUUID();
   let res = await app.inject({
     method: 'POST',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(a.token),
     payload: { clientMessageId: cmid, ciphertext: b64('hello') },
   });
@@ -52,7 +52,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   // идемпотентность: тот же clientMessageId -> 200, тот же messageId
   res = await app.inject({
     method: 'POST',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(a.token),
     payload: { clientMessageId: cmid, ciphertext: b64('hello') },
   });
@@ -62,14 +62,14 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   // не-участник C не может писать/читать -> 404
   res = await app.inject({
     method: 'POST',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(c.token),
     payload: { clientMessageId: randomUUID(), ciphertext: b64('x') },
   });
   assert.equal(res.statusCode, 404);
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(c.token),
   });
   assert.equal(res.statusCode, 404);
@@ -77,7 +77,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   // B читает историю -> 1 сообщение, расшифровывается
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(b.token),
   });
   assert.equal(res.statusCode, 200);
@@ -86,7 +86,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   assert.equal(fromB64(list.messages[0].ciphertext), 'hello');
 
   // у B unreadCount = 1, lastMessage не null
-  res = await app.inject({ method: 'GET', url: '/chats', headers: auth(b.token) });
+  res = await app.inject({ method: 'GET', url: '/api/chats', headers: auth(b.token) });
   let chat = res.json().chats.find((ch: { chatId: string }) => ch.chatId === chatId);
   assert.equal(chat.unreadCount, 1);
   assert.ok(chat.lastMessage);
@@ -94,19 +94,19 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   // B отмечает прочтение -> unreadCount 0
   res = await app.inject({
     method: 'POST',
-    url: `/chats/${chatId}/read`,
+    url: `/api/chats/${chatId}/read`,
     headers: auth(b.token),
     payload: { upToMessageId: messageId },
   });
   assert.equal(res.statusCode, 200);
-  res = await app.inject({ method: 'GET', url: '/chats', headers: auth(b.token) });
+  res = await app.inject({ method: 'GET', url: '/api/chats', headers: auth(b.token) });
   chat = res.json().chats.find((ch: { chatId: string }) => ch.chatId === chatId);
   assert.equal(chat.unreadCount, 0);
 
   // A редактирует своё сообщение
   res = await app.inject({
     method: 'PATCH',
-    url: `/messages/${messageId}`,
+    url: `/api/messages/${messageId}`,
     headers: auth(a.token),
     payload: { ciphertext: b64('hi') },
   });
@@ -115,7 +115,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
 
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(b.token),
   });
   const edited = res.json().messages[0];
@@ -125,7 +125,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   // B не может редактировать чужое -> 403
   res = await app.inject({
     method: 'PATCH',
-    url: `/messages/${messageId}`,
+    url: `/api/messages/${messageId}`,
     headers: auth(b.token),
     payload: { ciphertext: b64('nope') },
   });
@@ -135,14 +135,14 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   for (const text of ['m2', 'm3']) {
     await app.inject({
       method: 'POST',
-      url: `/chats/${chatId}/messages`,
+      url: `/api/chats/${chatId}/messages`,
       headers: auth(a.token),
       payload: { clientMessageId: randomUUID(), ciphertext: b64(text) },
     });
   }
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${chatId}/messages?limit=2`,
+    url: `/api/chats/${chatId}/messages?limit=2`,
     headers: auth(b.token),
   });
   let page = res.json();
@@ -152,7 +152,7 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
 
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${chatId}/messages?limit=2&before=${page.nextBefore}`,
+    url: `/api/chats/${chatId}/messages?limit=2&before=${page.nextBefore}`,
     headers: auth(b.token),
   });
   page = res.json();
@@ -162,14 +162,14 @@ test('send (idempotent), list+paginate, unread/read, edit, delete, access', asyn
   // A удаляет своё сообщение
   res = await app.inject({
     method: 'DELETE',
-    url: `/messages/${messageId}`,
+    url: `/api/messages/${messageId}`,
     headers: auth(a.token),
   });
   assert.equal(res.statusCode, 200);
 
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${chatId}/messages`,
+    url: `/api/chats/${chatId}/messages`,
     headers: auth(b.token),
   });
   const delMsg = res

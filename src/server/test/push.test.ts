@@ -24,7 +24,7 @@ test('push: subscribe is idempotent by (device, endpoint)', async () => {
 
   const first = await app.inject({
     method: 'POST',
-    url: '/push/subscriptions',
+    url: '/api/push/subscriptions',
     headers: auth(u.token),
     payload: { deviceId: u.deviceId, provider: 'fcm', endpoint },
   });
@@ -35,7 +35,7 @@ test('push: subscribe is idempotent by (device, endpoint)', async () => {
   // повтор того же токена — та же подписка, не дубликат
   const again = await app.inject({
     method: 'POST',
-    url: '/push/subscriptions',
+    url: '/api/push/subscriptions',
     headers: auth(u.token),
     payload: { deviceId: u.deviceId, provider: 'fcm', endpoint },
   });
@@ -49,7 +49,7 @@ test('push: rejects unknown provider and foreign device', async () => {
 
   const badProvider = await app.inject({
     method: 'POST',
-    url: '/push/subscriptions',
+    url: '/api/push/subscriptions',
     headers: auth(u.token),
     payload: { deviceId: u.deviceId, provider: 'apns', endpoint: 'x' },
   });
@@ -58,7 +58,7 @@ test('push: rejects unknown provider and foreign device', async () => {
   // нельзя подписать чужое устройство
   const foreign = await app.inject({
     method: 'POST',
-    url: '/push/subscriptions',
+    url: '/api/push/subscriptions',
     headers: auth(u.token),
     payload: {
       deviceId: other.deviceId,
@@ -74,7 +74,7 @@ test('push: delete is scoped to owner and idempotent', async () => {
   const endpoint = `https://up.example/${u.userId}`;
   const sub = await app.inject({
     method: 'POST',
-    url: '/push/subscriptions',
+    url: '/api/push/subscriptions',
     headers: auth(u.token),
     payload: { deviceId: u.deviceId, provider: 'unifiedpush', endpoint },
   });
@@ -82,7 +82,7 @@ test('push: delete is scoped to owner and idempotent', async () => {
 
   const del = await app.inject({
     method: 'DELETE',
-    url: `/push/subscriptions/${subId}`,
+    url: `/api/push/subscriptions/${subId}`,
     headers: auth(u.token),
   });
   assert.equal(del.statusCode, 200);
@@ -91,7 +91,7 @@ test('push: delete is scoped to owner and idempotent', async () => {
   // повторное удаление — всё равно ok
   const delAgain = await app.inject({
     method: 'DELETE',
-    url: `/push/subscriptions/${subId}`,
+    url: `/api/push/subscriptions/${subId}`,
     headers: auth(u.token),
   });
   assert.equal(delAgain.statusCode, 200);
@@ -103,7 +103,7 @@ test('push: wake-up stub finds the recipient channels', async () => {
 
   await app.inject({
     method: 'POST',
-    url: '/push/subscriptions',
+    url: '/api/push/subscriptions',
     headers: auth(u.token),
     payload: {
       deviceId: u.deviceId,

@@ -31,7 +31,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   // регистрация с плохим инвайтом -> 400
   let res = await app.inject({
     method: 'POST',
-    url: '/auth/register',
+    url: '/api/auth/register',
     payload: { username, password, invite: 'nope', deviceId },
   });
   assert.equal(res.statusCode, 400);
@@ -40,7 +40,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   const code = await makeInvite();
   res = await app.inject({
     method: 'POST',
-    url: '/auth/register',
+    url: '/api/auth/register',
     payload: { username, password, invite: code, deviceId },
   });
   assert.equal(res.statusCode, 201);
@@ -51,7 +51,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   // инвайт одноразовый -> повторное использование 400
   res = await app.inject({
     method: 'POST',
-    url: '/auth/register',
+    url: '/api/auth/register',
     payload: {
       username: `${username}x`,
       password,
@@ -65,7 +65,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   const code2 = await makeInvite();
   res = await app.inject({
     method: 'POST',
-    url: '/auth/register',
+    url: '/api/auth/register',
     payload: { username, password, invite: code2, deviceId: randomUUID() },
   });
   assert.equal(res.statusCode, 409);
@@ -73,7 +73,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   // логин с неверным паролем -> 401
   res = await app.inject({
     method: 'POST',
-    url: '/auth/login',
+    url: '/api/auth/login',
     payload: { username, password: 'wrong', deviceId },
   });
   assert.equal(res.statusCode, 401);
@@ -81,7 +81,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   // логин корректный -> 200
   res = await app.inject({
     method: 'POST',
-    url: '/auth/login',
+    url: '/api/auth/login',
     payload: { username, password, deviceId },
   });
   assert.equal(res.statusCode, 200);
@@ -89,13 +89,13 @@ test('register (invite-only), login, /me, /devices', async () => {
   assert.ok(token);
 
   // /me без токена -> 401
-  res = await app.inject({ method: 'GET', url: '/me' });
+  res = await app.inject({ method: 'GET', url: '/api/me' });
   assert.equal(res.statusCode, 401);
 
   // /me с токеном -> 200, username и устройство на месте
   res = await app.inject({
     method: 'GET',
-    url: '/me',
+    url: '/api/me',
     headers: { authorization: `Bearer ${token}` },
   });
   assert.equal(res.statusCode, 200);
@@ -106,7 +106,7 @@ test('register (invite-only), login, /me, /devices', async () => {
   // POST /devices с токеном -> 200
   res = await app.inject({
     method: 'POST',
-    url: '/devices',
+    url: '/api/devices',
     headers: { authorization: `Bearer ${token}` },
     payload: { deviceId: randomUUID(), devicePublicKey: 'pk' },
   });

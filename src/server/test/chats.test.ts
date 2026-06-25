@@ -26,7 +26,7 @@ test('direct create + dedup, group, access control', async () => {
   // A создаёт direct с B -> 201
   let res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'direct', username: b.username },
   });
@@ -44,7 +44,7 @@ test('direct create + dedup, group, access control', async () => {
   // повторно от A -> дедуп 200, тот же chatId
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'direct', username: b.username },
   });
@@ -54,7 +54,7 @@ test('direct create + dedup, group, access control', async () => {
   // от B к A -> тот же chatId (симметрично)
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(b.token),
     payload: { type: 'direct', username: a.username },
   });
@@ -64,7 +64,7 @@ test('direct create + dedup, group, access control', async () => {
   // direct с самим собой -> 400
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'direct', username: a.username },
   });
@@ -73,14 +73,14 @@ test('direct create + dedup, group, access control', async () => {
   // неизвестный username -> 404
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'direct', username: `nobody_${randomUUID()}` },
   });
   assert.equal(res.statusCode, 404);
 
   // GET /chats у A содержит чат
-  res = await app.inject({ method: 'GET', url: '/chats', headers: auth(a.token) });
+  res = await app.inject({ method: 'GET', url: '/api/chats', headers: auth(a.token) });
   assert.equal(res.statusCode, 200);
   assert.ok(
     res.json().chats.some((ch: { chatId: string }) => ch.chatId === directId),
@@ -89,13 +89,13 @@ test('direct create + dedup, group, access control', async () => {
   // GET /chats/:id — A участник (200), C не участник (404)
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${directId}`,
+    url: `/api/chats/${directId}`,
     headers: auth(a.token),
   });
   assert.equal(res.statusCode, 200);
   res = await app.inject({
     method: 'GET',
-    url: `/chats/${directId}`,
+    url: `/api/chats/${directId}`,
     headers: auth(c.token),
   });
   assert.equal(res.statusCode, 404);
@@ -103,7 +103,7 @@ test('direct create + dedup, group, access control', async () => {
   // группа с B и C -> 201, 3 участника
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'group', title: 'G', members: [b.username, c.username] },
   });
@@ -116,7 +116,7 @@ test('direct create + dedup, group, access control', async () => {
   // группа с неизвестным участником -> 400
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'group', title: 'X', members: [`ghost_${randomUUID()}`] },
   });
@@ -125,7 +125,7 @@ test('direct create + dedup, group, access control', async () => {
   // неизвестный type -> 400
   res = await app.inject({
     method: 'POST',
-    url: '/chats',
+    url: '/api/chats',
     headers: auth(a.token),
     payload: { type: 'weird' },
   });

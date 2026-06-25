@@ -30,10 +30,25 @@ run - директория, содержащая запускаемый docker-c
 src - директория с иходниками. Весь код - на typescript, с незначительными включениями платформенного кода при необходимости. Исходники делятся по артифактам
 
 * server - код сервера, на typescript
-* client - весь основной код клиента, на typescript. все другие клиенты используют этот код, так как на всех платформах будет работать данный веб-клиент в соответствующих обертках
-* desktop_client - обертка client на electron для десктопов
-* android_client - обертка client для android
+* web_client - весь основной код клиента, на typescript. все другие клиенты используют этот код, так как на всех платформах будет работать данный веб-клиент в соответствующих обертках
+* desktop_client - обертка web_client на electron для десктопов
+* android_client - обертка web_client для android
 
+
+## Команды и запуск
+Краткая шпаргалка по операциям (детали и обоснования — в README и run/*).
+
+* Сборка/typecheck сервера: `cd src/server && npm run build` (tsc).
+* Сборка/typecheck клиента: `cd src/web_client && npm run build` (`tsc --noEmit && vite build`).
+* Серверные тесты: `cd src/server && npm test`. Нужен Postgres на localhost:5432 (поднимается стеком run/dev); миграции тесты применяют сами. По умолчанию `DATABASE_URL=postgres://alpha:alpha@localhost:5432/alpha`.
+* E2e клиента: `cd src/web_client && npx playwright test` (он же `npm run test:e2e`). Требует запущенный сервер на :3000 и БД на :5432 (стек run/dev); сам Playwright поднимает vite dev на :5173. Сидинг инвайтов идёт напрямую в БД.
+
+Окружения в run/ (в каждом есть invite.sh для генерации инвайт-кода):
+* dev — БД и сервер в Docker (порты 5432 и 3000 на хост), клиент отдельно через `npm run dev`. Поднять для тестов: `cd run/dev && docker compose up -d --build`.
+* prod — всё в Docker: БД, сервер (:3000), клиент статикой через nginx (:5173). `cd run/prod && docker compose up -d --build`. Локальная сборка вшивает в клиент API-адрес localhost:3000.
+* deploy — тянет готовые образы из ghcr.io, работает за Apache-прокси (apache-proxy.conf). Образы публикует CI (.github/workflows/docker-image.yml) при push в main; клиентский образ собирается с пустым VITE_API_URL (относительные URL).
+
+Эндпоинты: REST — под префиксом /api/, поток событий — WebSocket /ws (контракт в doc/api.md).
 
 ## Тестирование
 * server - только минимальные, проверить каждый endpoint минимальными необходимыми тестами

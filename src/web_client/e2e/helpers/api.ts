@@ -18,7 +18,7 @@ export async function registerViaApi(): Promise<ApiUser> {
   const username = `u_${randomUUID().slice(0, 8)}`;
   const password = 'pw-secret-123';
   const deviceId = randomUUID();
-  const res = await fetch(`${API}/auth/register`, {
+  const res = await fetch(`${API}/api/auth/register`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password, invite, deviceId }),
