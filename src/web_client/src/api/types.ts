@@ -51,6 +51,9 @@ export interface Chat {
   participants: Participant[];
   lastMessage: MessagePreview | null;
   unreadCount: number;
+  // До какого message_id нас прочитали другие участники — сид статуса ✓✓
+  // при открытии чата (дальше актуализируется live-событиями message.read).
+  peerReadUpTo: string;
   updatedAt: string;
 }
 

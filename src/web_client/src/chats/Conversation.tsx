@@ -121,12 +121,17 @@ export function Conversation({
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSent = useRef(0);
   const lastReadSent = useRef(0);
+  // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
+  const chatRef = useRef(chat);
+  chatRef.current = chat;
 
   // Загрузка истории при открытии чата + подписка на живые события чата.
   useEffect(() => {
     let alive = true;
     setMessages([]);
-    setReadUpTo(0);
+    // Сид статуса прочтения из серверного состояния (а не только из live-событий):
+    // иначе при повторном открытии чата ✓✓ деградирует в ✓.
+    setReadUpTo(Number(chatRef.current.peerReadUpTo) || 0);
     setEditing(null);
     setInput('');
     setPendingImage(null);

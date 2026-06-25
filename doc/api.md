@@ -55,6 +55,7 @@
     "ts": "2026-06-24T20:00:00Z"
   },
   "unreadCount": 3,
+  "peerReadUpTo": "0",       // max last_read_message_id среди ДРУГИХ участников; сид статуса ✓✓
   "updatedAt": "2026-06-24T20:00:00Z"
 }
 ```

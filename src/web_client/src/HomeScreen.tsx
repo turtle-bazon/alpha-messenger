@@ -132,6 +132,26 @@ export function HomeScreen({
       );
     });
 
+    // Собеседник прочитал — двигаем peerReadUpTo в объекте чата вперёд, даже если
+    // чат сейчас закрыт. Тогда при открытии Conversation сидит верный статус ✓✓.
+    const offReadMarker = ws.on('message.read', (ev: ServerEvent) => {
+      const p = ev.payload as { userId: string; upToMessageId: string };
+      const chatId = ev.chatId;
+      if (!chatId || p.userId === myId) return;
+      setChats((prev) =>
+        prev.map((c) =>
+          c.chatId === chatId
+            ? {
+                ...c,
+                peerReadUpTo: String(
+                  Math.max(Number(c.peerReadUpTo), Number(p.upToMessageId)),
+                ),
+              }
+            : c,
+        ),
+      );
+    });
+
     // После окончания реплея (synced) берём снимок онлайна; покрывает и
     // переподключения — на каждом synced пересеиваем множество.
     const offSynced = ws.on('synced', () => {
@@ -177,6 +197,7 @@ export function HomeScreen({
       offNew();
       offEdited();
       offDeleted();
+      offReadMarker();
       offSynced();
       offPresence();
       offRemoved();

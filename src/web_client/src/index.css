@@ -312,6 +312,9 @@ body {
   line-height: 1;
   color: var(--text-muted);
   user-select: none;
+  /* мета-строка (время/статус) — всегда в одну строку: иначе overflow-wrap:
+     anywhere у пузыря ломает время посимвольно («20:1 / 3»). */
+  white-space: nowrap;
 }
 
 .bubble-own .bubble-meta {

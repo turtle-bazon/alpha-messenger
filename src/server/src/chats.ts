@@ -15,6 +15,9 @@ export interface ChatView {
     ts: string;
   } | null;
   unreadCount: number;
+  // Максимальный маркер прочтения среди ДРУГИХ участников — до какого message_id
+  // нас «прочитали». Нужен для устойчивого статуса ✓✓ (не только из live-событий).
+  peerReadUpTo: string;
   updatedAt: string;
 }
 
@@ -60,6 +63,14 @@ export async function loadChat(
     [chatId, userId, lastReadId],
   );
 
+  // До какого message_id нас прочитали другие участники (берём максимум —
+  // для direct это собеседник, для группы достаточно одного прочитавшего).
+  const peerRead = await db.query(
+    `SELECT COALESCE(MAX(last_read_message_id), 0)::text AS m
+       FROM chat_members WHERE chat_id = $1 AND user_id <> $2`,
+    [chatId, userId],
+  );
+
   const lm = lastMsg.rows[0];
   return {
     chatId: row.chat_id,
@@ -79,6 +90,7 @@ export async function loadChat(
         }
       : null,
     unreadCount: unread.rows[0].c,
+    peerReadUpTo: peerRead.rows[0].m,
     updatedAt: row.updated_at.toISOString(),
   };
 }
