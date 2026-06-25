@@ -116,6 +116,10 @@ export function Conversation({
   const [hasMore, setHasMore] = useState(false);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Защита от повторного входа в ленивую подгрузку — именно ref, а не state:
+  // несколько scroll-событий в одном тике читают одно (старое) значение state и
+  // проскакивают мимо guard'а, загружая одну и ту же страницу дважды → дубли.
+  const loadingMoreRef = useRef(false);
   const [readUpTo, setReadUpTo] = useState(0);
   const [typingFrom, setTypingFrom] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -248,7 +252,8 @@ export function Conversation({
     const el = scrollRef.current;
     if (!el) return;
     atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-    if (el.scrollTop < 40 && hasMore && !loadingMore && nextBefore) {
+    if (el.scrollTop < 40 && hasMore && !loadingMoreRef.current && nextBefore) {
+      loadingMoreRef.current = true;
       setLoadingMore(true);
       const prevHeight = el.scrollHeight;
       try {
@@ -257,8 +262,17 @@ export function Conversation({
           limit: PAGE,
         });
         setMessages((prev) => {
+          // Дедуп по messageId: страница не должна задвоить уже показанные
+          // сообщения, даже если диапазоны перекрылись (гонка подгрузок/сидов).
+          const seen = new Set(
+            prev.map((m) => m.messageId).filter((id): id is string => !!id),
+          );
           const merged = prev.slice();
-          for (const m of page.messages) merged.push(fromHistory(m));
+          for (const m of page.messages) {
+            if (seen.has(m.messageId)) continue;
+            seen.add(m.messageId);
+            merged.push(fromHistory(m));
+          }
           merged.sort(order);
           return merged;
         });
@@ -271,6 +285,7 @@ export function Conversation({
           }
         });
       } finally {
+        loadingMoreRef.current = false;
         setLoadingMore(false);
       }
     }

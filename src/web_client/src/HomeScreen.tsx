@@ -329,6 +329,7 @@ export function HomeScreen({
       <main className="conversation">
         {selectedChat ? (
           <Conversation
+            key={selectedChat.chatId}
             chat={selectedChat}
             ws={ws}
             myId={myId}
