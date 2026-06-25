@@ -3,7 +3,7 @@
 # Запуск из этого каталога при поднятом стеке:  ./invite.sh
 # Опции (env):
 #   INVITE_EXPIRES_DAYS  срок жизни в днях (по умолчанию 0 = бессрочно)
-#   CLIENT_URL           база ссылки (по умолчанию http://localhost:5173)
+#   CLIENT_URL           база ссылки (по умолчанию http://localhost:5273)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -19,5 +19,5 @@ fi
 docker compose exec -T db psql -U alpha -d alpha -v ON_ERROR_STOP=1 -qtA -c \
   "INSERT INTO invites(code, expires_at) VALUES ('$code', $expires);" >/dev/null
 
-base="${CLIENT_URL:-http://localhost:5173}"
+base="${CLIENT_URL:-http://localhost:5273}"
 echo "Invite link: ${base}/register?invite=${code}"

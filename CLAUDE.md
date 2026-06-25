@@ -45,10 +45,15 @@ src - директория с иходниками. Весь код - на types
 
 Окружения в run/ (в каждом есть invite.sh для генерации инвайт-кода):
 * dev — БД и сервер в Docker (порты 5432 и 3000 на хост), клиент отдельно через `npm run dev`. Поднять для тестов: `cd run/dev && docker compose up -d --build`.
-* prod — всё в Docker: БД, сервер (:3000), клиент статикой через nginx (:5173). `cd run/prod && docker compose up -d --build`. Локальная сборка вшивает в клиент API-адрес localhost:3000.
+* prod — всё в Docker: БД, сервер (:3100), клиент статикой через nginx (:5273). `cd run/prod && docker compose up -d --build`. Host-порты намеренно смещены (+100), чтобы prod не конфликтовал с dev — оба стека можно держать поднятыми одновременно. Сборка вшивает в клиент API-адрес localhost:3100.
 * deploy — тянет готовые образы из ghcr.io, работает за Apache-прокси (apache-proxy.conf). Образы публикует CI (.github/workflows/docker-image.yml) при push в main; клиентский образ собирается с пустым VITE_API_URL (относительные URL).
 
 Эндпоинты: REST — под префиксом /api/, поток событий — WebSocket /ws (контракт в doc/api.md).
+
+Маршрутизация и деплой:
+* nginx (внутри образа клиента, src/web_client/nginx.conf) — только раздача статики SPA c fallback на index.html (`listen 80`, без проксирования). API он не знает: в dev/prod браузер ходит на сервер напрямую по вшитому абсолютному адресу (cross-origin + CORS).
+* Apache (run/deploy/apache-proxy.conf) — обратный прокси на сервере деплоя: `/ws` → :3000 (websocket-upgrade), `/api/` → :3000, всё остальное → :5173 (nginx клиента). В этом контуре клиент собран с пустым VITE_API_URL, поэтому шлёт относительные URL на тот же origin, а развязку делает Apache (CORS не возникает).
+* Разница между контурами — только в адресе API у клиента: dev/prod вшивают абсолютный localhost-адрес (cross-origin), deploy — относительный (same-origin за Apache). Образ deploy переносим и не привязан к домену.
 
 ## Тестирование
 * server - только минимальные, проверить каждый endpoint минимальными необходимыми тестами

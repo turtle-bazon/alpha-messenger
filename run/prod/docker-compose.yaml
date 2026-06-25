@@ -1,7 +1,9 @@
 # Prod: всё в Docker — БД, сервер и веб-клиент (статика через nginx).
 # Запуск:  cd run/prod && docker compose up -d --build
-# Клиент:  http://localhost:5173   API: http://localhost:3000
+# Клиент:  http://localhost:5273   API: http://localhost:3100
 # Invite:  ./invite.sh
+# Host-порты намеренно смещены (+100), чтобы prod мог работать одновременно с
+# dev-стеком (тот держит канонические 3000/5432/5173 — их ждут config.ts и e2e).
 services:
   db:
     image: postgres:17-alpine
@@ -28,15 +30,19 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "3100:3000"
 
   client:
     build:
       context: ../../src/web_client
+      # Адрес сервера вшивается в бандл при сборке и должен совпадать с host-портом
+      # сервера выше (браузер ходит на него напрямую, cross-origin + CORS).
+      args:
+        VITE_API_URL: http://localhost:3100
     depends_on:
       - server
     ports:
-      - "5173:80"
+      - "5273:80"
 
 volumes:
   alpha-db:
