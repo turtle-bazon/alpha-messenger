@@ -1,3 +1,7 @@
+# Первичный roadmap v1 (ядро мессенджера)
+
+Исходный план разработки v1 — сервер, клиент, чаты, переписка, push. Все пункты выполнены (отмечены СДЕЛАНО); файл сохранён как завершённый план для истории планирования.
+
 1. Зафиксировать в doc ключевые решения: транспорт (WebSocket+REST), общий канал событий, push как отдельный канал, PostgreSQL, отказ от кэша сообщений на клиенте в v1 — СДЕЛАНО (doc/architecture.md, doc/api.md).
 2. Поднять каркас сервера на TypeScript в src/server и собрать docker-compose в run (сервис + PostgreSQL).
 3. Завести схему БД — СДЕЛАНО (migrations/0001_init.sql): accounts, devices, sessions, chats, chat_members, messages (ciphertext bytea + метаданные, message_id как IDENTITY), push_subscriptions, events (outbox со сквозным seq как IDENTITY). messageId и seq — глобальные IDENTITY-последовательности.
