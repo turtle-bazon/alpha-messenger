@@ -39,6 +39,43 @@ export function IconSend({ size = 22 }: IconProps): JSX.Element {
   );
 }
 
+// Галочки прочтения (задача #24). Тонкий контур (как в Telegram Desktop), без
+// заливки. Одиночная — «отправлено»; двойная — «прочитано» (красится синим
+// через класс .is-read у родителя). Свой viewBox/strokeWidth, чтобы на 14–16px
+// линия была ~1.5px и аккуратной.
+function checkProps(size: number) {
+  return {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2.5,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  };
+}
+
+// Одиночная галочка (отправлено).
+export function IconCheck({ size = 15 }: IconProps): JSX.Element {
+  return (
+    <svg {...checkProps(size)}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// Двойная галочка (прочитано). Чуть шире одиночной.
+export function IconChecks({ size = 17 }: IconProps): JSX.Element {
+  return (
+    <svg {...checkProps(size)}>
+      <path d="M18 6 7 17l-5-5" />
+      <path d="m22 10-7.5 7.5L13 16" />
+    </svg>
+  );
+}
+
 // Скрепка (вложение).
 export function IconAttach({ size = 22 }: IconProps): JSX.Element {
   return (

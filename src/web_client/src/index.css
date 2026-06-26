@@ -589,6 +589,36 @@ body {
   border-top: 11px solid transparent;
 }
 
+/* Группа: место слева под аватар автора (задача #21). Личные чаты — без отступа. */
+.bubble--group-in {
+  margin-left: 38px;
+}
+
+/* Аватар автора у последнего пузыря серии (в групповом чате, чужие сообщения). */
+.bubble-avatar {
+  position: absolute;
+  left: -38px;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+/* Имя автора над первым пузырём серии; цвет — по автору (как в Telegram). */
+.bubble-sender {
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
 .bubble-pending {
   opacity: 0.6;
 }
@@ -621,14 +651,65 @@ body {
   color: var(--bubble-meta-out); /* приглушённый таймстамп исходящих */
 }
 
+/* Статус доставки — SVG-галочки (задача #24). Контур красится currentColor:
+   по умолчанию — цвет меты (серый), прочитано — синий. */
 .bubble-status {
-  letter-spacing: -1px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: -1px; /* плотный отступ от времени (2–4px суммарно) */
+}
+
+.bubble-status svg {
+  display: block;
 }
 
 /* Прочитано (✓✓) — синий, как просит дизайн; не прочитано (✓) — цвет меты. */
 .bubble-status.is-read,
 .bubble-own .bubble-status.is-read {
   color: var(--check-read);
+}
+
+/* Ошибка отправки (задача #26) — красный «!». */
+.bubble-status.is-failed {
+  color: #e23b3b;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* Спиннер «идёт отправка» (задача #26). */
+.bubble-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: bubble-spin 0.7s linear infinite;
+}
+
+@keyframes bubble-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Кнопка ручного повтора неотправленного сообщения (задача #26). */
+.bubble-retry {
+  align-self: flex-end;
+  margin-top: 3px;
+  padding: 2px 9px;
+  border: none;
+  border-radius: 10px;
+  background: #e23b3b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.bubble-retry:hover {
+  filter: brightness(1.08);
 }
 
 /* Действия над своим сообщением — всплывают слева при наведении, вне потока. */
@@ -815,7 +896,7 @@ body {
 .conv-input-field {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 4px;
   padding: 0 6px 0 8px;
   background: var(--bg-input);
@@ -829,24 +910,35 @@ body {
   border-color: var(--accent);
 }
 
-.conv-input-field input {
+/* Скрепка прижата к низу поля (важно, когда textarea вырос на много строк). */
+.conv-input-field .conv-attach {
+  margin-bottom: 5px;
+}
+
+/* Поле ввода — textarea с авторасширением (задача #25): растёт по содержимому,
+   до потолка max-height, дальше внутренний скролл. Высоту в px ставит JS. */
+.conv-textarea {
   flex: 1;
   min-width: 0;
-  padding: 10px 6px;
+  padding: 11px 6px;
   border: none;
   background: none;
   outline: none;
+  font-family: inherit;
   font-size: 15px;
+  line-height: 1.35;
   color: var(--text);
+  resize: none;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
-.conv-input-field input::placeholder {
+.conv-textarea::placeholder {
   color: var(--text-muted);
 }
 
-/* Кнопка отправки — круглая, акцентная; появляется только при наличии текста
-   (анимация opacity + scale). Место под неё зарезервировано, чтобы поле ввода
-   не дёргалось по ширине при появлении кнопки. */
+/* Кнопка отправки — круглая, акцентная, ВСЕГДА видна на стабильной позиции
+   (задача #19). При пустом поле — погашена (disabled), без анимации появления. */
 .conv-send {
   flex: none;
   display: inline-flex;
@@ -860,17 +952,12 @@ body {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
-  opacity: 0;
-  transform: scale(0.6);
-  transition: opacity var(--t), transform var(--t), background var(--t-fast);
-}
-
-.conv-send.is-visible {
-  opacity: 1;
-  transform: scale(1);
+  transition: background var(--t-fast), color var(--t-fast);
 }
 
 .conv-send:disabled {
+  background: var(--bg-input);
+  color: var(--text-muted);
   cursor: default;
 }
 

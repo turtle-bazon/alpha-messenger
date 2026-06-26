@@ -27,7 +27,7 @@ test('edit, delete, read и typing между двумя пользовател�
   await expect(pageB.getByTestId('messages')).toContainText('исходное');
 
   // read: B открыл чат и прочитал -> у A статус становится «прочитано» (✓✓)
-  await expect(pageA.getByTestId('msg-status')).toHaveText('✓✓');
+  await expect(pageA.getByTestId('msg-status')).toHaveAttribute('data-status', 'read');
 
   // typing: A набирает -> B видит индикатор
   await pageA.getByTestId('message-input').fill('печатаю...');
@@ -77,7 +77,7 @@ test('статус ✓✓ переживает переоткрытие чата
   // B открывает чат и читает -> у A появляется ✓✓
   await pageB.getByTestId('chat-item').filter({ hasText: a.username }).click();
   await expect(pageB.getByTestId('messages')).toContainText('прочитай меня');
-  await expect(pageA.getByTestId('msg-status')).toHaveText('✓✓');
+  await expect(pageA.getByTestId('msg-status')).toHaveAttribute('data-status', 'read');
 
   // A уходит в другой чат и возвращается — Conversation перемонтируется.
   await pageA.getByTestId('chat-item').filter({ hasText: c.username }).click();
@@ -85,7 +85,7 @@ test('статус ✓✓ переживает переоткрытие чата
   await pageA.getByTestId('chat-item').filter({ hasText: b.username }).click();
 
   // Статус по-прежнему ✓✓ (раньше деградировал в ✓).
-  await expect(pageA.getByTestId('msg-status')).toHaveText('✓✓');
+  await expect(pageA.getByTestId('msg-status')).toHaveAttribute('data-status', 'read');
 
   await ctxA.close();
   await ctxB.close();

@@ -2,6 +2,7 @@ import {
   ChangeEvent,
   Fragment,
   FormEvent,
+  KeyboardEvent,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -22,7 +23,8 @@ import {
   type MessageContent,
 } from '../util/content';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
-import { IconAttach, IconSend } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconSend } from '../util/icons';
+import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
 import { MembersDialog } from './MembersDialog';
@@ -42,6 +44,10 @@ function pluralMembers(n: number): string {
 const PAGE = 50;
 const TYPING_HIDE_MS = 6000;
 const TYPING_SEND_THROTTLE_MS = 2000;
+// Максимальная высота поля ввода (задача #25): дальше — внутренний скролл.
+const MAX_INPUT_H = 160;
+// Период автоповтора неотправленных сообщений по таймеру (задача #26).
+const RETRY_TIMER_MS = 12000;
 
 // Модель сообщения в UI. Пока не подтверждено сервером — messageId == null
 // (pending), сверка оптимистичного сообщения с WS-эхом идёт по clientMessageId.
@@ -130,11 +136,24 @@ export function Conversation({
   // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
   const chatRef = useRef(chat);
   chatRef.current = chat;
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Очередь исходящих (задача #26): отправка строго последовательная, чтобы
+  // более позднее сообщение не обогнало раннее. Голова очереди отправляется
+  // первой; при ошибке остаётся в голове и блокирует следующие до повтора.
+  const sendQueueRef = useRef<{ clientMessageId: string; ciphertext: string }[]>(
+    [],
+  );
+  const pumpingRef = useRef(false);
+  const myIdRef = useRef(myId);
+  myIdRef.current = myId;
 
   // Загрузка истории при открытии чата + подписка на живые события чата.
   useEffect(() => {
     let alive = true;
     setMessages([]);
+    // Очередь отправки относится к конкретному чату — сбрасываем при переключении.
+    sendQueueRef.current = [];
+    pumpingRef.current = false;
     // Сид статуса прочтения из серверного состояния (а не только из live-событий):
     // иначе при повторном открытии чата ✓✓ деградирует в ✓.
     setReadUpTo(Number(chatRef.current.peerReadUpTo) || 0);
@@ -227,6 +246,30 @@ export function Conversation({
     if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  // Авторасширение поля ввода под содержимое (задача #25): сбрасываем высоту и
+  // подгоняем под scrollHeight, но не выше потолка — дальше внутренний скролл.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_H)}px`;
+  }, [input]);
+
+  // Автоповтор неотправленных (задача #26): при восстановлении сети, после
+  // reconnect WS (маркер 'synced') и по таймеру перезапускаем насос очереди.
+  useEffect(() => {
+    const kick = (): void => retrySend();
+    window.addEventListener('online', kick);
+    const offSynced = ws.on('synced', kick);
+    const timer = setInterval(kick, RETRY_TIMER_MS);
+    return () => {
+      window.removeEventListener('online', kick);
+      offSynced();
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws]);
+
   // Отметка прочтения: при появлении новых сообщений в открытом чате двигаем
   // маркер до последнего сообщения вперёд (см. POST /chats/{id}/read).
   useEffect(() => {
@@ -291,9 +334,10 @@ export function Conversation({
     }
   }
 
-  // Общий путь отправки (текст и картинка): оптимистичное сообщение +
-  // подтверждение WS-эхом по clientMessageId.
-  async function sendContent(content: MessageContent): Promise<void> {
+  // Общий путь отправки (текст и картинка): оптимистичное сообщение ставится в
+  // очередь, дальше pump() шлёт строго по порядку. Подтверждение — WS-эхом и
+  // ответом REST по clientMessageId.
+  function sendContent(content: MessageContent): void {
     const clientMessageId = crypto.randomUUID();
     const optimistic: MsgVM = {
       messageId: null,
@@ -308,29 +352,68 @@ export function Conversation({
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
+    sendQueueRef.current.push({
+      clientMessageId,
+      ciphertext: encodeContent(content),
+    });
+    void pump();
+  }
+
+  // Последовательный «насос» очереди: шлём голову, при успехе — сдвигаем и идём
+  // дальше; при ошибке — помечаем failed и СТОП (голова блокирует очередь до
+  // повтора). Единственный экземпляр в полёте (pumpingRef).
+  async function pump(): Promise<void> {
+    if (pumpingRef.current) return;
+    pumpingRef.current = true;
     try {
-      const res = await sendMessage(
-        chatId,
-        clientMessageId,
-        encodeContent(content),
-      );
-      setMessages((prev) =>
-        upsert(prev, {
-          ...optimistic,
-          messageId: res.messageId,
-          ts: res.ts,
-          pending: false,
-        }),
-      );
-    } catch {
-      setMessages((prev) =>
-        upsert(prev, { ...optimistic, pending: false, failed: true }),
-      );
+      while (sendQueueRef.current.length > 0) {
+        const head = sendQueueRef.current[0];
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientMessageId === head.clientMessageId
+              ? { ...m, pending: true, failed: false }
+              : m,
+          ),
+        );
+        try {
+          const res = await sendMessage(
+            chatId,
+            head.clientMessageId,
+            head.ciphertext,
+          );
+          setMessages((prev) =>
+            upsert(prev, {
+              clientMessageId: head.clientMessageId,
+              senderId: myIdRef.current ?? '',
+              messageId: res.messageId,
+              ts: res.ts,
+              pending: false,
+              failed: false,
+            }),
+          );
+          sendQueueRef.current.shift();
+        } catch {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.clientMessageId === head.clientMessageId
+                ? { ...m, pending: false, failed: true }
+                : m,
+            ),
+          );
+          break; // не обгоняем застрявшую голову
+        }
+      }
+    } finally {
+      pumpingRef.current = false;
     }
   }
 
-  async function onSubmit(e: FormEvent): Promise<void> {
-    e.preventDefault();
+  // Повтор: голова всё ещё в очереди — просто перезапускаем насос.
+  function retrySend(): void {
+    void pump();
+  }
+
+  async function doSubmit(): Promise<void> {
     const text = input.trim();
     if (!text) return;
 
@@ -355,7 +438,21 @@ export function Conversation({
     }
 
     setInput('');
-    await sendContent({ kind: 'text', text });
+    sendContent({ kind: 'text', text });
+  }
+
+  function onSubmit(e: FormEvent): void {
+    e.preventDefault();
+    void doSubmit();
+  }
+
+  // Enter — отправка, Shift+Enter — перенос строки (задача #25). isComposing
+  // отсекает Enter, подтверждающий ввод IME (иероглифы и т.п.).
+  function onInputKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      void doSubmit();
+    }
   }
 
   function onPickFile(e: ChangeEvent<HTMLInputElement>): void {
@@ -403,6 +500,9 @@ export function Conversation({
     if (other) subtitle = onlineUsers.has(other.userId) ? 'в сети' : 'не в сети';
   }
   const isGroup = chat.type === 'group';
+  // Имя отправителя по id — для идентификации автора в группе (задача #21).
+  const nameOf = (id: string): string =>
+    chat.participants.find((p) => p.userId === id)?.username ?? '—';
 
   return (
     <div className="conv" data-testid="conversation-open">
@@ -478,12 +578,33 @@ export function Conversation({
                 className={
                   'bubble' +
                   (own ? ' bubble-own' : '') +
+                  (isGroup && !own ? ' bubble--group-in' : '') +
                   (groupStart ? ' is-group-start' : '') +
                   (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
                   (m.failed ? ' bubble-failed' : '')
                 }
               >
+                {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
+                {isGroup && !own && groupEnd && (
+                  <span
+                    className="bubble-avatar"
+                    aria-hidden="true"
+                    style={{ background: colorFor(nameOf(m.senderId)) }}
+                  >
+                    {initialFor(nameOf(m.senderId))}
+                  </span>
+                )}
+                {/* Имя автора над первым пузырём серии (группа, чужие) — #21 */}
+                {isGroup && !own && groupStart && (
+                  <span
+                    className="bubble-sender"
+                    data-testid="bubble-sender"
+                    style={{ color: colorFor(nameOf(m.senderId)) }}
+                  >
+                    {nameOf(m.senderId)}
+                  </span>
+                )}
                 <span className="bubble-content">
                   {m.deleted ? (
                     <em>Сообщение удалено</em>
@@ -508,15 +629,48 @@ export function Conversation({
                   <span className="bubble-meta">
                     {m.edited && <span className="bubble-edited">ред.</span>}
                     <span className="bubble-time">{formatTime(m.ts)}</span>
-                    {own && m.messageId && (
-                      <span
-                        className={'bubble-status' + (read ? ' is-read' : '')}
-                        data-testid="msg-status"
-                      >
-                        {read ? '✓✓' : '✓'}
-                      </span>
-                    )}
+                    {/* Статус доставки своих сообщений (#24/#26): отправка —
+                        спиннер, ошибка — «!», отправлено — одна галочка,
+                        прочитано — двойная синяя. */}
+                    {own &&
+                      (m.failed ? (
+                        <span
+                          className="bubble-status is-failed"
+                          data-testid="msg-status"
+                          data-status="failed"
+                          title="Не отправлено"
+                          aria-label="Не отправлено"
+                        >
+                          !
+                        </span>
+                      ) : m.pending ? (
+                        <span
+                          className="bubble-spinner"
+                          data-testid="msg-status"
+                          data-status="sending"
+                          aria-label="Отправка"
+                        />
+                      ) : m.messageId ? (
+                        <span
+                          className={'bubble-status' + (read ? ' is-read' : '')}
+                          data-testid="msg-status"
+                          data-status={read ? 'read' : 'sent'}
+                          aria-label={read ? 'Прочитано' : 'Отправлено'}
+                        >
+                          {read ? <IconChecks /> : <IconCheck />}
+                        </span>
+                      ) : null)}
                   </span>
+                )}
+                {own && m.failed && (
+                  <button
+                    type="button"
+                    className="bubble-retry"
+                    data-testid="msg-retry"
+                    onClick={retrySend}
+                  >
+                    Повторить
+                  </button>
                 )}
                 {own && !m.deleted && m.messageId && (
                   <span className="bubble-actions">
@@ -572,17 +726,21 @@ export function Conversation({
           >
             <IconAttach />
           </button>
-          <input
+          <textarea
+            ref={inputRef}
+            className="conv-textarea"
             data-testid="message-input"
             aria-label="Сообщение"
             placeholder="Сообщение…"
+            rows={1}
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={onInputKeyDown}
           />
         </div>
         <button
           type="submit"
-          className={'conv-send' + (input.trim() ? ' is-visible' : '')}
+          className="conv-send"
           data-testid="message-send"
           aria-label={editing ? 'Сохранить' : 'Отправить'}
           disabled={!input.trim()}
@@ -596,7 +754,7 @@ export function Conversation({
           onCancel={() => setPendingImage(null)}
           onSend={(content) => {
             setPendingImage(null);
-            void sendContent(content);
+            sendContent(content);
           }}
         />
       )}
