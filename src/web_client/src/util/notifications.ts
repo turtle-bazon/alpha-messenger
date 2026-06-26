@@ -35,6 +35,24 @@ export function setNotifBrowser(on: boolean): void {
   localStorage.setItem(BROWSER_KEY, on ? '1' : '0');
 }
 
+// Явная инициализация дефолтов при входе (известная проблема №29). Раньше
+// отсутствие ключа неявно означало «включено», из-за чего после очистки
+// localStorage ключей не было вовсе, а при заблокированном разрешении возникал
+// рассинхрон: логически browser=вкл, но в UI — выкл. Теперь при входе:
+//  - sound: если ключа нет — сидим '1';
+//  - browser: если разрешение заблокировано (denied) — фиксируем '0' (и больше
+//    не включаем/не спрашиваем); иначе, если ключа нет — сидим '1'.
+// Идемпотентно: пользовательский выбор (явные '0'/'1') не перетираем, кроме
+// принудительного '0' при denied.
+export function initNotifDefaults(): void {
+  if (localStorage.getItem(SOUND_KEY) === null) setNotifSound(true);
+  if (getPermission() === 'denied') {
+    setNotifBrowser(false);
+  } else if (localStorage.getItem(BROWSER_KEY) === null) {
+    setNotifBrowser(true);
+  }
+}
+
 // Поддержка Notification API может отсутствовать (старый браузер, http без
 // secure-context) — тогда считаем разрешение недоступным.
 export function notificationsSupported(): boolean {

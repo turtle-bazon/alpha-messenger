@@ -18,6 +18,7 @@ import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
   ensureBrowserPermission,
+  initNotifDefaults,
   notifyIncoming,
   setUnreadBadge,
 } from './util/notifications';
@@ -63,6 +64,9 @@ export function HomeScreen({
     getMe()
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
+    // Явно фиксируем дефолты уведомлений в localStorage (известная проблема
+    // №29) до автозапроса разрешения — чтобы хранилище и UI не расходились.
+    initNotifDefaults();
     // Сразу просим системное разрешение на уведомления (если включено и ещё не
     // спрашивали) — иначе браузерные попапы молча не работают из коробки.
     void ensureBrowserPermission();
