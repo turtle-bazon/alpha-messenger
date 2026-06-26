@@ -32,8 +32,6 @@ services:
       MINIO_ROOT_PASSWORD: alpha-secret
     volumes:
       - /srv/alpha-messenger/blobs:/data
-    ports:
-      - "9000:9000"
 
   server:
     image: ghcr.io/gilmullin/alpha_messenger-server:latest
