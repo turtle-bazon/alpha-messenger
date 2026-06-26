@@ -312,9 +312,10 @@ body {
 }
 
 .notif-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  /* position: fixed — меню вырывается из .app-shell (overflow: hidden), а
+     координаты (top/left) считает компонент с клампом по вьюпорту (проблема
+     №11: иначе меню обрезалось слева). */
+  position: fixed;
   z-index: 20;
   min-width: 240px;
   padding: 6px;

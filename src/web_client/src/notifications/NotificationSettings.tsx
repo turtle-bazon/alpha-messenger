@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconBell, IconBellOff } from '../util/icons';
 import {
   getNotifPrefs,
@@ -18,6 +18,32 @@ export function NotificationSettings(): JSX.Element {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [perm, setPerm] = useState<NotificationPermission>(getPermission());
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Координаты меню (position: fixed). null — ещё не позиционировано (скрыто).
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Позиционирование меню (известная проблема №11). Колокольчик — не самая
+  // правая кнопка шапки, поэтому меню фиксированной ширины, выровненное по его
+  // правому краю, вылезало за левую границу .app-shell (overflow: hidden) и
+  // обрезалось. Решение как в Telegram: меню — position: fixed (вырывается из
+  // overflow-контейнера), выравниваем по правому краю кнопки и поджимаем
+  // (clamp) в пределах вьюпорта, чтобы не обрезалось ни слева, ни справа.
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current || !menuRef.current) {
+      setPos(null);
+      return;
+    }
+    const btn = rootRef.current
+      .querySelector('button')!
+      .getBoundingClientRect();
+    const mw = menuRef.current.offsetWidth;
+    const gap = 8;
+    const left = Math.max(
+      gap,
+      Math.min(window.innerWidth - mw - gap, btn.right - mw),
+    );
+    setPos({ top: btn.bottom + 6, left });
+  }, [open]);
 
   // Закрытие по клику вне меню и по Escape.
   useEffect(() => {
@@ -91,7 +117,17 @@ export function NotificationSettings(): JSX.Element {
         {anyOn ? <IconBell /> : <IconBellOff />}
       </button>
       {open && (
-        <div className="notif-menu" data-testid="notif-menu" role="menu">
+        <div
+          className="notif-menu"
+          data-testid="notif-menu"
+          role="menu"
+          ref={menuRef}
+          style={
+            pos
+              ? { top: pos.top, left: pos.left }
+              : { visibility: 'hidden' }
+          }
+        >
           <label className="notif-row">
             <span>Звук</span>
             <input

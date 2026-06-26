@@ -149,3 +149,28 @@ test('настройки уведомлений переключаются и с
 
   await page.close();
 });
+
+// Известная проблема №11: меню колокольчика обрезалось слева (вылезало за
+// .app-shell с overflow: hidden), текст был нечитаем. Меню должно целиком
+// помещаться во вьюпорт и не обрезаться.
+test('меню уведомлений не обрезается и помещается во вьюпорт', async ({
+  page,
+}) => {
+  await registerViaUi(page);
+  await page.getByTestId('notif-toggle').click();
+  const menu = page.getByTestId('notif-menu');
+  await expect(menu).toBeVisible();
+
+  // Геометрия меню в пределах вьюпорта (left ≥ 0, right ≤ ширины окна).
+  const box = await menu.boundingBox();
+  const vw = page.viewportSize()!.width;
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(vw);
+
+  // Тексты строк видны и читаемы целиком (не обрезаны клиппингом контейнера).
+  await expect(menu.getByText('Звук')).toBeVisible();
+  await expect(menu.getByText('Уведомления браузера')).toBeVisible();
+
+  await page.close();
+});
