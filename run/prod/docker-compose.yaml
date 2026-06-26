@@ -19,6 +19,19 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: alpha
+      MINIO_ROOT_PASSWORD: alpha-secret
+    volumes:
+      - alpha-blobs:/data
+    # Консоль/API наружу (опционально, для отладки): 9100 — S3 API, 9101 — UI.
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+
   server:
     build:
       context: ../../src/server
@@ -26,9 +39,17 @@ services:
       PORT: 3000
       HOST: 0.0.0.0
       DATABASE_URL: postgres://alpha:alpha@db:5432/alpha
+      # Блобы (вложения) — в объектном сторе MinIO. Бакет сервер создаёт сам.
+      BLOB_STORE: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: alpha-blobs
+      S3_ACCESS_KEY: alpha
+      S3_SECRET_KEY: alpha-secret
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_started
     ports:
       - "3100:3000"
 
@@ -46,3 +67,4 @@ services:
 
 volumes:
   alpha-db:
+  alpha-blobs:

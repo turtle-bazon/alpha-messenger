@@ -103,18 +103,20 @@
 * Ответ:
 ```
 {
-  "messages": [ { "messageId", "senderId", "ciphertext", "ts", "editedAt", "deleted" }, ... ],
+  "messages": [ { "messageId", "senderId", "ciphertext", "blobIds", "ts", "editedAt", "deleted" }, ... ],
   "hasMore": true,
   "nextBefore": "<messageId>"
 }
 ```
 * У удалённого сообщения `deleted: true`, `ciphertext` пустой.
+* `blobIds` — массив id вложений (см. «Блобы»); пустой, если вложений нет.
 
 ### POST /api/chats/{chatId}/messages
 Отправка сообщения. Всем участникам в outbox пишется `message.new`, у чата обновляется `updatedAt`.
-* Тело: `{ "clientMessageId": "...", "ciphertext": "..." }`
+* Тело: `{ "clientMessageId": "...", "ciphertext": "...", "blobIds": ["...", ...] }`
 * `clientMessageId` обеспечивает идемпотентность и оптимистичный UI: первая отправка — `201`; повтор с тем же id не создаёт дубликат и не шлёт событие повторно — `200` с тем же `messageId`.
-* Ответ: `{ "messageId": "...", "clientMessageId": "...", "ts": "..." }`
+* `blobIds` — необязательный список вложений (см. «Блобы»). Передаётся открыто: из зашифрованного `ciphertext` сервер ссылки не прочтёт, а они нужны ему для авторизации скачивания и подсчёта ссылок. Ключи расшифровки остаются внутри `ciphertext`. Каждый id должен существовать (иначе `400`); максимум 16 на сообщение.
+* Ответ: `{ "messageId": "...", "clientMessageId": "...", "blobIds": [...], "ts": "..." }`
 
 ### PATCH /api/messages/{messageId}
 Редактирование. Доступно только автору (`403` иначе, `404` если нет, `400` если уже удалено). Эмитит `message.edited`.
@@ -170,7 +172,7 @@ Resume после (пере)коннекта:
 
 Chat-scoped события (несут `chatId`):
 
-* `message.new` — `payload: { messageId, senderId, clientMessageId, ciphertext, ts }`
+* `message.new` — `payload: { messageId, senderId, clientMessageId, ciphertext, blobIds, ts }`
 * `message.edited` — `payload: { messageId, ciphertext, editedAt }`
 * `message.deleted` — `payload: { messageId }`
 * `message.read` — `payload: { userId, upToMessageId }`
@@ -185,6 +187,20 @@ Account/security-scoped события (без `chatId`):
 * `auth.attempt` — попытка входа с другого устройства — `payload: { deviceId, ip, userAgent, ts }`
 * `device.added` — к аккаунту добавлено устройство — `payload: { deviceId, ts }`
 * `device.removed` — `payload: { deviceId }`
+
+## Блобы (вложения)
+
+Крупные вложения (фото/видео/файлы), которые нельзя гнать inline в теле сообщения. Сервер хранит **непрозрачные блобы**, адресуемые по content-hash (sha256 содержимого — он же `blobId`); содержимого и ключей расшифровки не знает (в перспективе блоб шифруется клиентом, как и сообщения). Хранилище — за абстракцией `BlobStore`: локальная ФС в dev, объектный стор (MinIO) в prod/deploy; выбор драйвера — env `BLOB_STORE`.
+
+Жизненный цикл: загрузить блоб → получить `blobId` → отправить сообщение с этим id в `blobIds`. До привязки к сообщению блоб доступен только загрузчику.
+
+### POST /api/blobs
+Загрузка блоба. Тело — сырые байты, `Content-Type: application/octet-stream` (поток, без JSON/base64). Сервер считает sha256 на лету, режет превышение `MAX_BLOB_SIZE` (`413`), дедуплицирует по хэшу (один и тот же контент не дублируется в сторе) и фиксирует загрузчика.
+* Ответ: `201 { "blobId": "<sha256 hex>", "size": <bytes> }`
+* Пустое тело — `400`.
+
+### GET /api/blobs/{id}
+Скачивание блоба потоком (`application/octet-stream`). Доступ: загрузчик блоба **или** участник чата, где есть неудалённое сообщение, ссылающееся на этот блоб (иначе `403`; `404`, если блоба нет).
 
 ## Push-подписки
 

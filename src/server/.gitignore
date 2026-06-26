@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# Локальное content-addressed хранилище блобов (fs-драйвер, dev/тесты)
+blob-data/

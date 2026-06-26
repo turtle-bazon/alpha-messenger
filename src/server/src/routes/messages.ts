@@ -2,11 +2,18 @@ import { FastifyInstance } from 'fastify';
 import { pool } from '../db';
 import { authenticate } from '../auth';
 import { emitToMembers, isMember, markRead } from '../chat-helpers';
+import { HEX64 } from './blobs';
 
 interface SendBody {
   clientMessageId?: string;
   ciphertext?: string;
+  // Открытые ссылки на загруженные блобы (вложения). Серверу нужны явно: из
+  // зашифрованного ciphertext он их прочесть не может. Ключи расшифровки
+  // остаются внутри ciphertext — здесь только идентификаторы.
+  blobIds?: string[];
 }
+
+const MAX_BLOBS_PER_MESSAGE = 16;
 
 export async function messageRoutes(app: FastifyInstance): Promise<void> {
   app.post(
@@ -15,11 +22,35 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       const userId = req.user!.userId;
       const { chatId } = req.params as { chatId: string };
-      const { clientMessageId, ciphertext } = (req.body ?? {}) as SendBody;
+      const { clientMessageId, ciphertext, blobIds } = (req.body ??
+        {}) as SendBody;
 
       if (!clientMessageId || !ciphertext) {
         return reply.code(400).send({ error: 'missing fields' });
       }
+
+      // Валидация вложений: формат хэшей, лимит количества, существование.
+      let attachIds: string[] = [];
+      if (blobIds !== undefined) {
+        if (
+          !Array.isArray(blobIds) ||
+          blobIds.length > MAX_BLOBS_PER_MESSAGE ||
+          !blobIds.every((x) => typeof x === 'string' && HEX64.test(x))
+        ) {
+          return reply.code(400).send({ error: 'invalid blobIds' });
+        }
+        attachIds = [...new Set(blobIds)];
+        if (attachIds.length > 0) {
+          const found = await pool.query(
+            'SELECT blob_id FROM blobs WHERE blob_id = ANY($1)',
+            [attachIds],
+          );
+          if (found.rowCount !== attachIds.length) {
+            return reply.code(400).send({ error: 'unknown blob' });
+          }
+        }
+      }
+
       if (!(await isMember(chatId, userId))) {
         return reply.code(404).send({ error: 'not found' });
       }
@@ -53,6 +84,13 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
         const messageId: string = ins.rows[0].message_id;
         const ts: Date = ins.rows[0].created_at;
+        for (const blobId of attachIds) {
+          await client.query(
+            `INSERT INTO message_blobs(message_id, blob_id)
+             VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+            [messageId, blobId],
+          );
+        }
         await client.query('UPDATE chats SET updated_at = now() WHERE chat_id = $1', [
           chatId,
         ]);
@@ -61,12 +99,14 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           senderId: userId,
           clientMessageId,
           ciphertext,
+          blobIds: attachIds,
           ts: ts.toISOString(),
         });
         await client.query('COMMIT');
         return reply.code(201).send({
           messageId,
           clientMessageId,
+          blobIds: attachIds,
           ts: ts.toISOString(),
         });
       } catch (err) {
@@ -95,10 +135,17 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       if (limit > 100) limit = 100;
 
       const res = await pool.query(
-        `SELECT message_id, sender_id, ciphertext, created_at, edited_at, deleted
-         FROM messages
-         WHERE chat_id = $1 AND ($2::bigint IS NULL OR message_id < $2::bigint)
-         ORDER BY message_id DESC
+        `SELECT m.message_id, m.sender_id, m.ciphertext, m.created_at,
+                m.edited_at, m.deleted,
+                COALESCE(
+                  array_agg(mb.blob_id) FILTER (WHERE mb.blob_id IS NOT NULL),
+                  '{}'
+                ) AS blob_ids
+         FROM messages m
+         LEFT JOIN message_blobs mb ON mb.message_id = m.message_id
+         WHERE m.chat_id = $1 AND ($2::bigint IS NULL OR m.message_id < $2::bigint)
+         GROUP BY m.message_id
+         ORDER BY m.message_id DESC
          LIMIT $3`,
         [chatId, before, limit + 1],
       );
@@ -109,6 +156,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         messageId: r.message_id,
         senderId: r.sender_id,
         ciphertext: (r.ciphertext as Buffer).toString('base64'),
+        blobIds: r.blob_ids as string[],
         ts: r.created_at.toISOString(),
         editedAt: r.edited_at ? r.edited_at.toISOString() : null,
         deleted: r.deleted,

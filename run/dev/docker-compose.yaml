@@ -27,11 +27,17 @@ services:
       PORT: 3000
       HOST: 0.0.0.0
       DATABASE_URL: postgres://alpha:alpha@db:5432/alpha
+      # Блобы (вложения) в dev — на локальной ФС, без отдельного сервиса.
+      BLOB_STORE: fs
+      BLOB_FS_DIR: /data/blobs
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "3000:3000"
+    volumes:
+      - alpha-blobs:/data/blobs
 
 volumes:
   alpha-db:
+  alpha-blobs:

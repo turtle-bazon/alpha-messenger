@@ -2,10 +2,13 @@ import { buildApp } from './app';
 import { config } from './config';
 import { pool } from './db';
 import { runMigrations } from './migrate';
+import { getBlobStore } from './blobstore';
 import { startEventListener } from './ws';
 
 async function main(): Promise<void> {
   await runMigrations();
+  // Подготовка хранилища блобов: каталог для fs, бакет (с ожиданием) для s3.
+  await getBlobStore().init();
 
   const listener = startEventListener();
   const app = buildApp();
