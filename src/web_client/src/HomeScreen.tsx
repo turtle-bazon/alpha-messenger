@@ -68,13 +68,16 @@ export function HomeScreen({
     getMe()
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
+    // Проверяем наличие ключа ДО инициализации дефолтов — initNotifDefaults()
+    // создаст ключ, и hasNotifPref() вернёт true.
+    const firstLogin = !hasNotifPref();
     // Явно фиксируем дефолты уведомлений в localStorage (известная проблема
     // №29) — чтобы хранилище и UI не расходились.
     initNotifDefaults();
-    // При первом входе (ключей нет) и если разрешение ещё не запрашивалось —
+    // При первом входе (ключей не было) и если разрешение ещё не запрашивалось —
     // показываем баннер. Запрос разрешения произойдёт при клике (user gesture),
     // иначе браузер молча игнорирует Notification.requestPermission().
-    if (!hasNotifPref() && getPermission() === 'default') {
+    if (firstLogin && getPermission() === 'default') {
       setShowNotifBanner(true);
     }
   }, []);
