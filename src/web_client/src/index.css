@@ -354,6 +354,37 @@ body {
   font-weight: 400;
 }
 
+/* Баннер запроса разрешения на уведомления при первом входе */
+.notif-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+}
+.notif-banner-actions {
+  display: flex;
+  gap: 8px;
+}
+.notif-banner button {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--on-accent);
+  transition: background 0.15s;
+}
+.notif-banner button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.notif-banner button[data-testid='notif-banner-allow'] {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .conversation {
   flex: 1;
   display: flex;

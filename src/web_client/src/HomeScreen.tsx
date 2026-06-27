@@ -17,9 +17,12 @@ import { Conversation } from './chats/Conversation';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
-  ensureBrowserPermission,
+  getPermission,
+  hasNotifPref,
   initNotifDefaults,
   notifyIncoming,
+  requestPermission,
+  setNotifBrowser,
   setUnreadBadge,
 } from './util/notifications';
 import { IconMoon, IconSun } from './util/icons';
@@ -42,12 +45,13 @@ export function HomeScreen({
   const [username, setUsername] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
-  // Онлайн со-участников (множество userId). Сид — GET /presence после реплея,
-  // дальше актуализируется транзиентными событиями presence из WS.
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
+  // Баннер запроса разрешения на уведомления: показываем только при первом входе
+  // (ключей нет в localStorage) и если разрешение ещё не выдано/заблокировано.
+  const [showNotifBanner, setShowNotifBanner] = useState(false);
   selectedRef.current = selectedId;
   // Актуальный список для проверок внутри WS-обработчиков (без перезапуска
   // эффекта и без побочных эффектов в setState-апдейтерах).
@@ -65,11 +69,14 @@ export function HomeScreen({
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
     // Явно фиксируем дефолты уведомлений в localStorage (известная проблема
-    // №29) до автозапроса разрешения — чтобы хранилище и UI не расходились.
+    // №29) — чтобы хранилище и UI не расходились.
     initNotifDefaults();
-    // Сразу просим системное разрешение на уведомления (если включено и ещё не
-    // спрашивали) — иначе браузерные попапы молча не работают из коробки.
-    void ensureBrowserPermission();
+    // При первом входе (ключей нет) и если разрешение ещё не запрашивалось —
+    // показываем баннер. Запрос разрешения произойдёт при клике (user gesture),
+    // иначе браузер молча игнорирует Notification.requestPermission().
+    if (!hasNotifPref() && getPermission() === 'default') {
+      setShowNotifBanner(true);
+    }
   }, []);
 
   // Счётчик непрочитанных в title вкладки (известная проблема №8): сумма по всем
@@ -323,12 +330,44 @@ export function HomeScreen({
 
   const selectedChat = chats.find((c) => c.chatId === selectedId) ?? null;
 
+  async function handleNotifAllow(): Promise<void> {
+    const result = await requestPermission();
+    setNotifBrowser(result === 'granted');
+    setShowNotifBanner(false);
+  }
+
+  function handleNotifSkip(): void {
+    setNotifBrowser(false);
+    setShowNotifBanner(false);
+  }
+
   return (
     <div
       className={'home' + (selectedId ? ' home--chat-open' : '')}
       data-testid="app-home"
     >
       <AccountNotifications ws={ws} />
+      {showNotifBanner && (
+        <div className="notif-banner" data-testid="notif-banner">
+          <span>Разрешить уведомления?</span>
+          <span className="notif-banner-actions">
+            <button
+              type="button"
+              data-testid="notif-banner-allow"
+              onClick={() => void handleNotifAllow()}
+            >
+              Разрешить
+            </button>
+            <button
+              type="button"
+              data-testid="notif-banner-skip"
+              onClick={handleNotifSkip}
+            >
+              Нет
+            </button>
+          </span>
+        </div>
+      )}
       <div className="sidebar">
         <header className="home-header">
           <span data-testid="home-username">{username ?? '...'}</span>

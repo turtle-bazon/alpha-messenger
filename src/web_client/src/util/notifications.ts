@@ -52,6 +52,12 @@ export function initNotifDefaults(): void {
   if (localStorage.getItem(BROWSER_KEY) === null) setNotifBrowser(true);
 }
 
+// Пользователь уже делал выбор настроек уведомлений (хотя бы один раз открывал
+// меню или нажимал кнопку в баннере). Если ключа нет — это первый вход.
+export function hasNotifPref(): boolean {
+  return localStorage.getItem(BROWSER_KEY) !== null;
+}
+
 // Поддержка Notification API может отсутствовать (старый браузер, http без
 // secure-context) — тогда считаем разрешение недоступным.
 export function notificationsSupported(): boolean {
