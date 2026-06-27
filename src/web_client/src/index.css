@@ -758,9 +758,73 @@ body {
   border-radius: 8px;
 }
 
+.bubble-image img.is-openable {
+  cursor: pointer;
+}
+
 .bubble-caption {
   display: block;
   margin-top: 4px;
+}
+
+/* Текст под медиа в одном пузыре — отступ от превью. */
+.bubble-image + .bubble-text {
+  display: block;
+  margin-top: 4px;
+}
+
+/* Полноэкранный просмотр изображения (lightbox). */
+.media-viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.media-viewer-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.media-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.media-viewer-fig {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.media-viewer-img {
+  max-width: 100%;
+  max-height: calc(100vh - 96px);
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.media-viewer-fig figcaption,
+.media-viewer-msg {
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
 }
 
 /* Кнопка вложения в композере (внутри округлённого поля). */

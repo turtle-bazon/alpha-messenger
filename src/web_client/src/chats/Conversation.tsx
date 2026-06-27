@@ -1,5 +1,6 @@
 import {
   ChangeEvent,
+  ClipboardEvent,
   Fragment,
   FormEvent,
   KeyboardEvent,
@@ -13,21 +14,33 @@ import {
   editMessage,
   getMessages,
   sendMessage,
+  uploadBlob,
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
 import type { Chat, Message, ServerEvent } from '../api/types';
 import {
   decodeContent,
   encodeContent,
-  imageDataUrl,
+  textContent,
+  thumbUrl,
+  type ImageAttachment,
   type MessageContent,
 } from '../util/content';
+import type { PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
 import { IconAttach, IconCheck, IconChecks, IconSend } from '../util/icons';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
+import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
+
+// Исходящее изображение в очереди: сырые байты (полноразмерный блоб на загрузку)
+// и метаданные вложения. blobId в att заполняется после uploadBlob.
+interface OutgoingImage {
+  blob: Blob;
+  att: ImageAttachment;
+}
 
 // Склонение слова «участник» по числу (1 участник, 2 участника, 5 участников).
 function pluralMembers(n: number): string {
@@ -118,6 +131,10 @@ export function Conversation({
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
+  // Открытый lightbox (полноразмерный просмотр) — blobId и подпись.
+  const [viewer, setViewer] = useState<{ blobId: string; caption: string } | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
@@ -140,9 +157,9 @@ export function Conversation({
   // Очередь исходящих (задача #26): отправка строго последовательная, чтобы
   // более позднее сообщение не обогнало раннее. Голова очереди отправляется
   // первой; при ошибке остаётся в голове и блокирует следующие до повтора.
-  const sendQueueRef = useRef<{ clientMessageId: string; ciphertext: string }[]>(
-    [],
-  );
+  const sendQueueRef = useRef<
+    { clientMessageId: string; text: string; images: OutgoingImage[] }[]
+  >([]);
   const pumpingRef = useRef(false);
   const myIdRef = useRef(myId);
   myIdRef.current = myId;
@@ -160,6 +177,7 @@ export function Conversation({
     setEditing(null);
     setInput('');
     setPendingImage(null);
+    setViewer(null);
     setMembersOpen(false);
     getMessages(chatId, { limit: PAGE })
       .then((page) => {
@@ -334,16 +352,17 @@ export function Conversation({
     }
   }
 
-  // Общий путь отправки (текст и картинка): оптимистичное сообщение ставится в
-  // очередь, дальше pump() шлёт строго по порядку. Подтверждение — WS-эхом и
-  // ответом REST по clientMessageId.
-  function sendContent(content: MessageContent): void {
+  // Общий путь отправки (текст и/или картинки): оптимистичное сообщение ставится
+  // в очередь, дальше pump() грузит блобы и шлёт строго по порядку. Подтверждение
+  // — WS-эхом и ответом REST по clientMessageId. att-объекты вложений общие между
+  // очередью и оптимистичным content: после загрузки blobId проставится в обоих.
+  function enqueueSend(text: string, images: OutgoingImage[]): void {
     const clientMessageId = crypto.randomUUID();
     const optimistic: MsgVM = {
       messageId: null,
       clientMessageId,
       senderId: myId ?? '',
-      content,
+      content: { text, attachments: images.map((i) => i.att) },
       ts: new Date().toISOString(),
       pending: true,
       failed: false,
@@ -352,16 +371,15 @@ export function Conversation({
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
-    sendQueueRef.current.push({
-      clientMessageId,
-      ciphertext: encodeContent(content),
-    });
+    sendQueueRef.current.push({ clientMessageId, text, images });
     void pump();
   }
 
-  // Последовательный «насос» очереди: шлём голову, при успехе — сдвигаем и идём
-  // дальше; при ошибке — помечаем failed и СТОП (голова блокирует очередь до
-  // повтора). Единственный экземпляр в полёте (pumpingRef).
+  // Последовательный «насос» очереди: для головы сперва догружаем недостающие
+  // блобы, затем шлём сообщение; при успехе — сдвигаем и идём дальше; при ошибке
+  // (загрузки или отправки) — помечаем failed и СТОП (голова блокирует очередь до
+  // повтора). Повтор переиспользует уже загруженные блобы (blobId сохранён в att).
+  // Единственный экземпляр в полёте (pumpingRef).
   async function pump(): Promise<void> {
     if (pumpingRef.current) return;
     pumpingRef.current = true;
@@ -376,10 +394,32 @@ export function Conversation({
           ),
         );
         try {
+          for (const img of head.images) {
+            if (!img.att.blobId) {
+              const { blobId } = await uploadBlob(img.blob);
+              img.att.blobId = blobId;
+            }
+          }
+          const content: MessageContent = {
+            text: head.text,
+            attachments: head.images.map((i) => i.att),
+          };
+          // Прокинуть проставленные blobId в оптимистичное сообщение (чтобы клик
+          // по превью открывал полноразмер ещё до прихода WS-эха).
+          if (head.images.length) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.clientMessageId === head.clientMessageId
+                  ? { ...m, content }
+                  : m,
+              ),
+            );
+          }
           const res = await sendMessage(
             chatId,
             head.clientMessageId,
-            head.ciphertext,
+            encodeContent(content),
+            head.images.map((i) => i.att.blobId),
           );
           setMessages((prev) =>
             upsert(prev, {
@@ -425,12 +465,12 @@ export function Conversation({
       setMessages((prev) =>
         prev.map((m) =>
           m.messageId === messageId
-            ? { ...m, content: { kind: 'text', text }, edited: true }
+            ? { ...m, content: textContent(text), edited: true }
             : m,
         ),
       );
       try {
-        await editMessage(messageId, encodeContent({ kind: 'text', text }));
+        await editMessage(messageId, encodeContent(textContent(text)));
       } catch {
         /* событие не придёт — оставляем как есть; в v1 без отката */
       }
@@ -438,7 +478,7 @@ export function Conversation({
     }
 
     setInput('');
-    sendContent({ kind: 'text', text });
+    enqueueSend(text, []);
   }
 
   function onSubmit(e: FormEvent): void {
@@ -461,10 +501,47 @@ export function Conversation({
     if (file) setPendingImage(file);
   }
 
+  // Вставка изображения из буфера (Ctrl/Cmd+V): если в буфере есть картинка —
+  // открываем тот же редактор, что и при прикреплении через 📎 (issue #17).
+  // При редактировании вложения не добавляем — обычная вставка текста.
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>): void {
+    if (editing) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const file = it.getAsFile();
+        if (file) {
+          e.preventDefault(); // не вставлять в textarea сопутствующий текст
+          setPendingImage(file);
+          return;
+        }
+      }
+    }
+  }
+
   function startEdit(m: MsgVM): void {
-    if (!m.messageId || m.content.kind !== 'text') return;
+    // Редактируем только чисто текстовые сообщения (без вложений).
+    if (!m.messageId || m.content.attachments.length > 0) return;
     setEditing(m.messageId);
     setInput(m.content.text);
+  }
+
+  // Из редактора изображения: собираем вложение с thumbnail и ставим в очередь
+  // (полный блоб загрузится в pump). Подпись хранится на вложении.
+  function onImagePrepared(prepared: PreparedImage, caption: string): void {
+    const att: ImageAttachment = {
+      kind: 'image',
+      blobId: '',
+      mime: prepared.mime,
+      width: prepared.width,
+      height: prepared.height,
+      size: prepared.full.size,
+      thumb: prepared.thumb,
+      caption,
+    };
+    enqueueSend('', [{ blob: prepared.full, att }]);
   }
 
   function cancelEdit(): void {
@@ -608,21 +685,29 @@ export function Conversation({
                 <span className="bubble-content">
                   {m.deleted ? (
                     <em>Сообщение удалено</em>
-                  ) : m.content.kind === 'image' ? (
-                    <span className="bubble-image">
-                      <img
-                        data-testid="message-image"
-                        src={imageDataUrl(m.content)}
-                        alt={m.content.caption || 'изображение'}
-                      />
-                      {m.content.caption && (
-                        <span className="bubble-caption">
-                          {m.content.caption}
-                        </span>
-                      )}
-                    </span>
                   ) : (
-                    m.content.text
+                    <>
+                      {m.content.attachments.map((a, ai) => (
+                        <span className="bubble-image" key={ai}>
+                          <img
+                            data-testid="message-image"
+                            src={thumbUrl(a)}
+                            alt={a.caption || 'изображение'}
+                            className={a.blobId ? 'is-openable' : undefined}
+                            onClick={() =>
+                              a.blobId &&
+                              setViewer({ blobId: a.blobId, caption: a.caption })
+                            }
+                          />
+                          {a.caption && (
+                            <span className="bubble-caption">{a.caption}</span>
+                          )}
+                        </span>
+                      ))}
+                      {m.content.text && (
+                        <span className="bubble-text">{m.content.text}</span>
+                      )}
+                    </>
                   )}
                 </span>
                 {!m.deleted && (
@@ -674,7 +759,7 @@ export function Conversation({
                 )}
                 {own && !m.deleted && m.messageId && (
                   <span className="bubble-actions">
-                    {m.content.kind === 'text' && (
+                    {m.content.attachments.length === 0 && (
                       <button
                         type="button"
                         data-testid="msg-edit"
@@ -736,6 +821,7 @@ export function Conversation({
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={onInputKeyDown}
+            onPaste={onPaste}
           />
         </div>
         <button
@@ -752,10 +838,17 @@ export function Conversation({
         <ImageEditor
           file={pendingImage}
           onCancel={() => setPendingImage(null)}
-          onSend={(content) => {
+          onSend={(prepared, caption) => {
             setPendingImage(null);
-            sendContent(content);
+            onImagePrepared(prepared, caption);
           }}
+        />
+      )}
+      {viewer && (
+        <MediaViewer
+          blobId={viewer.blobId}
+          caption={viewer.caption}
+          onClose={() => setViewer(null)}
         />
       )}
       {membersOpen && (

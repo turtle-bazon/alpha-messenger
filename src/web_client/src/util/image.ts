@@ -1,12 +1,20 @@
-// Подготовка изображения для inline-отправки: поворот, уменьшение и кодирование
-// в JPEG так, чтобы итоговый ciphertext не превышал потолок малой медиа.
-// Всё, что не влезает, ужимается по качеству и размеру (см. architecture.md —
-// inline только для мелочи, крупное уйдёт в отдельное хранилище в будущем).
+// Подготовка изображения к отправке через блоб: поворот + два варианта рендера —
+// полноразмерный JPEG (уходит в блоб, тянется по требованию) и крошечный
+// thumbnail (лежит inline в теле сообщения для мгновенного превью в пузыре).
+// См. status/plans/blob-client-images.md.
 
-import { encodeContent, type ImageContent } from './content';
+const FULL_MAX_DIM = 2560; // потолок большей стороны полноразмерного варианта
+const FULL_QUALITY = 0.85;
+const THUMB_MAX_DIM = 320; // потолок большей стороны thumbnail
+const THUMB_QUALITY = 0.5;
 
-const MAX_DIM = 1280; // стартовый предел по большей стороне
-const MAX_CIPHERTEXT = 128 * 1024; // потолок итогового тела (символов base64)
+export interface PreparedImage {
+  full: Blob; // полноразмерный JPEG для загрузки в блоб
+  thumb: string; // base64 крошечного JPEG (без data: префикса)
+  mime: string;
+  width: number; // размеры полноразмерного варианта
+  height: number;
+}
 
 // Рисует изображение в canvas с поворотом (0/90/180/270) и масштабом так,
 // чтобы большая сторона не превышала maxDim.
@@ -36,40 +44,33 @@ function renderCanvas(
   return canvas;
 }
 
-function encodeJpeg(
-  canvas: HTMLCanvasElement,
-  quality: number,
-  caption: string,
-): ImageContent {
-  const url = canvas.toDataURL('image/jpeg', quality);
-  const dataB64 = url.slice(url.indexOf(',') + 1);
-  return {
-    kind: 'image',
-    mime: 'image/jpeg',
-    dataB64,
-    width: canvas.width,
-    height: canvas.height,
-    caption,
-  };
+function toJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+      'image/jpeg',
+      quality,
+    );
+  });
 }
 
-// Готовит ImageContent под потолок: сперва снижаем качество, затем размер.
-export function produceImageContent(
+// Готовит полноразмерный блоб и thumbnail из отрисованного <img> с учётом поворота.
+export async function prepareImage(
   img: HTMLImageElement,
   rotation: number,
-  caption: string,
-): ImageContent {
-  let maxDim = MAX_DIM;
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const canvas = renderCanvas(img, rotation, maxDim);
-    let last: ImageContent | null = null;
-    for (const q of [0.72, 0.55, 0.4]) {
-      last = encodeJpeg(canvas, q, caption);
-      if (encodeContent(last).length <= MAX_CIPHERTEXT) return last;
-    }
-    maxDim = Math.round(maxDim * 0.75);
-    if (maxDim < 64 && last) return last; // дальше ужимать некуда
-  }
-  // Фолбэк: максимально ужатый вариант.
-  return encodeJpeg(renderCanvas(img, rotation, 64), 0.4, caption);
+): Promise<PreparedImage> {
+  const fullCanvas = renderCanvas(img, rotation, FULL_MAX_DIM);
+  const full = await toJpegBlob(fullCanvas, FULL_QUALITY);
+
+  const thumbCanvas = renderCanvas(img, rotation, THUMB_MAX_DIM);
+  const url = thumbCanvas.toDataURL('image/jpeg', THUMB_QUALITY);
+  const thumb = url.slice(url.indexOf(',') + 1);
+
+  return {
+    full,
+    thumb,
+    mime: 'image/jpeg',
+    width: fullCanvas.width,
+    height: fullCanvas.height,
+  };
 }

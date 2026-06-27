@@ -150,11 +150,51 @@ export function sendMessage(
   chatId: string,
   clientMessageId: string,
   ciphertext: string,
+  blobIds: string[] = [],
 ): Promise<SendResult> {
   return rest.post<SendResult>(`/chats/${chatId}/messages`, {
     clientMessageId,
     ciphertext,
+    ...(blobIds.length ? { blobIds } : {}),
   });
+}
+
+// ---- Блобы (вложения) ----
+
+export interface BlobUploadResult {
+  blobId: string;
+  size: number;
+}
+
+// Загрузка блоба сырыми байтами (octet-stream, без JSON/base64). Сервер считает
+// sha256 на лету, дедуплицирует и возвращает blobId. Идёт мимо JSON-обёртки
+// request(): тело — поток байтов, а не сериализованный объект.
+export async function uploadBlob(bytes: Blob): Promise<BlobUploadResult> {
+  const headers: Record<string, string> = {
+    'content-type': 'application/octet-stream',
+  };
+  const token = getToken();
+  if (token) headers['authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiUrl('/blobs'), {
+    method: 'POST',
+    headers,
+    body: bytes,
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new ApiError(res.status, data);
+  return data as BlobUploadResult;
+}
+
+// Скачивание блоба потоком. Заголовок Authorization нельзя навесить на <img src>,
+// поэтому тянем через fetch и отдаём Blob (вызывающий делает object URL).
+export async function fetchBlob(blobId: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers['authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiUrl(`/blobs/${blobId}`), { headers });
+  if (!res.ok) throw new ApiError(res.status, null);
+  return res.blob();
 }
 
 export function editMessage(
