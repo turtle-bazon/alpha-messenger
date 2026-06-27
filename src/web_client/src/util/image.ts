@@ -54,6 +54,35 @@ function toJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   });
 }
 
+const LINK_THUMB_MAX_DIM = 320; // потолок картинки превью ссылки (#32)
+const LINK_THUMB_QUALITY = 0.6;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = src;
+  });
+}
+
+// Из байтов картинки превью ссылки (base64 + mime, как их отдал сервер) делает
+// крошечный inline-JPEG thumbnail. data-URL не «портит» canvas (свой источник),
+// поэтому toDataURL доступен. При любом сбое — '' (карточка покажется без картинки).
+export async function imageBytesToThumb(
+  dataBase64: string,
+  mime: string,
+): Promise<string> {
+  try {
+    const img = await loadImage(`data:${mime};base64,${dataBase64}`);
+    const canvas = renderCanvas(img, 0, LINK_THUMB_MAX_DIM);
+    const url = canvas.toDataURL('image/jpeg', LINK_THUMB_QUALITY);
+    return url.slice(url.indexOf(',') + 1);
+  } catch {
+    return '';
+  }
+}
+
 // Готовит полноразмерный блоб и thumbnail из отрисованного <img> с учётом поворота.
 export async function prepareImage(
   img: HTMLImageElement,

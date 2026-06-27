@@ -26,7 +26,20 @@ export interface ImageAttachment {
   key?: string; // зарезервировано: ключ расшифровки блоба (будущий E2EE)
 }
 
-export type Attachment = ImageAttachment;
+// Превью ссылки (#32). Метаданные OpenGraph целиком в теле сообщения (ciphertext):
+// сервер развернул ссылку один раз для отправителя, получатель только рендерит
+// карточку — без повторного фетча и без утечки своего IP стороннему сайту. thumb —
+// маленький inline-JPEG картинки превью (или '' если её нет), блоба тут нет.
+export interface LinkAttachment {
+  kind: 'link';
+  url: string;
+  title: string;
+  description: string;
+  siteName: string;
+  thumb: string; // base64 крошечного JPEG (без data: префикса), '' если нет
+}
+
+export type Attachment = ImageAttachment | LinkAttachment;
 
 // Сообщение — текст и/или вложения. Текст без вложений — обычное текстовое
 // сообщение; вложения без текста — медиа; возможна и комбинация.
@@ -43,22 +56,44 @@ export function encodeContent(c: MessageContent): string {
   const body: Record<string, unknown> = { t: 'msg' };
   if (c.text) body.text = c.text;
   if (c.attachments.length) {
-    body.atts = c.attachments.map((a) => ({
-      k: 'image',
-      blob: a.blobId,
-      mime: a.mime,
-      w: a.width,
-      h: a.height,
-      size: a.size,
-      thumb: a.thumb,
-      ...(a.caption ? { cap: a.caption } : {}),
-      ...(a.key ? { key: a.key } : {}),
-    }));
+    body.atts = c.attachments.map((a) =>
+      a.kind === 'image'
+        ? {
+            k: 'image',
+            blob: a.blobId,
+            mime: a.mime,
+            w: a.width,
+            h: a.height,
+            size: a.size,
+            thumb: a.thumb,
+            ...(a.caption ? { cap: a.caption } : {}),
+            ...(a.key ? { key: a.key } : {}),
+          }
+        : {
+            k: 'link',
+            url: a.url,
+            title: a.title,
+            ...(a.description ? { desc: a.description } : {}),
+            ...(a.siteName ? { site: a.siteName } : {}),
+            ...(a.thumb ? { thumb: a.thumb } : {}),
+          },
+    );
   }
   return encodeText(JSON.stringify(body));
 }
 
-function decodeAttachment(o: Record<string, unknown>): ImageAttachment | null {
+function decodeAttachment(o: Record<string, unknown>): Attachment | null {
+  if (o.k === 'link') {
+    if (typeof o.url !== 'string' || typeof o.title !== 'string') return null;
+    return {
+      kind: 'link',
+      url: o.url,
+      title: o.title,
+      description: typeof o.desc === 'string' ? o.desc : '',
+      siteName: typeof o.site === 'string' ? o.site : '',
+      thumb: typeof o.thumb === 'string' ? o.thumb : '',
+    };
+  }
   if (o.k !== 'image' && o.k !== undefined) return null;
   if (typeof o.thumb !== 'string' && typeof o.blob !== 'string') return null;
   return {
@@ -83,7 +118,7 @@ export function decodeContent(b64: string): MessageContent {
       const atts = Array.isArray(o.atts)
         ? (o.atts as Record<string, unknown>[])
             .map(decodeAttachment)
-            .filter((a): a is ImageAttachment => a !== null)
+            .filter((a): a is Attachment => a !== null)
         : [];
       return { text: typeof o.text === 'string' ? o.text : '', attachments: atts };
     }
@@ -120,10 +155,17 @@ export function thumbUrl(a: ImageAttachment): string {
   return `data:${a.mime};base64,${a.thumb}`;
 }
 
-// Краткое превью для списка чатов: для медиа — без раскодирования блоба.
+// data-URL для картинки превью ссылки (всегда JPEG).
+export function linkThumbUrl(a: LinkAttachment): string {
+  return `data:image/jpeg;base64,${a.thumb}`;
+}
+
+// Краткое превью для списка чатов: для медиа — без раскодирования блоба. У превью
+// ссылки текст (сам URL) есть в сообщении — показываем его как обычный текст.
 export function previewText(c: MessageContent): string {
-  if (c.attachments.length > 0) {
-    const cap = c.attachments[0].caption || c.text;
+  const img = c.attachments.find((a): a is ImageAttachment => a.kind === 'image');
+  if (img) {
+    const cap = img.caption || c.text;
     return cap ? `📷 ${cap}` : '📷 Фото';
   }
   return c.text;

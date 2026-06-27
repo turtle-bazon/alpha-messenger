@@ -14,6 +14,7 @@ import {
   editMessage,
   getMessages,
   sendMessage,
+  unfurl,
   uploadBlob,
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
@@ -21,12 +22,15 @@ import type { Chat, Message, ServerEvent } from '../api/types';
 import {
   decodeContent,
   encodeContent,
+  linkThumbUrl,
   textContent,
   thumbUrl,
+  type Attachment,
   type ImageAttachment,
+  type LinkAttachment,
   type MessageContent,
 } from '../util/content';
-import type { PreparedImage } from '../util/image';
+import { imageBytesToThumb, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
 import { IconAttach, IconCheck, IconChecks, IconSend } from '../util/icons';
 import { colorFor, initialFor } from './avatar';
@@ -61,6 +65,17 @@ const TYPING_SEND_THROTTLE_MS = 2000;
 const MAX_INPUT_H = 160;
 // Период автоповтора неотправленных сообщений по таймеру (задача #26).
 const RETRY_TIMER_MS = 12000;
+// Превью ссылок (#32): задержка перед разворачиванием набираемого URL.
+const LINK_PREVIEW_DEBOUNCE_MS = 600;
+
+// Первый http(s)-URL в тексте (для живого превью ссылки). Хвостовая пунктуация
+// (.,!?;: и закрывающие скобки) отрезается — она обычно не часть адреса.
+const URL_RE = /\bhttps?:\/\/[^\s<>"']+/i;
+function firstUrl(text: string): string | null {
+  const m = text.match(URL_RE);
+  if (!m) return null;
+  return m[0].replace(/[.,!?;:)\]]+$/, '');
+}
 
 // Модель сообщения в UI. Пока не подтверждено сервером — messageId == null
 // (pending), сверка оптимистичного сообщения с WS-эхом идёт по clientMessageId.
@@ -131,6 +146,14 @@ export function Conversation({
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
+  // Живое превью ссылки в композере (#32) и сопутствующее состояние:
+  // previewReqRef — токен против гонок (применяем только последний запрос);
+  // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
+  // символ); dismissedRef — URL'ы, снятые крестиком (не всплывают снова).
+  const [linkPreview, setLinkPreview] = useState<LinkAttachment | null>(null);
+  const previewReqRef = useRef(0);
+  const shownUrlRef = useRef<string | null>(null);
+  const dismissedRef = useRef<Set<string>>(new Set());
   // Открытый lightbox (полноразмерный просмотр) — blobId и подпись.
   const [viewer, setViewer] = useState<{ blobId: string; caption: string } | null>(
     null,
@@ -158,7 +181,12 @@ export function Conversation({
   // более позднее сообщение не обогнало раннее. Голова очереди отправляется
   // первой; при ошибке остаётся в голове и блокирует следующие до повтора.
   const sendQueueRef = useRef<
-    { clientMessageId: string; text: string; images: OutgoingImage[] }[]
+    {
+      clientMessageId: string;
+      text: string;
+      images: OutgoingImage[];
+      link?: LinkAttachment;
+    }[]
   >([]);
   const pumpingRef = useRef(false);
   const myIdRef = useRef(myId);
@@ -179,6 +207,11 @@ export function Conversation({
     setPendingImage(null);
     setViewer(null);
     setMembersOpen(false);
+    // Превью ссылок относится к набираемому тексту — сбрасываем при смене чата.
+    setLinkPreview(null);
+    shownUrlRef.current = null;
+    previewReqRef.current++;
+    dismissedRef.current.clear();
     getMessages(chatId, { limit: PAGE })
       .then((page) => {
         if (!alive) return;
@@ -273,6 +306,24 @@ export function Conversation({
     el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_H)}px`;
   }, [input]);
 
+  // Живое превью ссылки (#32): на изменение текста ищем первый URL и с задержкой
+  // просим сервер развернуть его. Снятые крестиком и уже показанные URL пропускаем.
+  useEffect(() => {
+    if (editing) {
+      clearPreview();
+      return;
+    }
+    const url = firstUrl(input);
+    if (!url || dismissedRef.current.has(url)) {
+      clearPreview();
+      return;
+    }
+    if (shownUrlRef.current === url) return; // уже показываем/тянем этот URL
+    const t = setTimeout(() => void resolvePreview(url), LINK_PREVIEW_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, editing]);
+
   // Автоповтор неотправленных (задача #26): при восстановлении сети, после
   // reconnect WS (маркер 'synced') и по таймеру перезапускаем насос очереди.
   useEffect(() => {
@@ -307,6 +358,50 @@ export function Conversation({
       lastTypingSent.current = now;
       ws.sendTyping(chatId);
     }
+  }
+
+  // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
+  function clearPreview(): void {
+    shownUrlRef.current = null;
+    previewReqRef.current++;
+    setLinkPreview(null);
+  }
+
+  // Развернуть URL через сервер и собрать карточку. Токен previewReqRef отсекает
+  // устаревшие ответы (пока тянули — текст/URL могли смениться). Картинку превью
+  // ужимаем в маленький inline-thumbnail (как у изображений).
+  async function resolvePreview(url: string): Promise<void> {
+    shownUrlRef.current = url;
+    const token = ++previewReqRef.current;
+    let preview;
+    try {
+      ({ preview } = await unfurl(url));
+    } catch {
+      preview = null;
+    }
+    if (token !== previewReqRef.current) return; // устарело
+    if (!preview) {
+      setLinkPreview(null);
+      return;
+    }
+    const thumb = preview.image
+      ? await imageBytesToThumb(preview.image.dataBase64, preview.image.mime)
+      : '';
+    if (token !== previewReqRef.current) return;
+    setLinkPreview({
+      kind: 'link',
+      url: preview.url,
+      title: preview.title,
+      description: preview.description ?? '',
+      siteName: preview.siteName ?? '',
+      thumb,
+    });
+  }
+
+  // Крестик на карточке: запоминаем URL как снятый и убираем превью.
+  function dismissPreview(): void {
+    if (linkPreview) dismissedRef.current.add(linkPreview.url);
+    clearPreview();
   }
 
   async function onScroll(): Promise<void> {
@@ -356,13 +451,21 @@ export function Conversation({
   // в очередь, дальше pump() грузит блобы и шлёт строго по порядку. Подтверждение
   // — WS-эхом и ответом REST по clientMessageId. att-объекты вложений общие между
   // очередью и оптимистичным content: после загрузки blobId проставится в обоих.
-  function enqueueSend(text: string, images: OutgoingImage[]): void {
+  function enqueueSend(
+    text: string,
+    images: OutgoingImage[],
+    link?: LinkAttachment,
+  ): void {
     const clientMessageId = crypto.randomUUID();
+    const attachments: Attachment[] = [
+      ...images.map((i) => i.att),
+      ...(link ? [link] : []),
+    ];
     const optimistic: MsgVM = {
       messageId: null,
       clientMessageId,
       senderId: myId ?? '',
-      content: { text, attachments: images.map((i) => i.att) },
+      content: { text, attachments },
       ts: new Date().toISOString(),
       pending: true,
       failed: false,
@@ -371,7 +474,7 @@ export function Conversation({
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
-    sendQueueRef.current.push({ clientMessageId, text, images });
+    sendQueueRef.current.push({ clientMessageId, text, images, link });
     void pump();
   }
 
@@ -402,7 +505,10 @@ export function Conversation({
           }
           const content: MessageContent = {
             text: head.text,
-            attachments: head.images.map((i) => i.att),
+            attachments: [
+              ...head.images.map((i) => i.att),
+              ...(head.link ? [head.link] : []),
+            ],
           };
           // Прокинуть проставленные blobId в оптимистичное сообщение (чтобы клик
           // по превью открывал полноразмер ещё до прихода WS-эха).
@@ -477,8 +583,12 @@ export function Conversation({
       return;
     }
 
+    // Прицепляем превью ссылки, если оно готово и его URL ещё есть в тексте (#32).
+    const link =
+      linkPreview && text.includes(linkPreview.url) ? linkPreview : undefined;
     setInput('');
-    enqueueSend(text, []);
+    clearPreview();
+    enqueueSend(text, [], link);
   }
 
   function onSubmit(e: FormEvent): void {
@@ -687,25 +797,60 @@ export function Conversation({
                     <em>Сообщение удалено</em>
                   ) : (
                     <>
-                      {m.content.attachments.map((a, ai) => (
-                        <span className="bubble-image" key={ai}>
-                          <img
-                            data-testid="message-image"
-                            src={thumbUrl(a)}
-                            alt={a.caption || 'изображение'}
-                            className={a.blobId ? 'is-openable' : undefined}
-                            onClick={() =>
-                              a.blobId &&
-                              setViewer({ blobId: a.blobId, caption: a.caption })
-                            }
-                          />
-                          {a.caption && (
-                            <span className="bubble-caption">{a.caption}</span>
-                          )}
-                        </span>
-                      ))}
                       {m.content.text && (
                         <span className="bubble-text">{m.content.text}</span>
+                      )}
+                      {m.content.attachments.map((a, ai) =>
+                        a.kind === 'image' ? (
+                          <span className="bubble-image" key={ai}>
+                            <img
+                              data-testid="message-image"
+                              src={thumbUrl(a)}
+                              alt={a.caption || 'изображение'}
+                              className={a.blobId ? 'is-openable' : undefined}
+                              onClick={() =>
+                                a.blobId &&
+                                setViewer({
+                                  blobId: a.blobId,
+                                  caption: a.caption,
+                                })
+                              }
+                            />
+                            {a.caption && (
+                              <span className="bubble-caption">{a.caption}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <a
+                            className="bubble-link"
+                            key={ai}
+                            data-testid="message-link"
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {a.thumb && (
+                              <img
+                                className="bubble-link-img"
+                                src={linkThumbUrl(a)}
+                                alt=""
+                              />
+                            )}
+                            <span className="bubble-link-body">
+                              {a.siteName && (
+                                <span className="bubble-link-site">
+                                  {a.siteName}
+                                </span>
+                              )}
+                              <span className="bubble-link-title">{a.title}</span>
+                              {a.description && (
+                                <span className="bubble-link-desc">
+                                  {a.description}
+                                </span>
+                              )}
+                            </span>
+                          </a>
+                        ),
                       )}
                     </>
                   )}
@@ -788,6 +933,35 @@ export function Conversation({
           <span>Редактирование</span>
           <button type="button" onClick={cancelEdit}>
             Отмена
+          </button>
+        </div>
+      )}
+      {linkPreview && !editing && (
+        <div className="composer-link" data-testid="composer-link-preview">
+          {linkPreview.thumb && (
+            <img
+              className="composer-link-img"
+              src={linkThumbUrl(linkPreview)}
+              alt=""
+            />
+          )}
+          <div className="composer-link-body">
+            {linkPreview.siteName && (
+              <span className="composer-link-site">{linkPreview.siteName}</span>
+            )}
+            <span className="composer-link-title">{linkPreview.title}</span>
+            {linkPreview.description && (
+              <span className="composer-link-desc">{linkPreview.description}</span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="composer-link-close"
+            data-testid="composer-link-dismiss"
+            aria-label="Убрать превью"
+            onClick={dismissPreview}
+          >
+            ×
           </button>
         </div>
       )}

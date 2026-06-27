@@ -7,6 +7,7 @@ import { meRoutes } from './routes/me';
 import { chatRoutes } from './routes/chats';
 import { messageRoutes } from './routes/messages';
 import { blobRoutes } from './routes/blobs';
+import { unfurlRoutes } from './routes/unfurl';
 import { presenceRoutes } from './routes/presence';
 import { pushRoutes } from './routes/push';
 import { wsRoutes } from './ws';
@@ -30,6 +31,7 @@ export function buildApp(): FastifyInstance {
       api.register(chatRoutes);
       api.register(messageRoutes);
       api.register(blobRoutes);
+      api.register(unfurlRoutes);
       api.register(presenceRoutes);
       api.register(pushRoutes);
     },

@@ -21,6 +21,20 @@ export const config = {
   fsBlobDir,
   blobTmpDir: process.env.BLOB_TMP_DIR ?? resolve(fsBlobDir, '.tmp'),
 
+  // Превью ссылок (#32): сервер сам тянет страницу/картинку (клиент не может —
+  // CORS), поэтому строгие лимиты и SSRF-защита. allowPrivate разрешает фетч
+  // приватных/loopback адресов — только для dev/тестов (фикстура на localhost).
+  unfurl: {
+    // геттер — читаем env живьём (тесты переключают флаг в рантайме)
+    get allowPrivate(): boolean {
+      return process.env.UNFURL_ALLOW_PRIVATE === '1';
+    },
+    timeoutMs: Number(process.env.UNFURL_TIMEOUT_MS ?? 5000),
+    maxRedirects: Number(process.env.UNFURL_MAX_REDIRECTS ?? 4),
+    maxHtmlBytes: Number(process.env.UNFURL_MAX_HTML_BYTES ?? 512 * 1024),
+    maxImageBytes: Number(process.env.UNFURL_MAX_IMAGE_BYTES ?? 2 * 1024 * 1024),
+  },
+
   s3: {
     endpoint: process.env.S3_ENDPOINT, // напр. http://minio:9000
     region: process.env.S3_REGION ?? 'us-east-1',

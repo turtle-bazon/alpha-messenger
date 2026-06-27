@@ -197,6 +197,22 @@ export async function fetchBlob(blobId: string): Promise<Blob> {
   return res.blob();
 }
 
+// ---- Превью ссылок (#32) ----
+
+export interface UnfurlPreview {
+  url: string;
+  title: string;
+  description?: string;
+  siteName?: string;
+  image?: { mime: string; dataBase64: string };
+}
+
+// Развернуть ссылку: сервер сам тянет страницу (браузеру мешает CORS) и отдаёт
+// метаданные OpenGraph + байты картинки превью. preview=null — превью нет.
+export function unfurl(url: string): Promise<{ preview: UnfurlPreview | null }> {
+  return rest.post<{ preview: UnfurlPreview | null }>('/unfurl', { url });
+}
+
 export function editMessage(
   messageId: string,
   ciphertext: string,
