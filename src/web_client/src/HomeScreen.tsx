@@ -17,8 +17,8 @@ import { Conversation } from './chats/Conversation';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
+  getNotifPrefs,
   getPermission,
-  hasNotifPref,
   initNotifDefaults,
   notifyIncoming,
   requestPermission,
@@ -68,16 +68,14 @@ export function HomeScreen({
     getMe()
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
-    // Проверяем наличие ключа ДО инициализации дефолтов — initNotifDefaults()
-    // создаст ключ, и hasNotifPref() вернёт true.
-    const firstLogin = !hasNotifPref();
     // Явно фиксируем дефолты уведомлений в localStorage (известная проблема
     // №29) — чтобы хранилище и UI не расходились.
     initNotifDefaults();
-    // При первом входе (ключей не было) и если разрешение ещё не запрашивалось —
-    // показываем баннер. Запрос разрешения произойдёт при клике (user gesture),
-    // иначе браузер молча игнорирует Notification.requestPermission().
-    if (firstLogin && getPermission() === 'default') {
+    // Если настройка браузерных уведомлений включена (дефолт '1' или пользователь
+    // включил), но системное разрешение ещё не запрошено (permission = 'default') —
+    // показываем баннер. Запрос произойдёт при клике (user gesture), иначе
+    // браузер молча игнорирует Notification.requestPermission().
+    if (getNotifPrefs().browser && getPermission() === 'default') {
       setShowNotifBanner(true);
     }
   }, []);
@@ -351,24 +349,48 @@ export function HomeScreen({
     >
       <AccountNotifications ws={ws} />
       {showNotifBanner && (
-        <div className="notif-banner" data-testid="notif-banner">
-          <span>Разрешить уведомления?</span>
-          <span className="notif-banner-actions">
-            <button
-              type="button"
-              data-testid="notif-banner-allow"
-              onClick={() => void handleNotifAllow()}
-            >
-              Разрешить
-            </button>
-            <button
-              type="button"
-              data-testid="notif-banner-skip"
-              onClick={handleNotifSkip}
-            >
-              Нет
-            </button>
-          </span>
+        <div
+          className="notif-overlay"
+          data-testid="notif-overlay"
+          onClick={handleNotifSkip}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') handleNotifSkip();
+          }}
+          role="presentation"
+        >
+          <div
+            className="notif-modal"
+            data-testid="notif-banner"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') handleNotifSkip();
+            }}
+          >
+            <div className="notif-modal-icon">🔔</div>
+            <h3 className="notif-modal-title">Разрешить уведомления?</h3>
+            <p className="notif-modal-text">
+              Вы будете получать уведомления о новых сообщениях, даже когда
+              приложение свёрнуто.
+            </p>
+            <div className="notif-modal-actions">
+              <button
+                type="button"
+                className="notif-modal-btn notif-modal-btn--primary"
+                data-testid="notif-banner-allow"
+                onClick={() => void handleNotifAllow()}
+              >
+                Разрешить
+              </button>
+              <button
+                type="button"
+                className="notif-modal-btn notif-modal-btn--secondary"
+                data-testid="notif-banner-skip"
+                onClick={handleNotifSkip}
+              >
+                Не сейчас
+              </button>
+            </div>
+          </div>
         </div>
       )}
       <div className="sidebar">

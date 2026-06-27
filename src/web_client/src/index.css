@@ -354,35 +354,78 @@ body {
   font-weight: 400;
 }
 
-/* Баннер запроса разрешения на уведомления при первом входе */
-.notif-banner {
+/* Модальный диалог запроса разрешения на уведомления */
+.notif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  animation: fadeIn 0.15s ease;
+}
+.notif-modal {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 28px 32px 24px;
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  text-align: center;
+  animation: modalIn 0.2s ease;
+}
+.notif-modal-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+.notif-modal-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.notif-modal-text {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.notif-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.notif-modal-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.notif-modal-btn--primary {
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 13px;
 }
-.notif-banner-actions {
-  display: flex;
-  gap: 8px;
+.notif-modal-btn--primary:hover {
+  background: var(--accent-hover);
 }
-.notif-banner button {
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 6px;
-  padding: 4px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  background: transparent;
-  color: var(--on-accent);
-  transition: background 0.15s;
+.notif-modal-btn--secondary {
+  background: var(--bg-input);
+  color: var(--text);
 }
-.notif-banner button:hover {
-  background: rgba(255, 255, 255, 0.15);
+.notif-modal-btn--secondary:hover {
+  background: var(--bg-hover);
 }
-.notif-banner button[data-testid='notif-banner-allow'] {
-  background: rgba(255, 255, 255, 0.2);
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .conversation {
