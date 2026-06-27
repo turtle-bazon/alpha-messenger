@@ -70,13 +70,20 @@ export function NotificationSettings(): JSX.Element {
     setPrefs((p) => ({ ...p, sound: next }));
   }
 
-  // Браузерные попапы реально включены, только когда и настройка, и системное
-  // разрешение «за». Тумблер показывает именно это.
+  // Браузерные попапы реально работают, только когда и настройка, и системное
+  // разрешение «за» — это нужно для иконки колокольчика (anyOn).
   const browserActive = prefs.browser && perm === 'granted';
+  // Что показывает тумблер. В норме — реальное состояние (browserActive): пока
+  // разрешение не выдано (default), честно «выключено». Исключение — denied
+  // (#30): разрешение заблокировано/недоступно, тумблер недоступен, поэтому
+  // показываем сохранённую настройку (по умолчанию включена) — «включён, но
+  // заблокирован», как в Telegram, без рассинхрона с localStorage.
+  const browserChecked = perm === 'denied' ? prefs.browser : browserActive;
 
   async function toggleBrowser(): Promise<void> {
     // Выключение — просто гасим настройку. Включение требует системного
     // разрешения: если ещё не дано — запрашиваем и включаем только при granted.
+    // (При denied input disabled — сюда не попадаем.)
     if (browserActive) {
       setNotifBrowser(false);
       setPrefs((p) => ({ ...p, browser: false }));
@@ -142,7 +149,7 @@ export function NotificationSettings(): JSX.Element {
             <input
               type="checkbox"
               data-testid="notif-browser"
-              checked={browserActive}
+              checked={browserChecked}
               disabled={!notificationsSupported() || denied}
               onChange={() => void toggleBrowser()}
             />

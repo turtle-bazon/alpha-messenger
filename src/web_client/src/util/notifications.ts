@@ -35,22 +35,21 @@ export function setNotifBrowser(on: boolean): void {
   localStorage.setItem(BROWSER_KEY, on ? '1' : '0');
 }
 
-// Явная инициализация дефолтов при входе (известная проблема №29). Раньше
+// Явная инициализация дефолтов при входе (известные проблемы №29 и №30). Раньше
 // отсутствие ключа неявно означало «включено», из-за чего после очистки
-// localStorage ключей не было вовсе, а при заблокированном разрешении возникал
-// рассинхрон: логически browser=вкл, но в UI — выкл. Теперь при входе:
-//  - sound: если ключа нет — сидим '1';
-//  - browser: если разрешение заблокировано (denied) — фиксируем '0' (и больше
-//    не включаем/не спрашиваем); иначе, если ключа нет — сидим '1'.
-// Идемпотентно: пользовательский выбор (явные '0'/'1') не перетираем, кроме
-// принудительного '0' при denied.
+// localStorage ключей не было вовсе. Теперь дефолты сидятся явно — оба '1'.
+//
+// Важно (проблема №30): дефолт browser ВСЕГДА '1', независимо от текущего
+// Notification.permission. Прежняя завязка на denied была ошибочной: getPermission()
+// отдаёт 'denied' не только когда пользователь реально заблокировал уведомления,
+// но и когда Notification API недоступен (старый браузер, http без secure-context).
+// В таком окружении дефолт ошибочно становился '0'. Теперь при denied настройка
+// остаётся включённой ('1'), а в UI тумблер показывается включённым, но
+// заблокированным (как в Telegram); ensureBrowserPermission() при denied просто
+// ничего не делает (не спрашивает). Идемпотентно: явный выбор не перетираем.
 export function initNotifDefaults(): void {
   if (localStorage.getItem(SOUND_KEY) === null) setNotifSound(true);
-  if (getPermission() === 'denied') {
-    setNotifBrowser(false);
-  } else if (localStorage.getItem(BROWSER_KEY) === null) {
-    setNotifBrowser(true);
-  }
+  if (localStorage.getItem(BROWSER_KEY) === null) setNotifBrowser(true);
 }
 
 // Поддержка Notification API может отсутствовать (старый браузер, http без
