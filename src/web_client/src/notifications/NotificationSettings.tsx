@@ -73,12 +73,11 @@ export function NotificationSettings(): JSX.Element {
   // Браузерные попапы реально работают, только когда и настройка, и системное
   // разрешение «за» — это нужно для иконки колокольчика (anyOn).
   const browserActive = prefs.browser && perm === 'granted';
-  // Что показывает тумблер. В норме — реальное состояние (browserActive): пока
-  // разрешение не выдано (default), честно «выключено». Исключение — denied
-  // (#30): разрешение заблокировано/недоступно, тумблер недоступен, поэтому
-  // показываем сохранённую настройку (по умолчанию включена) — «включён, но
-  // заблокирован», как в Telegram, без рассинхрона с localStorage.
-  const browserChecked = perm === 'denied' ? prefs.browser : browserActive;
+  // Что показывает тумблер. При granted — честное состояние (browserActive).
+  // При default — намерение пользователя (prefs.browser): разрешение ещё не
+  // запрошено, но настройка уже может быть включена (дефолт '1'). При denied —
+  // тоже prefs.browser (включён, но заблокирован, тумблер disabled, как в Telegram).
+  const browserChecked = perm === 'granted' ? browserActive : prefs.browser;
 
   async function toggleBrowser(): Promise<void> {
     // Выключение — просто гасим настройку. Включение требует системного
