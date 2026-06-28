@@ -100,9 +100,15 @@ export function NotificationSettings(): JSX.Element {
   }
 
   function openMenu(): void {
-    // Перечитываем разрешение при открытии — оно могло измениться (автозапрос
-    // при входе, смена в настройках браузера).
-    if (!open) setPerm(getPermission());
+    // Перечитываем разрешение и настройки при открытии — они могли измениться
+    // мимо этого компонента: системное разрешение (смена в настройках браузера),
+    // а prefs.browser — модальный диалог запроса при входе (handleNotifAllow/
+    // Skip пишут в localStorage, но не в это состояние). Иначе тумблер показал бы
+    // устаревшее значение.
+    if (!open) {
+      setPerm(getPermission());
+      setPrefs(getNotifPrefs());
+    }
     setOpen((v) => !v);
   }
 
