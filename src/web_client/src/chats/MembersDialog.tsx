@@ -11,11 +11,14 @@ export function MembersDialog({
   chat,
   myId,
   onlineUsers,
+  typingUsers,
   onClose,
 }: {
   chat: Chat;
   myId: string | null;
   onlineUsers: Set<string>;
+  // Печатающие сейчас в этом чате участники — их аватар обводим окантовкой (#27).
+  typingUsers: Set<string>;
   onClose: () => void;
 }): JSX.Element {
   const [members, setMembers] = useState<ChatMember[]>([]);
@@ -153,6 +156,13 @@ export function MembersDialog({
                     style={{ backgroundColor: colorFor(m.username) }}
                   >
                     {initialFor(m.username)}
+                    {typingUsers.has(m.userId) && (
+                      <span
+                        className="avatar-typing-ring"
+                        data-testid="member-typing"
+                        aria-hidden="true"
+                      />
+                    )}
                     {online && (
                       <span
                         className="member-online-dot"

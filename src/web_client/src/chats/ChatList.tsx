@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { getUserId } from '../api/session';
 import type { Chat, Participant } from '../api/types';
 import { decodeContent, previewText } from '../util/content';
 import { formatListTime } from '../util/time';
 import { IconSearch } from '../util/icons';
 import { chatTitle } from './chatTitle';
 import { colorFor, initialFor } from './avatar';
+import { AvatarBadges } from './AvatarBadges';
 import { NewChatDialog } from './NewChatDialog';
 
 // Левая колонка (раскладка Telegram): заголовок с кнопкой «новый чат» (синяя «+»,
@@ -15,6 +15,9 @@ export function ChatList({
   chats,
   loading,
   selectedId,
+  myId,
+  onlineUsers,
+  typingByChat,
   onSelect,
   onCreateDirect,
   onCreateGroup,
@@ -22,11 +25,13 @@ export function ChatList({
   chats: Chat[];
   loading: boolean;
   selectedId: string | null;
+  myId: string | null;
+  onlineUsers: Set<string>;
+  typingByChat: Map<string, Set<string>>;
   onSelect: (chatId: string) => void;
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;
 }): JSX.Element {
-  const myId = getUserId();
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -101,6 +106,15 @@ export function ChatList({
         ) : (
           filtered.map((chat) => {
             const title = chatTitle(chat, myId);
+            // Присутствие показываем только в личных чатах (для группы кружок не
+            // нужен). Тайпинг — в любом чате: для direct это собеседник, для
+            // группы — любой печатающий участник (#27).
+            const other =
+              chat.type === 'direct'
+                ? chat.participants.find((p) => p.userId !== myId)
+                : undefined;
+            const online = other ? onlineUsers.has(other.userId) : undefined;
+            const typing = (typingByChat.get(chat.chatId)?.size ?? 0) > 0;
             return (
               <button
                 key={chat.chatId}
@@ -118,6 +132,7 @@ export function ChatList({
                   aria-hidden="true"
                 >
                   {initialFor(title)}
+                  <AvatarBadges online={online} typing={typing} />
                 </span>
                 <span className="chat-item-row chat-item-top">
                   <span className="chat-item-title">{title}</span>
@@ -128,7 +143,10 @@ export function ChatList({
                   )}
                 </span>
                 <span className="chat-item-row chat-item-bottom">
-                  <span className="chat-item-preview">
+                  <span
+                    className="chat-item-preview"
+                    data-testid="chat-item-preview"
+                  >
                     {chat.lastMessage
                       ? previewText(decodeContent(chat.lastMessage.ciphertext))
                       : 'Нет сообщений'}

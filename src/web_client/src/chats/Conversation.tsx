@@ -59,7 +59,6 @@ function pluralMembers(n: number): string {
 }
 
 const PAGE = 50;
-const TYPING_HIDE_MS = 6000;
 const TYPING_SEND_THROTTLE_MS = 2000;
 // Максимальная высота поля ввода (задача #25): дальше — внутренний скролл.
 const MAX_INPUT_H = 160;
@@ -132,12 +131,16 @@ export function Conversation({
   ws,
   myId,
   onlineUsers,
+  typingUsers,
   onBack,
 }: {
   chat: Chat;
   ws: WsClient;
   myId: string | null;
   onlineUsers: Set<string>;
+  // Кто печатает в этом чате (без меня) — из общего трекера (#27). Заголовок
+  // показывает «печатает», окно участников — окантовку у их аватаров.
+  typingUsers: Set<string>;
   onBack: () => void;
 }): JSX.Element {
   const chatId = chat.chatId;
@@ -167,10 +170,8 @@ export function Conversation({
   // проскакивают мимо guard'а, загружая одну и ту же страницу дважды → дубли.
   const loadingMoreRef = useRef(false);
   const [readUpTo, setReadUpTo] = useState(0);
-  const [typingFrom, setTypingFrom] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSent = useRef(0);
   const lastReadSent = useRef(0);
   // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
@@ -272,22 +273,10 @@ export function Conversation({
         if (p.userId === myId) return; // нас интересует прочтение собеседником
         setReadUpTo((cur) => Math.max(cur, Number(p.upToMessageId)));
       }),
-      ws.on('typing', (ev: ServerEvent) => {
-        if (ev.chatId !== chatId) return;
-        const p = ev.payload as { userId: string };
-        if (p.userId === myId) return;
-        setTypingFrom(true);
-        if (typingTimer.current) clearTimeout(typingTimer.current);
-        typingTimer.current = setTimeout(
-          () => setTypingFrom(false),
-          TYPING_HIDE_MS,
-        );
-      }),
     ];
     return () => {
       alive = false;
       offs.forEach((off) => off());
-      if (typingTimer.current) clearTimeout(typingTimer.current);
     };
   }, [chatId, ws, myId]);
 
@@ -475,6 +464,9 @@ export function Conversation({
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
     sendQueueRef.current.push({ clientMessageId, text, images, link });
+    // Набор завершён отправкой — сбрасываем троттл typing, чтобы следующий ввод
+    // сразу заново уведомил собеседника (иначе до 2 с «печатает» не появится).
+    lastTypingSent.current = 0;
     void pump();
   }
 
@@ -723,7 +715,7 @@ export function Conversation({
             </span>
           )}
         </button>
-        {typingFrom && (
+        {typingUsers.size > 0 && (
           <span className="conv-typing" data-testid="typing-indicator">
             печатает
             <span className="typing-dots" aria-hidden="true">
@@ -1030,6 +1022,7 @@ export function Conversation({
           chat={chat}
           myId={myId}
           onlineUsers={onlineUsers}
+          typingUsers={typingUsers}
           onClose={() => setMembersOpen(false)}
         />
       )}

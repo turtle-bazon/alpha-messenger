@@ -28,3 +28,20 @@ export async function createDirectViaUi(
   await page.getByTestId('new-chat-submit').click();
   await expect(page.getByTestId('new-chat-dialog')).toHaveCount(0);
 }
+
+// Создание группы через UI: вкладка «Новая группа», название и выбор участников
+// из списка знакомых (с кем уже есть личный чат). members — их username.
+export async function createGroupViaUi(
+  page: Page,
+  title: string,
+  members: string[],
+): Promise<void> {
+  await page.getByTestId('new-chat-button').click();
+  await page.getByTestId('new-chat-tab-group').click();
+  await page.getByTestId('new-group-title').fill(title);
+  for (const m of members) {
+    await page.getByTestId('new-group-option').filter({ hasText: m }).click();
+  }
+  await page.getByTestId('new-group-submit').click();
+  await expect(page.getByTestId('new-chat-dialog')).toHaveCount(0);
+}

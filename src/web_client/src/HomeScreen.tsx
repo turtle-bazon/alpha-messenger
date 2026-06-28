@@ -9,11 +9,12 @@ import {
 } from './api/rest';
 import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
-import type { Chat, ServerEvent } from './api/types';
+import type { Chat, MessagePreview, ServerEvent } from './api/types';
 import { AccountNotifications } from './account/AccountNotifications';
 import { NotificationSettings } from './notifications/NotificationSettings';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
+import { useTyping } from './chats/useTyping';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
@@ -26,6 +27,24 @@ import {
   setUnreadBadge,
 } from './util/notifications';
 import { IconMoon, IconSun } from './util/icons';
+
+// Самое свежее превью из набора кандидатов (по возрастанию message_id). Нужно,
+// чтобы превью в списке не «застревало» на раннем сообщении при гонке нескольких
+// параллельных getChat (см. задачу #28, ветка idx<0 ниже).
+function newestPreview(
+  ...candidates: (MessagePreview | null | undefined)[]
+): MessagePreview | null {
+  let best: MessagePreview | null = null;
+  for (const c of candidates) {
+    if (!c) continue;
+    if (!best || Number(c.messageId) > Number(best.messageId)) best = c;
+  }
+  return best;
+}
+
+// Стабильная пустая ссылка для чатов без печатающих — чтобы не плодить новые
+// Set на каждый рендер (лишние ререндеры Conversation).
+const EMPTY_TYPING: Set<string> = new Set();
 
 // Главный экран: владеет списком чатов, WS-соединением и выбором чата.
 // Живые события (chat.created, message.new) обновляют список здесь — из одного
@@ -46,6 +65,9 @@ export function HomeScreen({
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  // Кто печатает, по чатам — единый источник для списка чатов, заголовка
+  // переписки и окна участников (задача #27).
+  const typingByChat = useTyping(ws, myId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
@@ -158,12 +180,32 @@ export function HomeScreen({
       setChats((prev) => {
         const idx = prev.findIndex((c) => c.chatId === chatId);
         if (idx < 0) {
+          // Чата ещё нет в списке (новый чат / всплеск сообщений в него) —
+          // тянем объект чата. Превью берём как самое свежее из загруженного
+          // снимка, уже лежащего в списке и самого события: несколько message.new
+          // в один новый чат запускают параллельные getChat, и «победитель» мог
+          // снять устаревший снимок — без этой подстраховки превью застревало бы
+          // на раннем сообщении (задача #28).
+          const preview: MessagePreview = {
+            messageId: p.messageId,
+            senderId: p.senderId,
+            ciphertext: p.ciphertext,
+            ts: p.ts,
+          };
           void getChat(chatId).then((chat) =>
-            setChats((cur) =>
-              cur.some((c) => c.chatId === chat.chatId)
-                ? cur
-                : [chat, ...cur],
-            ),
+            setChats((cur) => {
+              const existing = cur.find((c) => c.chatId === chat.chatId);
+              const lastMessage = newestPreview(
+                chat.lastMessage,
+                existing?.lastMessage,
+                preview,
+              );
+              return existing
+                ? cur.map((c) =>
+                    c.chatId === chat.chatId ? { ...c, lastMessage } : c,
+                  )
+                : [{ ...chat, lastMessage }, ...cur];
+            }),
           );
           return prev;
         }
@@ -419,6 +461,9 @@ export function HomeScreen({
           chats={chats}
           loading={loading}
           selectedId={selectedId}
+          myId={myId}
+          onlineUsers={onlineUsers}
+          typingByChat={typingByChat}
           onSelect={onSelect}
           onCreateDirect={onCreateDirect}
           onCreateGroup={onCreateGroup}
@@ -432,6 +477,7 @@ export function HomeScreen({
             ws={ws}
             myId={myId}
             onlineUsers={onlineUsers}
+            typingUsers={typingByChat.get(selectedChat.chatId) ?? EMPTY_TYPING}
             onBack={() => setSelectedId(null)}
           />
         ) : (
