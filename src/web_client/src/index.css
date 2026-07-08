@@ -486,6 +486,10 @@ body {
   font-weight: 400;
   font-size: 13px;
   color: var(--accent);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Анимированные точки «печатает» — пульсация с волной (как в Telegram). */

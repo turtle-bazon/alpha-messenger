@@ -132,6 +132,7 @@ export function Conversation({
   myId,
   onlineUsers,
   typingUsers,
+  inputRef,
   onBack,
 }: {
   chat: Chat;
@@ -141,6 +142,8 @@ export function Conversation({
   // Кто печатает в этом чате (без меня) — из общего трекера (#27). Заголовок
   // показывает «печатает», окно участников — окантовку у их аватаров.
   typingUsers: Set<string>;
+  // Ссылка на поле ввода — для глобального фокуса (задача #40).
+  inputRef: React.RefObject<HTMLTextAreaElement>;
   onBack: () => void;
 }): JSX.Element {
   const chatId = chat.chatId;
@@ -177,7 +180,6 @@ export function Conversation({
   // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
   const chatRef = useRef(chat);
   chatRef.current = chat;
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   // Очередь исходящих (задача #26): отправка строго последовательная, чтобы
   // более позднее сообщение не обогнало раннее. Голова очереди отправляется
   // первой; при ошибке остаётся в голове и блокирует следующие до повтора.
@@ -689,6 +691,29 @@ export function Conversation({
   const nameOf = (id: string): string =>
     chat.participants.find((p) => p.userId === id)?.username ?? '—';
 
+  // Форматирование строки «печатает» с именами (задача #35).
+  // Возвращает текст БЕЗ «...» — анимированные точки добавляются отдельно в JSX.
+  const formatTypingText = (users: Set<string>): string => {
+    const names = [...users]
+      .map((id) => chat.participants.find((p) => p.userId === id)?.username)
+      .filter((n): n is string => !!n);
+    if (names.length === 0) return 'печатает';
+    const MAX_LEN = 40;
+    if (names.length === 1) return `${names[0]} печатает`;
+    if (names.length === 2) return `${names[0]} и ${names[1]} печатают`;
+    // 3+ имён: добавляем по одному, пока влезает. Если не влезает — «и др.».
+    let result = names[0];
+    for (let i = 1; i < names.length; i++) {
+      const candidate = `${result}, ${names[i]}`;
+      if (candidate.length + ' печатают'.length <= MAX_LEN) {
+        result = candidate;
+      } else {
+        return `${result} и др. печатают`;
+      }
+    }
+    return `${result} печатают`;
+  };
+
   return (
     <div className="conv" data-testid="conversation-open">
       <header className="conv-header">
@@ -723,7 +748,7 @@ export function Conversation({
         </button>
         {typingUsers.size > 0 && (
           <span className="conv-typing" data-testid="typing-indicator">
-            печатает
+            {formatTypingText(typingUsers)}
             <span className="typing-dots" aria-hidden="true">
               <i></i>
               <i></i>
@@ -732,7 +757,24 @@ export function Conversation({
           </span>
         )}
       </header>
-      <div className="conv-scroll" ref={scrollRef} onScroll={onScroll}>
+      <div
+        className="conv-scroll"
+        ref={scrollRef}
+        onScroll={onScroll}
+        onClick={(e) => {
+          // Фокус на поле ввода при клике в пустое место (задача #40).
+          // Игнорируем клики на сообщениях ( bubble) и интерактивных элементах.
+          const target = e.target as HTMLElement;
+          if (
+            !target.closest('.bubble') &&
+            !target.closest('button') &&
+            !target.closest('input') &&
+            !target.closest('textarea')
+          ) {
+            inputRef.current?.focus();
+          }
+        }}
+      >
         {loadingMore && <div className="conv-loading">Загрузка…</div>}
         <div className="conv-messages" data-testid="messages">
           {messages.map((m, i) => {

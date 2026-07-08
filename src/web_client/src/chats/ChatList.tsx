@@ -21,6 +21,7 @@ export function ChatList({
   onSelect,
   onCreateDirect,
   onCreateGroup,
+  onFocusInput,
 }: {
   chats: Chat[];
   loading: boolean;
@@ -31,6 +32,7 @@ export function ChatList({
   onSelect: (chatId: string) => void;
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;
+  onFocusInput: () => void;
 }): JSX.Element {
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState('');
@@ -60,7 +62,15 @@ export function ChatList({
   }, [chats, myId]);
 
   return (
-    <aside className="chat-list" data-testid="chat-list">
+    <aside
+      className="chat-list"
+      data-testid="chat-list"
+      onClick={(e) => {
+        // Фокус на поле ввода при клике в пустое место (задача #40).
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag !== 'BUTTON' && tag !== 'INPUT') onFocusInput();
+      }}
+    >
       <div className="chat-list-bar">
         <span className="chat-list-bar-title">Чаты</span>
         <button

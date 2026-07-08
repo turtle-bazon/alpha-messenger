@@ -79,6 +79,8 @@ export function HomeScreen({
   // эффекта и без побочных эффектов в setState-апдейтерах).
   const chatsRef = useRef<Chat[]>([]);
   chatsRef.current = chats;
+  // Ссылка на поле ввода сообщений — для глобального фокуса (задача #40).
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   function toggleTheme(): void {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
@@ -100,6 +102,24 @@ export function HomeScreen({
     if (getNotifPrefs().browser && getPermission() === 'default') {
       setShowNotifBanner(true);
     }
+  }, []);
+
+  // Глобальный фокус поля ввода при нажатии клавиши или вставке (задача #40).
+  useEffect(() => {
+    const focusInput = () => inputRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Игнорируем модификаторы и служебные клавиши (Tab, Shift и т.д.).
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;
+      focusInput();
+    };
+    const onPaste = () => focusInput();
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('paste', onPaste);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('paste', onPaste);
+    };
   }, []);
 
   // Счётчик непрочитанных в title вкладки (известная проблема №8): сумма по всем
@@ -467,6 +487,7 @@ export function HomeScreen({
           onSelect={onSelect}
           onCreateDirect={onCreateDirect}
           onCreateGroup={onCreateGroup}
+          onFocusInput={() => inputRef.current?.focus()}
         />
       </div>
       <main className="conversation">
@@ -478,6 +499,7 @@ export function HomeScreen({
             myId={myId}
             onlineUsers={onlineUsers}
             typingUsers={typingByChat.get(selectedChat.chatId) ?? EMPTY_TYPING}
+            inputRef={inputRef}
             onBack={() => setSelectedId(null)}
           />
         ) : (
