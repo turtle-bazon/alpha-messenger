@@ -55,11 +55,15 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload AppImage
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: alpha-messenger-${{ matrix.platform }}
-        path: src/desktop_client/release/*.AppImage
+        path: |
+          src/desktop_client/release/*.AppImage
+          src/desktop_client/release/*.zip
+          src/desktop_client/release/*.exe
+          src/desktop_client/release/*.dmg
         if-no-files-found: error
         retention-days: 30
 
