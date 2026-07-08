@@ -1,6 +1,7 @@
 appId: com.alpha.messenger
 productName: Alpha Messenger
 copyright: Copyright © 2024 Alpha Messenger
+publish: null
 
 directories:
   output: release
