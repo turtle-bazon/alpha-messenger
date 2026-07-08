@@ -11,6 +11,10 @@ files:
   - resources/**/*
   - "!node_modules/**/{test,__tests__,tests,powered-test,example,examples}"
 
+extraFiles:
+  - from: ../web_client/dist
+    to: web_client/dist
+
 extraResources:
   - from: resources/
     to: resources/
