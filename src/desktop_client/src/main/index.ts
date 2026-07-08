@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, protocol } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { setupTray } from './tray';
 
 let mainWindow: BrowserWindow | null = null;
@@ -25,8 +26,8 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // В prod режиме загружаем built SPA
-    mainWindow.loadFile(path.join(__dirname, '../../web_client_dist/index.html'));
+    // В prod режиме загружаем built SPA через custom protocol
+    mainWindow.loadURL('app://index.html');
   }
 
   // Открываем внешние ссылки в браузере
@@ -50,6 +51,16 @@ function createWindow(): void {
 
 // Готово к работе — настраиваем трей
 app.whenReady().then(() => {
+  // Регистрируем custom protocol для раздачи статики
+  protocol.handle('app', (request) => {
+    const filePath = path.join(__dirname, '../../web_client_dist', new URL(request.url).pathname);
+    if (fs.existsSync(filePath)) {
+      return new Response(fs.readFileSync(filePath));
+    }
+    // Fallback для SPA — все маршруты → index.html
+    return new Response(fs.readFileSync(path.join(__dirname, '../../web_client_dist/index.html')));
+  });
+
   createWindow();
   if (mainWindow) setupTray(mainWindow);
 
