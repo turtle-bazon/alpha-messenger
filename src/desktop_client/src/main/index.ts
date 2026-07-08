@@ -1,9 +1,6 @@
 import { app, BrowserWindow, shell } from 'electron';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { setupTray } from './tray.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import path from 'path';
+import { setupTray } from './tray';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -40,7 +37,7 @@ function createWindow(): void {
 
   // Сворачиваем в трей вместо закрытия
   mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
+    if (!(global as any).isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
     }
@@ -74,7 +71,7 @@ app.on('window-all-closed', () => {
 
 // Флаг для выхода из трея
 app.on('before-quit', () => {
-  (app as typeof app & { isQuitting: boolean }).isQuitting = true;
+  (global as any).isQuitting = true;
 });
 
 export { mainWindow };

@@ -1,8 +1,5 @@
 import { Tray, Menu, BrowserWindow, app, nativeImage, ipcMain } from 'electron';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import path from 'path';
 
 let tray: Tray | null = null;
 
@@ -32,7 +29,7 @@ export function setupTray(mainWindow: BrowserWindow): void {
     {
       label: 'Выход',
       click: () => {
-        (app as typeof app & { isQuitting: boolean }).isQuitting = true;
+        (global as any).isQuitting = true;
         app.quit();
       },
     },
