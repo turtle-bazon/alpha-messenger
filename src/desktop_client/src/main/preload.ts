@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: () => ipcRenderer.invoke('app:version'),
   getPlatform: () => ipcRenderer.invoke('app:platform'),
 
+  // Настройка сервера
+  loadWebClient: () => ipcRenderer.invoke('load-web-client'),
+  showSetup: () => ipcRenderer.invoke('show-setup'),
+
   // События
   onNotificationClick: (callback: () => void) => {
     ipcRenderer.on('notification:click', () => callback());

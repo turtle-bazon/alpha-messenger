@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alpha Messenger — Настройка</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .setup-card {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 40px;
+      width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #888;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #0f3460;
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      border-color: #4a9eff;
+    }
+    input::placeholder {
+      color: #666;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 24px;
+      border: none;
+      border-radius: 8px;
+      background: #4a9eff;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #3a8eef;
+    }
+    button:disabled {
+      background: #333;
+      cursor: not-allowed;
+    }
+    .error {
+      color: #ff6b6b;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-card">
+    <h1>Alpha Messenger</h1>
+    <p class="subtitle">Подключение к серверу</p>
+    <form id="setup-form">
+      <label for="server-url">Адрес сервера</label>
+      <input
+        type="url"
+        id="server-url"
+        placeholder="https://example.com"
+        required
+        autofocus
+      >
+      <p class="error" id="error-msg">Введите корректный URL</p>
+      <button type="submit" id="connect-btn">Подключиться</button>
+    </form>
+  </div>
+  <script>
+    const form = document.getElementById('setup-form');
+    const input = document.getElementById('server-url');
+    const error = document.getElementById('error-msg');
+    const btn = document.getElementById('connect-btn');
+
+    // Проверяем, есть ли уже сохранённый URL
+    const saved = localStorage.getItem('alpha.serverUrl');
+    if (saved) {
+      input.value = saved;
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const url = input.value.trim();
+
+      // Валидация URL
+      try {
+        new URL(url);
+      } catch {
+        error.style.display = 'block';
+        return;
+      }
+
+      error.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Подключение...';
+
+      // Сохраняем URL
+      localStorage.setItem('alpha.serverUrl', url);
+
+      // Загружаем web клиент через IPC
+      if (window.electronAPI && window.electronAPI.loadWebClient) {
+        window.electronAPI.loadWebClient();
+      } else {
+        // Fallback для браузера
+        window.location.reload();
+      }
+    });
+  </script>
+</body>
+</html>
