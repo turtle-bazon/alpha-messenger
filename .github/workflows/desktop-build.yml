@@ -40,6 +40,8 @@ jobs:
       run: |
         npm install
         npm run build
+      env:
+        VITE_API_URL: https://doyhof3v5x.java-lords.ru
 
     - name: Build Electron app
       working-directory: src/desktop_client
