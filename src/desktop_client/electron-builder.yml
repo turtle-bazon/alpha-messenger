@@ -43,6 +43,7 @@ linux:
   icon: resources/icon.png
   artifactName: alpha-messenger-${version}-linux-${arch}.${ext}
   category: Network
+  archive: false
 
 nsis:
   oneClick: false
