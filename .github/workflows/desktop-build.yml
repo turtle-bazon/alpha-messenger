@@ -46,6 +46,9 @@ jobs:
       env:
         VITE_API_URL: https://doyhof3v5x.java-lords.ru
 
+    - name: Copy web client to desktop_client
+      run: cp -r src/web_client/dist src/desktop_client/web_client_dist
+
     - name: Build Electron app
       working-directory: src/desktop_client
       run: npm run build:${{ matrix.platform }}

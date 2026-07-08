@@ -26,7 +26,7 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools();
   } else {
     // В prod режиме загружаем built SPA
-    mainWindow.loadFile(path.join(__dirname, '../../web_client/dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../../web_client_dist/index.html'));
   }
 
   // Открываем внешние ссылки в браузере
