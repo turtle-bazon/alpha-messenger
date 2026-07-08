@@ -55,14 +55,30 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload artifacts
+    - name: Upload AppImage
+      if: matrix.platform == 'linux'
       uses: actions/upload-artifact@v4
       with:
         name: alpha-messenger-${{ matrix.platform }}
-        path: |
-          src/desktop_client/release/*.AppImage
-          src/desktop_client/release/*.exe
-          src/desktop_client/release/*.dmg
+        path: src/desktop_client/release/*.AppImage
+        if-no-files-found: error
+        retention-days: 30
+
+    - name: Upload exe
+      if: matrix.platform == 'win'
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpha-messenger-${{ matrix.platform }}
+        path: src/desktop_client/release/*.exe
+        if-no-files-found: error
+        retention-days: 30
+
+    - name: Upload dmg
+      if: matrix.platform == 'mac'
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpha-messenger-${{ matrix.platform }}
+        path: src/desktop_client/release/*.dmg
         if-no-files-found: error
         retention-days: 30
 
