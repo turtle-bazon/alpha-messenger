@@ -127,6 +127,8 @@ export function HomeScreen({
   useEffect(() => {
     const total = chats.reduce((sum, c) => sum + c.unreadCount, 0);
     setUnreadBadge(total);
+    // Badge на иконке в трее (Electron desktop)
+    window.electronAPI?.setBadgeCount(total);
   }, [chats]);
   useEffect(() => () => setUnreadBadge(0), []);
 

@@ -67,6 +67,14 @@ ipcMain.handle('show-setup', () => {
   }
 });
 
+// IPC: установить badge на иконке (вызывается из renderer при обновлении unread)
+ipcMain.handle('app:setBadgeCount', (_event, count: number) => {
+  if (process.platform !== 'win32') {
+    app.setBadgeCount(count);
+  }
+  // Tooltip обновляется в tray.ts
+});
+
 // Готово к работе — настраиваем трей
 app.whenReady().then(() => {
   createWindow();

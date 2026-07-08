@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setTrayTooltip: (tooltip: string) => ipcRenderer.invoke('tray:tooltip', tooltip),
   setTrayBadge: (count: number) => ipcRenderer.invoke('tray:badge', count),
 
+  // Badge на иконке приложения (непрочитанные)
+  setBadgeCount: (count: number) => ipcRenderer.invoke('app:setBadgeCount', count),
+
   // Информация о приложении
   getVersion: () => ipcRenderer.invoke('app:version'),
   getPlatform: () => ipcRenderer.invoke('app:platform'),
