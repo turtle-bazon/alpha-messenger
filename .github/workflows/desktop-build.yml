@@ -29,9 +29,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: src/desktop_client/package-lock.json
+        node-version: '22'
 
     - name: Install dependencies
       working-directory: src/desktop_client
