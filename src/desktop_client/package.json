@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "Alpha Messenger Desktop Client",
+  "author": {
+    "name": "gilmullin",
+    "email": "gilmullin@users.noreply.github.com"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/gilmullin/alpha_messenger.git"
