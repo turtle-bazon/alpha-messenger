@@ -38,9 +38,6 @@ linux:
     - target: AppImage
       arch:
         - x64
-    - target: deb
-      arch:
-        - x64
   icon: resources/icon.png
   artifactName: alpha-messenger-${version}-linux-${arch}.${ext}
   category: Network
@@ -61,10 +58,3 @@ dmg:
       y: 220
       type: link
       path: /Applications
-
-deb:
-  depends:
-    - libnotify4
-    - libappindicator3-1
-    - libxtst6
-    - libnss3
