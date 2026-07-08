@@ -27,8 +27,8 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools();
   } else {
     // В prod режиме загружаем setup.html или web клиент
-    const setupPath = path.join(__dirname, '../setup.html');
-    const distPath = path.join(__dirname, '../web_client_dist/index.html');
+    const setupPath = path.join(__dirname, '../../setup.html');
+    const distPath = path.join(__dirname, '../../web_client_dist/index.html');
     mainWindow.loadFile(setupPath);
   }
 
@@ -54,7 +54,7 @@ function createWindow(): void {
 // IPC: перезагрузить с web клиентом
 ipcMain.handle('load-web-client', () => {
   if (mainWindow) {
-    const distPath = path.join(__dirname, '../web_client_dist/index.html');
+    const distPath = path.join(__dirname, '../../web_client_dist/index.html');
     mainWindow.loadFile(distPath);
   }
 });
@@ -62,7 +62,7 @@ ipcMain.handle('load-web-client', () => {
 // IPC: вернуться на экран настройки
 ipcMain.handle('show-setup', () => {
   if (mainWindow) {
-    const setupPath = path.join(__dirname, '../setup.html');
+    const setupPath = path.join(__dirname, '../../setup.html');
     mainWindow.loadFile(setupPath);
   }
 });
