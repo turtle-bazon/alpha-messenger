@@ -280,6 +280,12 @@ export function Conversation({
     };
   }, [chatId, ws, myId]);
 
+  // Автофокус на поле ввода при открытии чата (задача #37): фокусируем после
+  // маунта, чтобы пользователь мог сразу начать набирать текст.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [chatId]);
+
   // Автопрокрутка вниз, если пользователь уже у низа.
   useLayoutEffect(() => {
     const el = scrollRef.current;
