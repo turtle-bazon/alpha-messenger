@@ -1,6 +1,5 @@
-import { app, BrowserWindow, shell, protocol } from 'electron';
+import { app, BrowserWindow, shell, protocol, net } from 'electron';
 import path from 'path';
-import fs from 'fs';
 import { setupTray } from './tray';
 
 let mainWindow: BrowserWindow | null = null;
@@ -52,13 +51,19 @@ function createWindow(): void {
 // Готово к работе — настраиваем трей
 app.whenReady().then(() => {
   // Регистрируем custom protocol для раздачи статики
+  const distPath = path.join(__dirname, '../../web_client_dist');
+
   protocol.handle('app', (request) => {
-    const filePath = path.join(__dirname, '../../web_client_dist', new URL(request.url).pathname);
-    if (fs.existsSync(filePath)) {
-      return new Response(fs.readFileSync(filePath));
+    const url = new URL(request.url);
+    let filePath = path.join(distPath, url.pathname);
+
+    // Если файл не существует — fallback для SPA (index.html)
+    const fs = require('fs');
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(distPath, 'index.html');
     }
-    // Fallback для SPA — все маршруты → index.html
-    return new Response(fs.readFileSync(path.join(__dirname, '../../web_client_dist/index.html')));
+
+    return net.fetch(`file://${filePath}`);
   });
 
   createWindow();
