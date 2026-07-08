@@ -1,10 +1,8 @@
-import { app, BrowserWindow, shell, protocol, net, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import path from 'path';
-import fs from 'fs';
 import { setupTray } from './tray';
 
 let mainWindow: BrowserWindow | null = null;
-const distPath = path.join(__dirname, '../../web_client_dist');
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -19,6 +17,7 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      webSecurity: false, // Разрешаем localStorage и cross-origin для file://
     },
   });
 
@@ -27,9 +26,10 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // Проверяем, есть ли сохранённый URL сервера
-    // Если нет — показываем экран настройки
-    mainWindow.loadURL('app://setup.html');
+    // В prod режиме загружаем setup.html или web клиент
+    const setupPath = path.join(__dirname, '../../setup.html');
+    const distPath = path.join(__dirname, '../../web_client_dist/index.html');
+    mainWindow.loadFile(setupPath);
   }
 
   // Открываем внешние ссылки в браузере
@@ -51,41 +51,24 @@ function createWindow(): void {
   });
 }
 
-// IPC: получить сохранённый URL сервера
-ipcMain.handle('get-server-url', () => {
-  // Читаем из localStorage через renderer
-  return null;
-});
-
 // IPC: перезагрузить с web клиентом
 ipcMain.handle('load-web-client', () => {
   if (mainWindow) {
-    mainWindow.loadURL('app://index.html');
+    const distPath = path.join(__dirname, '../../web_client_dist/index.html');
+    mainWindow.loadFile(distPath);
   }
 });
 
 // IPC: вернуться на экран настройки
 ipcMain.handle('show-setup', () => {
   if (mainWindow) {
-    mainWindow.loadURL('app://setup.html');
+    const setupPath = path.join(__dirname, '../../setup.html');
+    mainWindow.loadFile(setupPath);
   }
 });
 
 // Готово к работе — настраиваем трей
 app.whenReady().then(() => {
-  // Регистрируем custom protocol для раздачи статики
-  protocol.handle('app', (request) => {
-    const url = new URL(request.url);
-    let filePath = path.join(distPath, url.pathname);
-
-    // Если файл не существует — fallback для SPA (index.html)
-    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-      filePath = path.join(distPath, 'index.html');
-    }
-
-    return net.fetch(`file://${filePath}`);
-  });
-
   createWindow();
   if (mainWindow) setupTray(mainWindow);
 
