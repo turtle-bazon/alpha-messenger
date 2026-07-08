@@ -145,3 +145,10 @@ vite.config.ts.timestamp-*
 # Playwright (на случай запуска из корня)
 test-results/
 playwright-report/
+
+# Desktop client build artifacts
+src/desktop_client/release/
+src/desktop_client/dist/
+src/desktop_client/web_client_dist/
+src/desktop_client/node_modules/
+src/desktop_client/package-lock.json
