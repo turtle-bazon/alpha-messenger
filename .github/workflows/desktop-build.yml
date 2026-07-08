@@ -11,8 +11,6 @@ env:
 jobs:
   build-desktop:
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
     strategy:
       matrix:
         include:
@@ -49,16 +47,40 @@ jobs:
     - name: Build Electron app
       working-directory: src/desktop_client
       run: npm run build:${{ matrix.platform }}
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload to release (tag only)
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v2
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        files: |
+        name: release-${{ matrix.platform }}
+        path: |
           src/desktop_client/release/*.AppImage
           src/desktop_client/release/*.exe
           src/desktop_client/release/*.dmg
+        if-no-files-found: error
+        retention-days: 1
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        pattern: release-*
+        merge-multiple: true
+
+    - name: List files
+      run: ls -la artifacts/
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: artifacts/*
         draft: false
         prerelease: false
+        generate_release_notes: true
