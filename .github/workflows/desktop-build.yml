@@ -1,0 +1,79 @@
+name: Desktop App Build
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-desktop:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            artifact: AppImage
+          - os: windows-latest
+            platform: win
+            artifact: exe
+          - os: macos-latest
+            platform: mac
+            artifact: dmg
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: src/desktop_client/package-lock.json
+
+    - name: Install dependencies
+      working-directory: src/desktop_client
+      run: npm ci
+
+    - name: Build web client
+      working-directory: src/web_client
+      run: |
+        npm ci
+        npm run build
+
+    - name: Build Electron app
+      working-directory: src/desktop_client
+      run: npm run build:${{ matrix.platform }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpha-messenger-${{ matrix.platform }}
+        path: src/desktop_client/release/*
+        retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: artifacts/*
+        draft: false
+        prerelease: false
+        generate_release_notes: true

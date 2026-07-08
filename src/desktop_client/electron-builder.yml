@@ -1,0 +1,70 @@
+appId: com.alpha.messenger
+productName: Alpha Messenger
+copyright: Copyright © 2024 Alpha Messenger
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist/**/*
+  - resources/**/*
+  - "!node_modules/**/{test,__tests__,tests,powered-test,example,examples}"
+
+extraResources:
+  - from: resources/
+    to: resources/
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: resources/icon.ico
+  artifactName: alpha-messenger-${version}-win-${arch}.exe
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: resources/icon.icns
+  artifactName: alpha-messenger-${version}-mac-${arch}.dmg
+  category: public.app-category.social-networking
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: resources/icon.png
+  artifactName: alpha-messenger-${version}-linux-${arch}.${ext}
+  category: Network
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Alpha Messenger
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+deb:
+  depends:
+    - libnotify4
+    - libappindicator3-1
+    - libxtst6
+    - libnss3

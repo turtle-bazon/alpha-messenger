@@ -1,0 +1,25 @@
+{
+  "name": "alpha-messenger-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Alpha Messenger Desktop Client",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "tsx src/main/index.ts",
+    "build": "tsc && electron-builder",
+    "build:win": "tsc && electron-builder --win",
+    "build:mac": "tsc && electron-builder --mac",
+    "build:linux": "tsc && electron-builder --linux",
+    "preview": "electron dist/main/index.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
