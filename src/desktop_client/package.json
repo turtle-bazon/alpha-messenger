@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "Alpha Messenger Desktop Client",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gilmullin/alpha_messenger.git"
+  },
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "tsx src/main/index.ts",
