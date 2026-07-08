@@ -33,12 +33,12 @@ jobs:
 
     - name: Install dependencies
       working-directory: src/desktop_client
-      run: npm ci
+      run: npm install
 
     - name: Build web client
       working-directory: src/web_client
       run: |
-        npm ci
+        npm install
         npm run build
 
     - name: Build Electron app
