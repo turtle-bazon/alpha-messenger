@@ -1,15 +1,15 @@
 // Базовый адрес сервера. В dev и e2e — локальный стек (cross-origin :5173→:3000).
 // В прод-сборке читаем из localStorage (десктоп) или используем VITE_API_URL.
 function getApiUrl(): string {
-  // В dev режиме используем VITE_API_URL
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
-  // В десктопе читаем из localStorage
+  // В десктопе приоритет — localStorage (пользователь вводит адрес)
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('alpha.serverUrl');
     if (saved) return saved;
+  }
+
+  // В dev/CI режиме используем VITE_API_URL
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
 
   // Fallback
