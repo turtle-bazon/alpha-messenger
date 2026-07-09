@@ -88,6 +88,7 @@ interface MsgVM {
   failed: boolean;
   deleted: boolean;
   edited: boolean;
+  replyToMessageId: string | null;
 }
 
 function fromHistory(m: Message): MsgVM {
@@ -100,6 +101,7 @@ function fromHistory(m: Message): MsgVM {
     failed: false,
     deleted: m.deleted,
     edited: !!m.editedAt,
+    replyToMessageId: m.replyToMessageId ?? null,
   };
 }
 
@@ -152,6 +154,8 @@ export function Conversation({
   const [messages, setMessages] = useState<MsgVM[]>([]);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
+  // Ответ на сообщение: ID сообщения, на которое отвечаем.
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
@@ -199,6 +203,7 @@ export function Conversation({
       text: string;
       images: OutgoingImage[];
       link?: LinkAttachment;
+      replyToMessageId?: string;
     }[]
   >([]);
   const pumpingRef = useRef(false);
@@ -244,6 +249,7 @@ export function Conversation({
           clientMessageId?: string;
           ciphertext: string;
           ts: string;
+          replyToMessageId?: string;
         };
         setMessages((prev) =>
           upsert(prev, {
@@ -256,6 +262,7 @@ export function Conversation({
             failed: false,
             deleted: false,
             edited: false,
+            replyToMessageId: p.replyToMessageId ?? null,
           }),
         );
       }),
@@ -478,6 +485,7 @@ export function Conversation({
     text: string,
     images: OutgoingImage[],
     link?: LinkAttachment,
+    replyToMessageId?: string,
   ): void {
     const clientMessageId = crypto.randomUUID();
     const attachments: Attachment[] = [
@@ -494,10 +502,11 @@ export function Conversation({
       failed: false,
       deleted: false,
       edited: false,
+      replyToMessageId: replyToMessageId ?? null,
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
-    sendQueueRef.current.push({ clientMessageId, text, images, link });
+    sendQueueRef.current.push({ clientMessageId, text, images, link, replyToMessageId });
     // Набор завершён отправкой — сбрасываем троттл typing и flush-таймер.
     lastTypingSent.current = 0;
     if (typingFlushRef.current) {
@@ -555,6 +564,7 @@ export function Conversation({
             head.clientMessageId,
             encodeContent(content),
             head.images.map((i) => i.att.blobId),
+            head.replyToMessageId,
           );
           setMessages((prev) =>
             upsert(prev, {
@@ -615,11 +625,13 @@ export function Conversation({
     // Прицепляем превью ссылки, если оно готово и его URL ещё есть в тексте (#32).
     const link =
       linkPreview && text.includes(linkPreview.url) ? linkPreview : undefined;
+    const replyId = replyTo;
     setInput('');
+    setReplyTo(null);
     clearPreview();
     // Очищаем draft на других устройствах
     ws.sendTyping(chatId);
-    enqueueSend(text, [], link);
+    enqueueSend(text, [], link, replyId ?? undefined);
   }
 
   function onSubmit(e: FormEvent): void {
@@ -630,6 +642,10 @@ export function Conversation({
   // Enter — отправка, Shift+Enter — перенос строки (задача #25). isComposing
   // отсекает Enter, подтверждающий ввод IME (иероглифы и т.п.).
   function onInputKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (e.key === 'Escape' && replyTo) {
+      setReplyTo(null);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       void doSubmit();
@@ -868,6 +884,36 @@ export function Conversation({
                     <em>Сообщение удалено</em>
                   ) : (
                     <>
+                      {/* Превью сообщения, на которое отвечаем (#33) */}
+                      {m.replyToMessageId && (() => {
+                        const ref = messages.find((x) => x.messageId === m.replyToMessageId);
+                        const refName = ref
+                          ? chat.participants.find((p) => p.userId === ref.senderId)?.username ?? '—'
+                          : '';
+                        const refText = ref
+                          ? ref.deleted ? 'Сообщение удалено' : ref.content.text.slice(0, 80)
+                          : '';
+                        return (
+                          <span
+                            className="bubble-reply"
+                            onClick={() => {
+                              if (!ref) return;
+                              const el = scrollRef.current;
+                              if (!el) return;
+                              const idx = messages.findIndex((x) => x.messageId === m.replyToMessageId);
+                              if (idx < 0) return;
+                              // приблизительный скролл: оценка высоты пузырей
+                              const avgH = 60;
+                              el.scrollTop = idx * avgH - el.clientHeight / 2;
+                            }}
+                          >
+                            <span className="bubble-reply-name" style={{ color: colorFor(refName) }}>
+                              {refName}
+                            </span>
+                            <span className="bubble-reply-text">{refText}</span>
+                          </span>
+                        );
+                      })()}
                       {m.content.text && (
                         <span className="bubble-text">{m.content.text}</span>
                       )}
@@ -993,6 +1039,18 @@ export function Conversation({
                     </button>
                   </span>
                 )}
+                {/* Кнопка ответа на сообщение (#33) — видна при hover */}
+                {!m.deleted && m.messageId && (
+                  <button
+                    type="button"
+                    className="bubble-reply-btn"
+                    data-testid="msg-reply"
+                    title="Ответить"
+                    onClick={() => setReplyTo(m.messageId!)}
+                  >
+                    ↩
+                  </button>
+                )}
               </div>
               </Fragment>
             );
@@ -1063,6 +1121,28 @@ export function Conversation({
           </button>
         </div>
       )}
+      {replyTo && (() => {
+        const msg = messages.find((m) => m.messageId === replyTo);
+        if (!msg) return null;
+        const name = chat.participants.find((p) => p.userId === msg.senderId)?.username ?? '—';
+        const preview = msg.deleted ? 'Сообщение удалено' : msg.content.text.slice(0, 80);
+        return (
+          <div className="conv-reply-banner" data-testid="reply-banner">
+            <span className="conv-reply-text">
+              <span className="conv-reply-name" style={{ color: colorFor(name) }}>{name}</span>
+              {preview}
+            </span>
+            <button
+              type="button"
+              className="conv-reply-close"
+              onClick={() => setReplyTo(null)}
+              aria-label="Отменить ответ"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })()}
       <form className="conv-input" onSubmit={onSubmit}>
         <input
           ref={fileInputRef}

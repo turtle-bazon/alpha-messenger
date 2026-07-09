@@ -144,6 +144,7 @@ export interface SendResult {
   messageId: string;
   clientMessageId: string;
   ts: string;
+  replyToMessageId: string | null;
 }
 
 export function sendMessage(
@@ -151,11 +152,13 @@ export function sendMessage(
   clientMessageId: string,
   ciphertext: string,
   blobIds: string[] = [],
+  replyToMessageId?: string,
 ): Promise<SendResult> {
   return rest.post<SendResult>(`/chats/${chatId}/messages`, {
     clientMessageId,
     ciphertext,
     ...(blobIds.length ? { blobIds } : {}),
+    ...(replyToMessageId ? { replyToMessageId } : {}),
   });
 }
 

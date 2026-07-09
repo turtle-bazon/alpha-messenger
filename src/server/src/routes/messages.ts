@@ -11,6 +11,8 @@ interface SendBody {
   // зашифрованного ciphertext он их прочесть не может. Ключи расшифровки
   // остаются внутри ciphertext — здесь только идентификаторы.
   blobIds?: string[];
+  // Ответ на сообщение: ID сообщения, на которое отвечаем.
+  replyToMessageId?: string;
 }
 
 const MAX_BLOBS_PER_MESSAGE = 16;
@@ -22,7 +24,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       const userId = req.user!.userId;
       const { chatId } = req.params as { chatId: string };
-      const { clientMessageId, ciphertext, blobIds } = (req.body ??
+      const { clientMessageId, ciphertext, blobIds, replyToMessageId } = (req.body ??
         {}) as SendBody;
 
       if (!clientMessageId || !ciphertext) {
@@ -55,22 +57,38 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(404).send({ error: 'not found' });
       }
 
+      // Валидация replyToMessageId: должно быть числовым ID сообщения в этом чате.
+      let replyToId: string | null = null;
+      if (replyToMessageId !== undefined) {
+        if (!/^\d+$/.test(replyToMessageId)) {
+          return reply.code(400).send({ error: 'invalid replyToMessageId' });
+        }
+        const refMsg = await pool.query(
+          'SELECT message_id FROM messages WHERE message_id = $1 AND chat_id = $2',
+          [replyToMessageId, chatId],
+        );
+        if (refMsg.rowCount === 0) {
+          return reply.code(400).send({ error: 'replyToMessageId not found' });
+        }
+        replyToId = replyToMessageId;
+      }
+
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
         const ins = await client.query(
-          `INSERT INTO messages(chat_id, sender_id, client_message_id, ciphertext)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO messages(chat_id, sender_id, client_message_id, ciphertext, reply_to_message_id)
+           VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (chat_id, sender_id, client_message_id) DO NOTHING
            RETURNING message_id, created_at`,
-          [chatId, userId, clientMessageId, Buffer.from(ciphertext, 'base64')],
+          [chatId, userId, clientMessageId, Buffer.from(ciphertext, 'base64'), replyToId],
         );
 
         // идемпотентность: повтор с тем же clientMessageId не создаёт дубль
         if (ins.rowCount === 0) {
           await client.query('ROLLBACK');
           const ex = await pool.query(
-            `SELECT message_id, created_at FROM messages
+            `SELECT message_id, created_at, reply_to_message_id FROM messages
              WHERE chat_id = $1 AND sender_id = $2 AND client_message_id = $3`,
             [chatId, userId, clientMessageId],
           );
@@ -79,6 +97,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
             messageId: row.message_id,
             clientMessageId,
             ts: row.created_at.toISOString(),
+            replyToMessageId: row.reply_to_message_id,
           });
         }
 
@@ -101,6 +120,8 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           ciphertext,
           blobIds: attachIds,
           ts: ts.toISOString(),
+          replyToMessageId: replyToId,
+          isReply: !!replyToId,
         });
         await client.query('COMMIT');
         return reply.code(201).send({
@@ -108,6 +129,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           clientMessageId,
           blobIds: attachIds,
           ts: ts.toISOString(),
+          replyToMessageId: replyToId,
         });
       } catch (err) {
         await client.query('ROLLBACK').catch(() => undefined);
@@ -136,7 +158,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       const res = await pool.query(
         `SELECT m.message_id, m.sender_id, m.ciphertext, m.created_at,
-                m.edited_at, m.deleted,
+                m.edited_at, m.deleted, m.reply_to_message_id,
                 COALESCE(
                   array_agg(mb.blob_id) FILTER (WHERE mb.blob_id IS NOT NULL),
                   '{}'
@@ -160,6 +182,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         ts: r.created_at.toISOString(),
         editedAt: r.edited_at ? r.edited_at.toISOString() : null,
         deleted: r.deleted,
+        replyToMessageId: r.reply_to_message_id,
       }));
       const nextBefore =
         hasMore && slice.length > 0 ? slice[slice.length - 1].message_id : null;

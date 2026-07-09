@@ -15,8 +15,10 @@ export interface ChatView {
     ts: string;
   } | null;
   unreadCount: number;
-  // Максимальный маркер прочтения среди ДРУГИХ участников — до какого message_id
-  // нас «прочитали». Нужен для устойчивого статуса ✓✓ (не только из live-событий).
+  // Количество непрочитанных ответов на мои сообщения.
+  unreadMentions: number;
+  // До какого message_id нас прочитали другие участники — сид статуса ✓✓
+  // при открытии чата (дальше актуализируется live-событиями message.read).
   peerReadUpTo: string;
   updatedAt: string;
 }
@@ -63,6 +65,20 @@ export async function loadChat(
     [chatId, userId, lastReadId],
   );
 
+  // Непрочитанные ответы на мои сообщения: сообщения, которые отвечают на
+  // мои сообщения и ещё не прочитаны мной.
+  const unreadMentionsRes = await db.query(
+    `SELECT count(*)::int AS c FROM messages m
+     WHERE m.chat_id = $1 AND m.deleted = false AND m.sender_id <> $2
+       AND m.message_id > COALESCE($3::bigint, 0)
+       AND m.reply_to_message_id IS NOT NULL
+       AND EXISTS (
+         SELECT 1 FROM messages ref
+         WHERE ref.message_id = m.reply_to_message_id AND ref.sender_id = $2
+       )`,
+    [chatId, userId, lastReadId],
+  );
+
   // До какого message_id нас прочитали другие участники (берём максимум —
   // для direct это собеседник, для группы достаточно одного прочитавшего).
   const peerRead = await db.query(
@@ -90,6 +106,7 @@ export async function loadChat(
         }
       : null,
     unreadCount: unread.rows[0].c,
+    unreadMentions: unreadMentionsRes.rows[0].c,
     peerReadUpTo: peerRead.rows[0].m,
     updatedAt: row.updated_at.toISOString(),
   };

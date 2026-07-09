@@ -66,6 +66,7 @@ src - директория с иходниками. Весь код - на types
 
 * Сборка/typecheck сервера: `cd src/server && npm run build` (tsc).
 * Сборка/typecheck клиента: `cd src/web_client && npm run build` (`tsc --noEmit && vite build`).
+* Быстрый typecheck без сборки: `cd src/server && npx tsc --noEmit` / `cd src/web_client && npx tsc --noEmit` (tsc не доступен напрямую, только через npx).
 * Серверные тесты: `cd src/server && npm test`. Нужен Postgres на localhost:5432 (поднимается стеком run/dev); миграции тесты применяют сами. По умолчанию `DATABASE_URL=postgres://alpha:alpha@localhost:5432/alpha`.
 * E2e клиента: `cd src/web_client && npx playwright test` (он же `npm run test:e2e`). Требует запущенный сервер на :3000 и БД на :5432 (стек run/dev); сам Playwright поднимает vite dev на :5173. Сидинг инвайтов идёт напрямую в БД.
 

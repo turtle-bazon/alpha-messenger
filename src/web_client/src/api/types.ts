@@ -51,6 +51,7 @@ export interface Chat {
   participants: Participant[];
   lastMessage: MessagePreview | null;
   unreadCount: number;
+  unreadMentions: number;
   // До какого message_id нас прочитали другие участники — сид статуса ✓✓
   // при открытии чата (дальше актуализируется live-событиями message.read).
   peerReadUpTo: string;
@@ -64,6 +65,7 @@ export interface Message {
   ts: string;
   editedAt: string | null;
   deleted: boolean;
+  replyToMessageId: string | null;
 }
 
 // Конверт события из потока WS. payload зависит от type (см. doc/api.md).
