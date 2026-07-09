@@ -152,6 +152,16 @@ function showBrowserNotification(
   body: string,
   onOpen: () => void,
 ): void {
+  // В Electron используем нативные уведомления через IPC
+  if (window.electronAPI) {
+    window.electronAPI.showNotification(title, body);
+    window.electronAPI.onNotificationClick(() => {
+      window.electronAPI?.focus();
+      onOpen();
+    });
+    return;
+  }
+  // В браузере — Web Notifications
   try {
     const n = new Notification(title, { body, tag: 'alpha-message' });
     n.onclick = () => {
@@ -186,7 +196,9 @@ export function notifyIncoming(opts: {
   if (inForeground()) return;
   const prefs = getNotifPrefs();
   if (prefs.sound) playSound();
-  if (prefs.browser && getPermission() === 'granted') {
+  // В Electron нативные уведомления не требуют разрешения браузера
+  const isElectron = !!window.electronAPI;
+  if (prefs.browser && (isElectron || getPermission() === 'granted')) {
     const body = previewText(decodeContent(opts.ciphertext));
     showBrowserNotification(opts.title, body, opts.onOpen);
   }

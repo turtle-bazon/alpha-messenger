@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import path from 'path';
 import { setupTray } from './tray';
+import { setupNotifications } from './notifications';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -75,10 +76,13 @@ ipcMain.handle('app:setBadgeCount', (_event, count: number) => {
   // Tooltip обновляется в tray.ts
 });
 
-// Готово к работе — настраиваем трей
+// Готово к работе — настраиваем трей и уведомления
 app.whenReady().then(() => {
   createWindow();
-  if (mainWindow) setupTray(mainWindow);
+  if (mainWindow) {
+    setupTray(mainWindow);
+    setupNotifications(mainWindow);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
