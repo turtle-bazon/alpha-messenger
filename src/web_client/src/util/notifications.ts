@@ -155,10 +155,6 @@ function showBrowserNotification(
   // В Electron используем нативные уведомления через IPC
   if (window.electronAPI) {
     window.electronAPI.showNotification(title, body);
-    window.electronAPI.onNotificationClick(() => {
-      window.electronAPI?.focus();
-      onOpen();
-    });
     return;
   }
   // В браузере — Web Notifications
@@ -186,6 +182,8 @@ function inForeground(): boolean {
 
 // Реакция на входящее сообщение (звук + браузерное уведомление). Вызывать только
 // для чужих живых сообщений — фильтрацию по senderId/isLive делает вызывающий.
+let electronClickRegistered = false;
+
 export function notifyIncoming(opts: {
   title: string;
   ciphertext: string;
@@ -200,6 +198,13 @@ export function notifyIncoming(opts: {
   const isElectron = !!window.electronAPI;
   if (prefs.browser && (isElectron || getPermission() === 'granted')) {
     const body = previewText(decodeContent(opts.ciphertext));
+    // В Electron регистрируем обработчик клика один раз
+    if (isElectron && !electronClickRegistered) {
+      electronClickRegistered = true;
+      window.electronAPI!.onNotificationClick(() => {
+        window.electronAPI?.focus();
+      });
+    }
     showBrowserNotification(opts.title, body, opts.onOpen);
   }
 }

@@ -70,10 +70,46 @@ ipcMain.handle('show-setup', () => {
 
 // IPC: установить badge на иконке (вызывается из renderer при обновлении unread)
 ipcMain.handle('app:setBadgeCount', (_event, count: number) => {
+  // Linux/Unity
   if (process.platform !== 'win32') {
     app.setBadgeCount(count);
   }
-  // Tooltip обновляется в tray.ts
+  // Обновляем title окна как fallback
+  if (mainWindow) {
+    const baseTitle = 'Alpha Messenger';
+    mainWindow.setTitle(count > 0 ? `(${count}) ${baseTitle}` : baseTitle);
+  }
+});
+
+// IPC: управление окном
+ipcMain.handle('window:minimize', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+
+ipcMain.handle('window:close', () => {
+  mainWindow?.close();
+});
+
+ipcMain.handle('window:focus', () => {
+  mainWindow?.show();
+  mainWindow?.focus();
+});
+
+// IPC: информация о приложении
+ipcMain.handle('app:version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('app:platform', () => {
+  return process.platform;
 });
 
 // Готово к работе — настраиваем трей и уведомления
