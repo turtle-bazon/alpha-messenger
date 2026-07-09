@@ -6,15 +6,15 @@ import type { ServerEvent } from '../api/types';
 // Conversation): источник транзиентный, без явного «перестал печатать».
 const TYPING_HIDE_MS = 6000;
 
-// Кто сейчас печатает, по чатам: chatId → множество userId. Источник —
+// Кто сейчас печатает, по чатам: chatId → Map<userId, draft>. Источник —
 // транзиентные события 'typing' из WS (без seq, не из outbox). Один источник на
 // всё приложение (задача #27): и список чатов, и заголовок переписки, и окно
 // участников читают отсюда. Себя не учитываем (своё «печатает» не показываем).
 export function useTyping(
   ws: WsClient,
   myId: string | null,
-): Map<string, Set<string>> {
-  const [typingByChat, setTypingByChat] = useState<Map<string, Set<string>>>(
+): Map<string, Map<string, string>> {
+  const [typingByChat, setTypingByChat] = useState<Map<string, Map<string, string>>>(
     () => new Map(),
   );
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -22,12 +22,12 @@ export function useTyping(
   useEffect(() => {
     const drop = (chatId: string, userId: string): void =>
       setTypingByChat((prev) => {
-        const set = prev.get(chatId);
-        if (!set || !set.has(userId)) return prev;
+        const map = prev.get(chatId);
+        if (!map || !map.has(userId)) return prev;
         const next = new Map(prev);
-        const ns = new Set(set);
-        ns.delete(userId);
-        if (ns.size) next.set(chatId, ns);
+        const nm = new Map(map);
+        nm.delete(userId);
+        if (nm.size) next.set(chatId, nm);
         else next.delete(chatId);
         return next;
       });
@@ -44,11 +44,21 @@ export function useTyping(
 
     const offTyping = ws.on('typing', (ev: ServerEvent) => {
       const chatId = ev.chatId;
-      const userId = (ev.payload as { userId?: string }).userId;
+      const payload = ev.payload as { userId?: string; draft?: string };
+      const userId = payload.userId;
+      const draft = payload.draft;
       if (!chatId || !userId || userId === myId) return;
       const key = `${chatId}|${userId}`;
       const existing = timers.current.get(key);
       if (existing) clearTimeout(existing);
+
+      // Если draft пустой — это сигнал «прекратил набор»
+      if (!draft) {
+        timers.current.delete(key);
+        drop(chatId, userId);
+        return;
+      }
+
       timers.current.set(
         key,
         setTimeout(() => {
@@ -58,9 +68,9 @@ export function useTyping(
       );
       setTypingByChat((prev) => {
         const next = new Map(prev);
-        const ns = new Set(prev.get(chatId));
-        ns.add(userId);
-        next.set(chatId, ns);
+        const nm = new Map(prev.get(chatId));
+        nm.set(userId, draft);
+        next.set(chatId, nm);
         return next;
       });
     });
@@ -89,11 +99,11 @@ export function useTyping(
       setTypingByChat((prev) => {
         let changed = false;
         const next = new Map(prev);
-        for (const [chatId, set] of prev) {
-          if (!set.has(userId)) continue;
-          const ns = new Set(set);
-          ns.delete(userId);
-          if (ns.size) next.set(chatId, ns);
+        for (const [chatId, map] of prev) {
+          if (!map.has(userId)) continue;
+          const nm = new Map(map);
+          nm.delete(userId);
+          if (nm.size) next.set(chatId, nm);
           else next.delete(chatId);
           changed = true;
         }

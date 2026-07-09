@@ -28,7 +28,7 @@ export function ChatList({
   selectedId: string | null;
   myId: string | null;
   onlineUsers: Set<string>;
-  typingByChat: Map<string, Set<string>>;
+  typingByChat: Map<string, Map<string, string>>;
   onSelect: (chatId: string) => void;
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;

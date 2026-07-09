@@ -153,8 +153,8 @@ export class WsClient {
     return this.live;
   }
 
-  sendTyping(chatId: string): void {
-    this.send({ type: 'typing', chatId });
+  sendTyping(chatId: string, draft?: string): void {
+    this.send({ type: 'typing', chatId, draft: draft || undefined });
   }
 
   sendRead(chatId: string, upToMessageId: string): void {

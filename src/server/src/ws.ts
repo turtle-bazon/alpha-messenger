@@ -213,12 +213,13 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
         if (msg.type === 'typing' && typeof msg.chatId === 'string') {
           if (await isMember(msg.chatId, conn.userId)) {
             const members = await getMemberIds(pool, msg.chatId);
+            const draft = typeof msg.draft === 'string' ? msg.draft.slice(0, 1000) : undefined;
             for (const m of members) {
               if (m !== conn.userId) {
                 sendTransient(m, {
                   type: 'typing',
                   chatId: msg.chatId,
-                  payload: { userId: conn.userId },
+                  payload: { userId: conn.userId, draft },
                 });
               }
             }

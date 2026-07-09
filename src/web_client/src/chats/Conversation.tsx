@@ -141,7 +141,8 @@ export function Conversation({
   onlineUsers: Set<string>;
   // Кто печатает в этом чате (без меня) — из общего трекера (#27). Заголовок
   // показывает «печатает», окно участников — окантовку у их аватаров.
-  typingUsers: Set<string>;
+  // Map<userId, draft> — draft содержит текст набираемого сообщения.
+  typingUsers: Map<string, string>;
   // Ссылка на поле ввода — для глобального фокуса (задача #40).
   inputRef: React.RefObject<HTMLTextAreaElement>;
   onBack: () => void;
@@ -353,7 +354,7 @@ export function Conversation({
     const now = Date.now();
     if (now - lastTypingSent.current > TYPING_SEND_THROTTLE_MS) {
       lastTypingSent.current = now;
-      ws.sendTyping(chatId);
+      ws.sendTyping(chatId, value || undefined);
     }
   }
 
@@ -588,6 +589,8 @@ export function Conversation({
       linkPreview && text.includes(linkPreview.url) ? linkPreview : undefined;
     setInput('');
     clearPreview();
+    // Очищаем draft на других устройствах
+    ws.sendTyping(chatId);
     enqueueSend(text, [], link);
   }
 
@@ -693,8 +696,8 @@ export function Conversation({
 
   // Форматирование строки «печатает» с именами (задача #35).
   // Возвращает текст БЕЗ «...» — анимированные точки добавляются отдельно в JSX.
-  const formatTypingText = (users: Set<string>): string => {
-    const names = [...users]
+  const formatTypingText = (users: Map<string, string>): string => {
+    const names = [...users.keys()]
       .map((id) => chat.participants.find((p) => p.userId === id)?.username)
       .filter((n): n is string => !!n);
     if (names.length === 0) return 'печатает';
@@ -966,6 +969,33 @@ export function Conversation({
               </Fragment>
             );
           })}
+          {/* Облачко-превью набираемого сообщения (#18 Live Draft) */}
+          {typingUsers.size > 0 && (() => {
+            // Показываем draft от первого пользователя, у которого есть текст
+            for (const [userId, draft] of typingUsers) {
+              if (draft) {
+                const name = chat.participants.find((p) => p.userId === userId)?.username ?? '—';
+                return (
+                  <div
+                    key={`draft-${userId}`}
+                    className="bubble bubble-draft"
+                    data-testid="draft-preview"
+                  >
+                    <span className="bubble-sender" style={{ color: colorFor(name) }}>
+                      {name}
+                    </span>
+                    <span className="bubble-content">
+                      <span className="bubble-text">{draft}</span>
+                    </span>
+                    <span className="bubble-meta">
+                      <span className="bubble-draft-status">печатает...</span>
+                    </span>
+                  </div>
+                );
+              }
+            }
+            return null;
+          })()}
         </div>
       </div>
       {editing && (

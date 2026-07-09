@@ -18,7 +18,7 @@ export function MembersDialog({
   myId: string | null;
   onlineUsers: Set<string>;
   // Печатающие сейчас в этом чате участники — их аватар обводим окантовкой (#27).
-  typingUsers: Set<string>;
+  typingUsers: Map<string, string>;
   onClose: () => void;
 }): JSX.Element {
   const [members, setMembers] = useState<ChatMember[]>([]);

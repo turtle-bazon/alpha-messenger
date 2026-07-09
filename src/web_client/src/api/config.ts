@@ -1,5 +1,6 @@
 // Базовый адрес сервера. В десктопе — из localStorage (setup.html),
 // в web/CI — из VITE_API_URL (для обратной совместимости).
+// По умолчанию — тот же origin, что и страница ( works behind reverse proxy).
 function getApiUrl(): string {
   // Приоритет — localStorage (пользователь вводит адрес)
   if (typeof window !== 'undefined') {
@@ -7,7 +8,12 @@ function getApiUrl(): string {
     if (saved) return saved;
   }
 
-  // Fallback для dev/CI
+  // Явно заданный адрес (для dev или нестандартных портов)
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+
+  // По умолчанию — тот же origin (Apache/nginx reverse proxy)
+  if (typeof window !== 'undefined') return window.location.origin;
+
   return 'http://localhost:3000';
 }
 

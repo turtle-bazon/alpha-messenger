@@ -43,8 +43,8 @@ function newestPreview(
 }
 
 // Стабильная пустая ссылка для чатов без печатающих — чтобы не плодить новые
-// Set на каждый рендер (лишние ререндеры Conversation).
-const EMPTY_TYPING: Set<string> = new Set();
+// Map на каждый рендер (лишние ререндеры Conversation).
+const EMPTY_TYPING: Map<string, string> = new Map();
 
 // Главный экран: владеет списком чатов, WS-соединением и выбором чата.
 // Живые события (chat.created, message.new) обновляют список здесь — из одного

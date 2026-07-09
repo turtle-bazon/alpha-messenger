@@ -904,6 +904,29 @@ body {
   -webkit-box-orient: vertical;
 }
 
+/* Облачко-превью набираемого сообщения (#18 Live Draft) */
+.bubble-draft {
+  opacity: 0.7;
+  border: 1px dashed var(--bubble-meta);
+  animation: draft-in 0.2s ease-out;
+}
+
+.bubble-draft-status {
+  color: var(--accent);
+  font-style: italic;
+}
+
+@keyframes draft-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 0.7;
+    transform: translateY(0);
+  }
+}
+
 /* Живое превью ссылки над полем ввода (#32). */
 .composer-link {
   display: flex;
