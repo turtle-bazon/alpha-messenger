@@ -57,6 +57,7 @@ jobs:
         # к домену и переносим на любой хост за обратным прокси.
         build-args: |
           VITE_API_URL=
+          CLIENT_VERSION=${{ github.sha }}
         tags: |
           ${{ env.CLIENT_IMAGE }}:latest
           ${{ env.CLIENT_IMAGE }}:${{ github.sha }}
