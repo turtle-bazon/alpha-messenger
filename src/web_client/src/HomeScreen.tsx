@@ -105,15 +105,18 @@ export function HomeScreen({
   }, []);
 
   // Глобальный фокус поля ввода при нажатии клавиши или вставке (задача #40).
+  // При открытом модале (members-backdrop, new-chat-backdrop и т.п.) фокус
+  // не смещаем — иначе ввод текста в модале попадает в поле сообщений (#47).
   useEffect(() => {
     const focusInput = () => inputRef.current?.focus();
+    const isModalOpen = (): boolean =>
+      !!document.querySelector('[class*="-backdrop"]');
     const onKeyDown = (e: KeyboardEvent) => {
-      // Игнорируем модификаторы и служебные клавиши (Tab, Shift и т.д.).
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;
-      focusInput();
+      if (!isModalOpen()) focusInput();
     };
-    const onPaste = () => focusInput();
+    const onPaste = () => { if (!isModalOpen()) focusInput(); };
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('paste', onPaste);
     return () => {
