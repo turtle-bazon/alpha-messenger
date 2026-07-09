@@ -795,10 +795,10 @@ body {
   display: none;
   position: absolute;
   top: 50%;
-  right: calc(100% + 6px);
+  right: calc(100% + 4px);
   transform: translateY(-50%);
-  gap: 10px;
-  padding: 4px 8px;
+  gap: 6px;
+  padding: 4px 6px;
   white-space: nowrap;
   background: var(--bg);
   border-radius: 14px;
@@ -810,16 +810,21 @@ body {
 }
 
 .bubble-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   color: var(--text-muted);
-  font-size: 12px;
   cursor: pointer;
-  padding: 0;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
 }
 
 .bubble-actions button:hover {
   color: var(--accent);
+  background: var(--bg-hover);
 }
 
 /* Кнопка ответа на сообщение (#33) — всплывает справа при наведении. */
@@ -827,7 +832,7 @@ body {
   display: none;
   position: absolute;
   top: 50%;
-  left: calc(100% + 6px);
+  left: calc(100% + 4px);
   transform: translateY(-50%);
   width: 28px;
   height: 28px;

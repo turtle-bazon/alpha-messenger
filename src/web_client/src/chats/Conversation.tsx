@@ -32,7 +32,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconSend } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconEdit, IconSend, IconTrash } from '../util/icons';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
@@ -1025,17 +1025,19 @@ export function Conversation({
                       <button
                         type="button"
                         data-testid="msg-edit"
+                        title="Редактировать"
                         onClick={() => startEdit(m)}
                       >
-                        ред.
+                        <IconEdit />
                       </button>
                     )}
                     <button
                       type="button"
                       data-testid="msg-delete"
+                      title="Удалить"
                       onClick={() => onDelete(m)}
                     >
-                      удалить
+                      <IconTrash />
                     </button>
                   </span>
                 )}
