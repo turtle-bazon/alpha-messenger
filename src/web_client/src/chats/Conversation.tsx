@@ -1019,40 +1019,47 @@ export function Conversation({
                     Повторить
                   </button>
                 )}
-                {own && !m.deleted && m.messageId && (
-                  <span className="bubble-actions">
-                    {m.content.attachments.length === 0 && (
-                      <button
-                        type="button"
-                        data-testid="msg-edit"
-                        title="Редактировать"
-                        onClick={() => startEdit(m)}
-                      >
-                        <IconEdit />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      data-testid="msg-delete"
-                      title="Удалить"
-                      onClick={() => onDelete(m)}
-                    >
-                      <IconTrash />
-                    </button>
-                  </span>
-                )}
-                {/* Кнопка ответа на сообщение (#33) — видна при hover */}
-                {!m.deleted && m.messageId && (
-                  <button
-                    type="button"
-                    className="bubble-reply-btn"
-                    data-testid="msg-reply"
-                    title="Ответить"
-                    onClick={() => setReplyTo(m.messageId!)}
-                  >
-                    ↩
-                  </button>
-                )}
+                {/* Кнопки действий: удалить, редактировать, ответить (#50) */}
+                {!m.deleted && m.messageId && (() => {
+                  const canDelete = own || (chat.createdBy === myId);
+                  const canEdit = own;
+                  const canReply = true;
+                  if (!canDelete && !canEdit && !canReply) return null;
+                  return (
+                    <span className="bubble-actions">
+                      {canDelete && (
+                        <button
+                          type="button"
+                          data-testid="msg-delete"
+                          title="Удалить"
+                          onClick={() => onDelete(m)}
+                        >
+                          <IconTrash />
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          data-testid="msg-edit"
+                          title="Редактировать"
+                          onClick={() => startEdit(m)}
+                        >
+                          <IconEdit />
+                        </button>
+                      )}
+                      {canReply && (
+                        <button
+                          type="button"
+                          data-testid="msg-reply"
+                          title="Ответить"
+                          onClick={() => setReplyTo(m.messageId!)}
+                        >
+                          ↩
+                        </button>
+                      )}
+                    </span>
+                  );
+                })()}
               </div>
               </Fragment>
             );

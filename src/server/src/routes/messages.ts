@@ -249,14 +249,18 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       const { messageId } = req.params as { messageId: string };
 
       const msg = await pool.query(
-        'SELECT chat_id, sender_id, deleted FROM messages WHERE message_id = $1',
+        `SELECT m.chat_id, m.sender_id, m.deleted, c.type, c.created_by
+         FROM messages m JOIN chats c ON c.chat_id = m.chat_id
+         WHERE m.message_id = $1`,
         [messageId],
       );
       if (msg.rowCount === 0) {
         return reply.code(404).send({ error: 'not found' });
       }
       const row = msg.rows[0];
-      if (row.sender_id !== userId) {
+      // Удаление разрешено: автору сообщения ИЛИ владельцу группы
+      const isOwner = row.type === 'group' && row.created_by === userId;
+      if (row.sender_id !== userId && !isOwner) {
         return reply.code(403).send({ error: 'forbidden' });
       }
       if (row.deleted) {

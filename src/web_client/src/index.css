@@ -790,22 +790,22 @@ body {
   filter: brightness(1.08);
 }
 
-/* Действия над своим сообщением — всплывают слева при наведении, вне потока. */
+/* Действия над сообщением — наезжают на правый верхний угол пузыря (#50). */
 .bubble-actions {
   display: none;
   position: absolute;
-  top: 50%;
-  right: calc(100% + 4px);
-  transform: translateY(-50%);
-  gap: 6px;
-  padding: 4px 6px;
+  top: -12px;
+  right: 4px;
+  gap: 2px;
+  padding: 2px 4px;
   white-space: nowrap;
   background: var(--bg);
   border-radius: 14px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+  z-index: 1;
 }
 
-.bubble-own:hover .bubble-actions {
+.bubble:hover .bubble-actions {
   display: inline-flex;
 }
 
@@ -823,38 +823,6 @@ body {
 }
 
 .bubble-actions button:hover {
-  color: var(--accent);
-  background: var(--bg-hover);
-}
-
-/* Кнопка ответа на сообщение (#33) — всплывает справа при наведении. */
-.bubble-reply-btn {
-  display: none;
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 4px);
-  transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 50%;
-  background: var(--bg);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
-  color: var(--text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-  transition: color 0.15s, background 0.15s;
-}
-
-.bubble:hover .bubble-reply-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bubble-reply-btn:hover {
   color: var(--accent);
   background: var(--bg-hover);
 }
