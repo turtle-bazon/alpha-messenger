@@ -20,7 +20,7 @@ interface ElectronAPI {
   setBadgeCount: (count: number) => Promise<void>;
   getVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
-  loadWebClient: () => Promise<void>;
+  loadWebClient: (serverUrl?: string) => Promise<void>;
   showSetup: () => Promise<void>;
   onNotificationClick: (callback: () => void) => void;
 }

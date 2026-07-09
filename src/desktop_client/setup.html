@@ -133,7 +133,7 @@
 
       // Загружаем web клиент через IPC
       if (window.electronAPI && window.electronAPI.loadWebClient) {
-        window.electronAPI.loadWebClient();
+        window.electronAPI.loadWebClient(url);
       } else {
         // Fallback для браузера
         window.location.reload();

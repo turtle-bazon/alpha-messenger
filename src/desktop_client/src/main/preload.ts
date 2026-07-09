@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPlatform: () => ipcRenderer.invoke('app:platform'),
 
   // Настройка сервера
-  loadWebClient: () => ipcRenderer.invoke('load-web-client'),
+  loadWebClient: (serverUrl?: string) => ipcRenderer.invoke('load-web-client', serverUrl),
   showSetup: () => ipcRenderer.invoke('show-setup'),
 
   // События

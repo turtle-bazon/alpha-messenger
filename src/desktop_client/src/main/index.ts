@@ -27,9 +27,8 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // В prod режиме загружаем setup.html или web клиент
+    // В prod режиме: setup.html → load-web-client (пробует сервер, fallback на bundled)
     const setupPath = path.join(__dirname, '../../setup.html');
-    const distPath = path.join(__dirname, '../../web_client_dist/index.html');
     mainWindow.loadFile(setupPath);
   }
 
@@ -53,11 +52,30 @@ function createWindow(): void {
 }
 
 // IPC: перезагрузить с web клиентом
-ipcMain.handle('load-web-client', () => {
-  if (mainWindow) {
-    const distPath = path.join(__dirname, '../../web_client_dist/index.html');
-    mainWindow.loadFile(distPath);
+ipcMain.handle('load-web-client', async (_event, serverUrl?: string) => {
+  if (!mainWindow) return;
+
+  // Пробуем загрузить web-клиент с сервера (всегда актуальная версия)
+  const url = serverUrl || '';
+  if (url) {
+    try {
+      // Проверяем доступность сервера (таймаут 3 сек)
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const resp = await fetch(url, { method: 'HEAD', signal: controller.signal });
+      clearTimeout(timeout);
+      if (resp.ok) {
+        mainWindow.loadURL(url);
+        return;
+      }
+    } catch {
+      // Сервер недоступен — грузим bundled версию
+    }
   }
+
+  // Fallback: вшитый web-клиент
+  const distPath = path.join(__dirname, '../../web_client_dist/index.html');
+  mainWindow.loadFile(distPath);
 });
 
 // IPC: вернуться на экран настройки
