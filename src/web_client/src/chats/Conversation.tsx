@@ -367,11 +367,10 @@ export function Conversation({
       ws.sendTyping(chatId, value || undefined);
     }
     // Через TYPING_FLUSH_MS без нового ввода — допослать текущий draft
-    if (value) {
-      typingFlushRef.current = setTimeout(() => {
-        ws.sendTyping(chatId, value);
-      }, TYPING_FLUSH_MS);
-    }
+    // (включая пустой — чтобы очистить draft на другом устройстве)
+    typingFlushRef.current = setTimeout(() => {
+      ws.sendTyping(chatId, value || undefined);
+    }, TYPING_FLUSH_MS);
   }
 
   // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
