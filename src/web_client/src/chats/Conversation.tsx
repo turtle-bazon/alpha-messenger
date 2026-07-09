@@ -160,8 +160,14 @@ export function Conversation({
   const [linkPreview, setLinkPreview] = useState<LinkAttachment | null>(null);
   const previewReqRef = useRef(0);
   const shownUrlRef = useRef<string | null>(null);
-  // Наличие активного draft для автоскролла (#49).
-  const hasDraft = typingUsers.size > 0;
+  // Строка для отслеживания изменений draft в deps useLayoutEffect (#49):
+  // меняется при появлении/исчезновении/изменении текста облачка.
+  const draftKey =
+    typingUsers.size > 0
+      ? [...typingUsers.entries()]
+          .map(([k, v]) => `${k}:${v}`)
+          .join('|')
+      : '';
   const dismissedRef = useRef<Set<string>>(new Set());
   // Открытый lightbox (полноразмерный просмотр) — blobId и подпись.
   const [viewer, setViewer] = useState<{ blobId: string; caption: string } | null>(
@@ -297,12 +303,12 @@ export function Conversation({
   }, [chatId]);
 
   // Автопрокрутка вниз, если пользователь уже у низа (#49).
-  // Зависит от messages и hasDraft — скроллим при новом сообщении
-  // или при появлении/исчезновении draft-облачка.
+  // Зависит от messages и draftKey — скроллим при новом сообщении,
+  // при появлении/исчезновении draft-облачка и при изменении его текста.
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
-  }, [messages, hasDraft]);
+  }, [messages, draftKey]);
 
   // Авторасширение поля ввода под содержимое (задача #25): сбрасываем высоту и
   // подгоняем под scrollHeight, но не выше потолка — дальше внутренний скролл.
