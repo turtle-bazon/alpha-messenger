@@ -147,6 +147,7 @@ interface ClientMessage {
   lastSeq?: unknown;
   chatId?: string;
   upToMessageId?: unknown;
+  draft?: string;
 }
 
 export async function wsRoutes(app: FastifyInstance): Promise<void> {
