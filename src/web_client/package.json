@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "prebuild": "node -e \"const fs=require('fs');const h=require('child_process').execSync('git rev-parse --short HEAD').toString().trim();fs.writeFileSync('dist/version.json',JSON.stringify({version:h,ts:Date.now()}))\" 2>/dev/null || echo '{\"version\":\"dev\",\"ts\":0}' > dist/version.json",
+    "build": "tsc --noEmit && vite build && node -e \"const fs=require('fs');const h=require('child_process').execSync('git rev-parse --short HEAD').toString().trim();fs.writeFileSync('dist/version.json',JSON.stringify({version:h,ts:Date.now()}))\"",
     "preview": "vite preview",
     "test:e2e": "playwright test"
   },

@@ -132,6 +132,30 @@ export function HomeScreen({
   }, [chats]);
   useEffect(() => () => setUnreadBadge(0), []);
 
+  // Периодическая проверка версии клиента. Если на сервере новая сборка —
+  // перезагружаем страницу (обновление без Ctrl+Shift+R).
+  useEffect(() => {
+    let currentVersion: string | null = null;
+    // Запоминаем версию при загрузке
+    fetch('/version.json')
+      .then((r) => r.json())
+      .then((v) => { currentVersion = v.version; })
+      .catch(() => {});
+
+    const CHECK_MS = 5 * 60 * 1000; // каждые 5 минут
+    const interval = setInterval(() => {
+      fetch('/version.json')
+        .then((r) => r.json())
+        .then((v) => {
+          if (currentVersion && v.version !== currentVersion) {
+            window.location.reload();
+          }
+        })
+        .catch(() => {});
+    }, CHECK_MS);
+    return () => clearInterval(interval);
+  }, []);
+
   // Подъём списка чатов + WS-соединение на время сессии.
   useEffect(() => {
     let alive = true;
