@@ -177,6 +177,7 @@ export function Conversation({
   const scrollRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
   const lastTypingSent = useRef(0);
+  const typingFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReadSent = useRef(0);
   // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
   const chatRef = useRef(chat);
@@ -280,6 +281,10 @@ export function Conversation({
     return () => {
       alive = false;
       offs.forEach((off) => off());
+      if (typingFlushRef.current) {
+        clearTimeout(typingFlushRef.current);
+        typingFlushRef.current = null;
+      }
     };
   }, [chatId, ws, myId]);
 
@@ -348,13 +353,24 @@ export function Conversation({
     }
   }, [messages, chatId, ws]);
 
+  // Таймаут допосылки draft при остановке набора (#48).
+  const TYPING_FLUSH_MS = 1000;
+
   function onInputChange(value: string): void {
     setInput(value);
     if (editing) return;
     const now = Date.now();
+    // Сброс предыдущего flush-таймера
+    if (typingFlushRef.current) clearTimeout(typingFlushRef.current);
     if (now - lastTypingSent.current > TYPING_SEND_THROTTLE_MS) {
       lastTypingSent.current = now;
       ws.sendTyping(chatId, value || undefined);
+    }
+    // Через TYPING_FLUSH_MS без нового ввода — допослать текущий draft
+    if (value) {
+      typingFlushRef.current = setTimeout(() => {
+        ws.sendTyping(chatId, value);
+      }, TYPING_FLUSH_MS);
     }
   }
 
@@ -473,9 +489,12 @@ export function Conversation({
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
     sendQueueRef.current.push({ clientMessageId, text, images, link });
-    // Набор завершён отправкой — сбрасываем троттл typing, чтобы следующий ввод
-    // сразу заново уведомил собеседника (иначе до 2 с «печатает» не появится).
+    // Набор завершён отправкой — сбрасываем троттл typing и flush-таймер.
     lastTypingSent.current = 0;
+    if (typingFlushRef.current) {
+      clearTimeout(typingFlushRef.current);
+      typingFlushRef.current = null;
+    }
     void pump();
   }
 
