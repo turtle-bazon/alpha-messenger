@@ -60,6 +60,7 @@ services:
       # сервера выше (браузер ходит на него напрямую, cross-origin + CORS).
       args:
         VITE_API_URL: http://localhost:3100
+        CLIENT_VERSION: ${GIT_SHA:-dev}
     depends_on:
       - server
     ports:
