@@ -137,9 +137,7 @@ export function HomeScreen({
 
   // Периодическая проверка версии клиента. Если на сервере новая сборка —
   // перезагружаем страницу (обновление без Ctrl+Shift+R).
-  // Пропускаем при file:// протоколе (desktop bundled client).
   useEffect(() => {
-    if (window.location.protocol === 'file:') return;
     let currentVersion: string | null = null;
     // Запоминаем версию при загрузке
     fetch('/version.json')
