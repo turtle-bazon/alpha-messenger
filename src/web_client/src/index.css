@@ -2060,6 +2060,7 @@ body {
 .emoji-picker-search {
   padding: 8px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .emoji-picker-search input {
@@ -2084,6 +2085,7 @@ body {
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
 }
 
 .emoji-picker-categories::-webkit-scrollbar {
