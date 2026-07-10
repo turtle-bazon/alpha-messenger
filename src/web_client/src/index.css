@@ -845,25 +845,43 @@ body {
 }
 
 /* Подсветка сообщения при переходе к нему (#51).
-   Используем ::before как overlay-подсветку — он покрывает и пузырь, и хвостик.
-   Анимируем opacity от 1 до 0, чтобы подсветка плавно исчезала. */
-.bubble.is-highlighted::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -10px;
-  right: -10px;
-  background: rgba(51, 144, 236, 0.25);
-  border-radius: inherit;
-  z-index: -1;
-  pointer-events: none;
-  animation: highlight-fade 2s ease-out forwards;
+   Анимируем background пузыря и border-color хвостика одновременно. */
+.bubble.is-highlighted:not(.bubble-own) {
+  animation: highlight-fade-in 2s ease-out forwards;
 }
 
-@keyframes highlight-fade {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
+.bubble-own.is-highlighted {
+  animation: highlight-fade-out 2s ease-out forwards;
+}
+
+/* Хвостик входящего: border-right окрашивается в подсветку. */
+.bubble.is-highlighted.is-tail:not(.bubble-own)::after {
+  animation: highlight-tail-in 2s ease-out forwards;
+}
+
+/* Хвостик исходящего: border-left окрашивается в подсветку. */
+.bubble-own.is-highlighted.is-tail::after {
+  animation: highlight-tail-out 2s ease-out forwards;
+}
+
+@keyframes highlight-fade-in {
+  0% { background: rgba(51, 144, 236, 0.25); }
+  100% { background: var(--bubble-in); }
+}
+
+@keyframes highlight-fade-out {
+  0% { background: rgba(51, 144, 236, 0.25); }
+  100% { background: linear-gradient(var(--bubble-out), var(--bubble-out-grad)); }
+}
+
+@keyframes highlight-tail-in {
+  0% { border-right-color: rgba(51, 144, 236, 0.25); }
+  100% { border-right-color: var(--bubble-in); }
+}
+
+@keyframes highlight-tail-out {
+  0% { border-left-color: rgba(51, 144, 236, 0.25); }
+  100% { border-left-color: var(--bubble-out-grad); }
 }
 
 .bubble-reply-name {
