@@ -1208,15 +1208,6 @@ export function Conversation({
           >
             <IconAttach />
           </button>
-          <button
-            type="button"
-            className="conv-emoji-btn"
-            data-testid="emoji-btn"
-            aria-label="Эмодзи"
-            onClick={() => setEmojiOpen(!emojiOpen)}
-          >
-            😊
-          </button>
           <textarea
             ref={inputRef}
             className="conv-textarea"
@@ -1230,6 +1221,15 @@ export function Conversation({
             onPaste={onPaste}
           />
         </div>
+        <button
+          type="button"
+          className="conv-emoji-btn"
+          data-testid="emoji-btn"
+          aria-label="Эмодзи"
+          onClick={() => setEmojiOpen(!emojiOpen)}
+        >
+          😊
+        </button>
         <button
           type="submit"
           className="conv-send"
