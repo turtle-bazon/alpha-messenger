@@ -2109,9 +2109,7 @@ body {
 
 .emoji-cat-btn.active {
   opacity: 1;
-  background: none;
-  border-bottom: 2px solid var(--accent);
-  border-radius: 0;
+  background: var(--bg-active);
 }
 
 .emoji-picker-grid {
