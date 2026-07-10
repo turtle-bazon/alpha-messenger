@@ -2,29 +2,12 @@
 
 При переходе на сообщение (клик по reply preview, навигация по @) — сообщение должно подсветиться другим цветом и плавно вернуться к обычному виду.
 
-## Поведение
-- Клик по reply preview в пузыре → скролл к оригинальному сообщению
-- Сообщение получает класс-подсветку (например `is-highlighted`)
-- CSS-анимация: плавное изменение фона за ~1.5–2 секунды
-- После завершения анимации — класс снимается
+## Статус: исправлено ✅
 
-## CSS
-```css
-.bubble.is-highlighted {
-  animation: highlight-fade 2s ease-out;
-}
-
-@keyframes highlight-fade {
-  0% { background: rgba(51, 144, 236, 0.2); }
-  100% { background: transparent; }
-}
-```
+Проблема: анимация шла в `transparent`, затем рывок до цвета пузыря.
+Решение: анимация идёт от подсветки до реального цвета пузыря (`var(--bubble-in)` / `var(--bubble-out)` с градиентом). `animation-fill-mode: forwards` сохраняет конечное состояние.
 
 ## Реализация
-- В `MsgVM` добавить флаг `highlighted: boolean`
-- При переходе к сообщению — ставить `highlighted = true`
-- Через `setTimeout` (2 сек) — снимать флаг
-- Класс `is-highlighted` вешается на `.bubble`
-
-## Приоритет
-normal
+- `MsgVM.highlighted: boolean`
+- Клик по reply preview → `highlighted = true` + scroll, через 2 сек → `false`
+- CSS: `highlight-fade-in` (для входящих) и `highlight-fade-out` (для исходящих с градиентом)
