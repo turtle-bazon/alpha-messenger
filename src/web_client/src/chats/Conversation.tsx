@@ -32,7 +32,8 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconEdit, IconSend, IconTrash } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconTrash } from '../util/icons';
+import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
@@ -161,6 +162,7 @@ export function Conversation({
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -865,6 +867,26 @@ export function Conversation({
                   (m.failed ? ' bubble-failed' : '') +
                   (m.highlighted ? ' is-highlighted' : '')
                 }
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  if (!m.messageId || m.deleted) return;
+                  const ownMsg = m.senderId === myId;
+                  const canDelete = ownMsg || (chat.createdBy === myId);
+                  const canEdit = ownMsg;
+                  const items: ContextMenuItem[] = [
+                    { label: 'Ответить', icon: <IconReply />, onClick: () => setReplyTo(m.messageId!) },
+                  ];
+                  if (canEdit) {
+                    items.push({ label: 'Редактировать', icon: <IconEdit />, onClick: () => startEdit(m) });
+                  }
+                  items.push({ separator: true, label: '', onClick: () => {} });
+                  items.push({ label: 'Копировать текст', icon: <IconCopy />, onClick: () => navigator.clipboard.writeText(m.content.text) });
+                  if (canDelete) {
+                    items.push({ separator: true, label: '', onClick: () => {} });
+                    items.push({ label: 'Удалить', icon: <IconTrash />, onClick: () => onDelete(m), danger: true });
+                  }
+                  setCtxMenu({ items, x: e.clientX, y: e.clientY });
+                }}
               >
                 {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
                 {isGroup && !own && groupEnd && (
@@ -1288,6 +1310,14 @@ export function Conversation({
           onlineUsers={onlineUsers}
           typingUsers={typingUsers}
           onClose={() => setMembersOpen(false)}
+        />
+      )}
+      {ctxMenu && (
+        <ContextMenu
+          items={ctxMenu.items}
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
         />
       )}
     </div>
