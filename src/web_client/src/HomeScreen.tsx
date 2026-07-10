@@ -14,6 +14,7 @@ import { AccountNotifications } from './account/AccountNotifications';
 import { NotificationSettings } from './notifications/NotificationSettings';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
+import { AboutDialog } from './chats/AboutDialog';
 import { useTyping } from './chats/useTyping';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
@@ -74,6 +75,7 @@ export function HomeScreen({
   // Баннер запроса разрешения на уведомления: показываем только при первом входе
   // (ключей нет в localStorage) и если разрешение ещё не выдано/заблокировано.
   const [showNotifBanner, setShowNotifBanner] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   selectedRef.current = selectedId;
   // Актуальный список для проверок внутри WS-обработчиков (без перезапуска
   // эффекта и без побочных эффектов в setState-апдейтерах).
@@ -513,6 +515,16 @@ export function HomeScreen({
             <button type="button" onClick={onLogout}>
               Выйти
             </button>
+            <button
+              type="button"
+              className="icon-button"
+              data-testid="about-btn"
+              aria-label="О программе"
+              title="О программе"
+              onClick={() => setAboutOpen(true)}
+            >
+              ℹ
+            </button>
           </span>
         </header>
         <ChatList
@@ -544,6 +556,7 @@ export function HomeScreen({
           <div className="conversation-empty">Выберите чат</div>
         )}
       </main>
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
     </div>
   );
 }
