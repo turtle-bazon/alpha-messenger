@@ -2083,6 +2083,11 @@ body {
   padding: 4px 8px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.emoji-picker-categories::-webkit-scrollbar {
+  display: none;
 }
 
 .emoji-cat-btn {
