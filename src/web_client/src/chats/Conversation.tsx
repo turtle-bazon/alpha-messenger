@@ -1112,7 +1112,7 @@ export function Conversation({
                           title="Ответить"
                           onClick={() => setReplyTo(m.messageId!)}
                         >
-                          ↩
+                          <IconReply />
                         </button>
                       )}
                     </span>
