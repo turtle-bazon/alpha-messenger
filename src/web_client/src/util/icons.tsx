@@ -148,10 +148,7 @@ export function IconTrash({ size = 16 }: IconProps): JSX.Element {
 
 export function IconReply({ size = 16 }: IconProps): JSX.Element {
   return (
-    <svg {...svgProps(size)}>
-      <path d="M9 17H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v6" />
-      <polyline points="15 14 9 17 11 11" />
-    </svg>
+    <span style={{ fontSize: size, lineHeight: 1 }} aria-hidden>↩</span>
   );
 }
 
