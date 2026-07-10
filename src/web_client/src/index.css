@@ -844,6 +844,16 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* Подсветка сообщения при переходе к нему (#51). */
+.bubble.is-highlighted {
+  animation: highlight-fade 2s ease-out;
+}
+
+@keyframes highlight-fade {
+  0% { background-color: rgba(51, 144, 236, 0.25); }
+  100% { background-color: transparent; }
+}
+
 .bubble-reply-name {
   display: block;
   font-size: 12px;

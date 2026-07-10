@@ -89,6 +89,7 @@ interface MsgVM {
   deleted: boolean;
   edited: boolean;
   replyToMessageId: string | null;
+  highlighted: boolean;
 }
 
 function fromHistory(m: Message): MsgVM {
@@ -102,6 +103,7 @@ function fromHistory(m: Message): MsgVM {
     deleted: m.deleted,
     edited: !!m.editedAt,
     replyToMessageId: m.replyToMessageId ?? null,
+    highlighted: false,
   };
 }
 
@@ -503,6 +505,7 @@ export function Conversation({
       deleted: false,
       edited: false,
       replyToMessageId: replyToMessageId ?? null,
+      highlighted: false,
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
@@ -856,7 +859,8 @@ export function Conversation({
                   (groupStart ? ' is-group-start' : '') +
                   (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
-                  (m.failed ? ' bubble-failed' : '')
+                  (m.failed ? ' bubble-failed' : '') +
+                  (m.highlighted ? ' is-highlighted' : '')
                 }
               >
                 {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
@@ -905,6 +909,23 @@ export function Conversation({
                               // приблизительный скролл: оценка высоты пузырей
                               const avgH = 60;
                               el.scrollTop = idx * avgH - el.clientHeight / 2;
+                              // Подсветка сообщения (#51)
+                              setMessages((prev) =>
+                                prev.map((x) =>
+                                  x.messageId === m.replyToMessageId
+                                    ? { ...x, highlighted: true }
+                                    : x,
+                                ),
+                              );
+                              setTimeout(() => {
+                                setMessages((prev) =>
+                                  prev.map((x) =>
+                                    x.messageId === m.replyToMessageId
+                                      ? { ...x, highlighted: false }
+                                      : x,
+                                  ),
+                                );
+                              }, 2000);
                             }}
                           >
                             <span className="bubble-reply-name" style={{ color: colorFor(refName) }}>
