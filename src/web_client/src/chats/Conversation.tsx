@@ -903,15 +903,6 @@ export function Conversation({
                             className="bubble-reply"
                             onClick={() => {
                               if (!ref) return;
-                              // Скролл к оригинальному сообщению через DOM
-                              const el = scrollRef.current;
-                              if (!el) return;
-                              const target = el.querySelector(
-                                `[data-message-id="${m.replyToMessageId}"]`,
-                              );
-                              if (target) {
-                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }
                               // Подсветка сообщения (#51)
                               setMessages((prev) =>
                                 prev.map((x) =>
@@ -929,6 +920,17 @@ export function Conversation({
                                   ),
                                 );
                               }, 2000);
+                              // Скролл к оригинальному сообщению через DOM
+                              requestAnimationFrame(() => {
+                                const el = scrollRef.current;
+                                if (!el) return;
+                                const target = el.querySelector(
+                                  `[data-message-id="${m.replyToMessageId}"]`,
+                                );
+                                if (target) {
+                                  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                              });
                             }}
                           >
                             <span className="bubble-reply-name" style={{ color: colorFor(refName) }}>
