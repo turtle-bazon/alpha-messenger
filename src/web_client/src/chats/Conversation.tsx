@@ -1260,6 +1260,7 @@ export function Conversation({
               }
             }}
             onClose={() => setEmojiOpen(false)}
+            textareaRef={inputRef}
           />
         )}
       </form>
