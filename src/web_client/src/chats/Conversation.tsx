@@ -852,6 +852,7 @@ export function Conversation({
                 )}
               <div
                 data-testid="message"
+                data-message-id={m.messageId ?? ''}
                 className={
                   'bubble' +
                   (own ? ' bubble-own' : '') +
@@ -902,13 +903,15 @@ export function Conversation({
                             className="bubble-reply"
                             onClick={() => {
                               if (!ref) return;
+                              // Скролл к оригинальному сообщению через DOM
                               const el = scrollRef.current;
                               if (!el) return;
-                              const idx = messages.findIndex((x) => x.messageId === m.replyToMessageId);
-                              if (idx < 0) return;
-                              // приблизительный скролл: оценка высоты пузырей
-                              const avgH = 60;
-                              el.scrollTop = idx * avgH - el.clientHeight / 2;
+                              const target = el.querySelector(
+                                `[data-message-id="${m.replyToMessageId}"]`,
+                              );
+                              if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }
                               // Подсветка сообщения (#51)
                               setMessages((prev) =>
                                 prev.map((x) =>
