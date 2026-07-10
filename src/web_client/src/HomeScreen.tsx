@@ -137,21 +137,30 @@ export function HomeScreen({
 
   // Периодическая проверка версии клиента. Если на сервере новая сборка —
   // перезагружаем страницу (обновление без Ctrl+Shift+R).
+  // Для bundled-клиента (file://) проверяем version.json на сервере напрямую.
   useEffect(() => {
     let currentVersion: string | null = null;
-    // Запоминаем версию при загрузке
-    fetch('/version.json')
+    const isBundled = window.location.protocol === 'file:';
+    const serverUrl = isBundled ? localStorage.getItem('alpha.serverUrl') : null;
+    const versionUrl = serverUrl ? `${serverUrl}/version.json` : '/version.json';
+    const reloadUrl = serverUrl || undefined;
+
+    fetch(versionUrl)
       .then((r) => r.json())
       .then((v) => { currentVersion = v.version; })
       .catch(() => {});
 
-    const CHECK_MS = 5 * 60 * 1000; // каждые 5 минут
+    const CHECK_MS = 5 * 60 * 1000;
     const interval = setInterval(() => {
-      fetch('/version.json')
+      fetch(versionUrl)
         .then((r) => r.json())
         .then((v) => {
           if (currentVersion && v.version !== currentVersion) {
-            window.location.reload();
+            if (reloadUrl) {
+              window.location.href = reloadUrl;
+            } else {
+              window.location.reload();
+            }
           }
         })
         .catch(() => {});
