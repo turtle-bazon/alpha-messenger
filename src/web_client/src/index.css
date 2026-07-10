@@ -2115,6 +2115,7 @@ body {
 .emoji-picker-grid {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
