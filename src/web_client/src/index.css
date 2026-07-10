@@ -845,43 +845,16 @@ body {
 }
 
 /* Подсветка сообщения при переходе к нему (#51).
-   Анимируем background пузыря и border-color хвостика одновременно. */
-.bubble.is-highlighted:not(.bubble-own) {
-  animation: highlight-fade-in 2s ease-out forwards;
+   Полупрозрачная полоска слева, плавно исчезающая. */
+.bubble.is-highlighted {
+  border-left: 3px solid rgba(51, 144, 236, 0.7);
+  padding-left: 7px; /* компенсация ширины полоски */
+  animation: highlight-stripe 2s ease-out forwards;
 }
 
-.bubble-own.is-highlighted {
-  animation: highlight-fade-out 2s ease-out forwards;
-}
-
-/* Хвостик входящего: border-right окрашивается в подсветку. */
-.bubble.is-highlighted.is-tail:not(.bubble-own)::after {
-  animation: highlight-tail-in 2s ease-out forwards;
-}
-
-/* Хвостик исходящего: border-left окрашивается в подсветку. */
-.bubble-own.is-highlighted.is-tail::after {
-  animation: highlight-tail-out 2s ease-out forwards;
-}
-
-@keyframes highlight-fade-in {
-  0% { background: rgba(51, 144, 236, 0.25); }
-  100% { background: var(--bubble-in); }
-}
-
-@keyframes highlight-fade-out {
-  0% { background: rgba(51, 144, 236, 0.25); }
-  100% { background: linear-gradient(var(--bubble-out), var(--bubble-out-grad)); }
-}
-
-@keyframes highlight-tail-in {
-  0% { border-right-color: rgba(51, 144, 236, 0.25); }
-  100% { border-right-color: var(--bubble-in); }
-}
-
-@keyframes highlight-tail-out {
-  0% { border-left-color: rgba(51, 144, 236, 0.25); }
-  100% { border-left-color: var(--bubble-out-grad); }
+@keyframes highlight-stripe {
+  0% { border-left-color: rgba(51, 144, 236, 0.7); }
+  100% { border-left-color: transparent; }
 }
 
 .bubble-reply-name {
