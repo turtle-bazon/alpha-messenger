@@ -903,34 +903,42 @@ export function Conversation({
                             className="bubble-reply"
                             onClick={() => {
                               if (!ref) return;
-                              // Подсветка сообщения (#51)
-                              setMessages((prev) =>
-                                prev.map((x) =>
-                                  x.messageId === m.replyToMessageId
-                                    ? { ...x, highlighted: true }
-                                    : x,
-                                ),
+                              const el = scrollRef.current;
+                              if (!el) return;
+                              const target = el.querySelector(
+                                `[data-message-id="${m.replyToMessageId}"]`,
                               );
-                              setTimeout(() => {
+                              if (!target) return;
+                              // Сначала скролл, потом подсветка
+                              let started = false;
+                              const onScrollEnd = () => {
+                                if (started) return;
+                                started = true;
+                                el.removeEventListener('scrollend', onScrollEnd);
+                                startHighlight();
+                              };
+                              const startHighlight = () => {
                                 setMessages((prev) =>
                                   prev.map((x) =>
                                     x.messageId === m.replyToMessageId
-                                      ? { ...x, highlighted: false }
+                                      ? { ...x, highlighted: true }
                                       : x,
                                   ),
                                 );
-                              }, 2000);
-                              // Скролл к оригинальному сообщению через DOM
-                              requestAnimationFrame(() => {
-                                const el = scrollRef.current;
-                                if (!el) return;
-                                const target = el.querySelector(
-                                  `[data-message-id="${m.replyToMessageId}"]`,
-                                );
-                                if (target) {
-                                  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }
-                              });
+                                setTimeout(() => {
+                                  setMessages((prev) =>
+                                    prev.map((x) =>
+                                      x.messageId === m.replyToMessageId
+                                        ? { ...x, highlighted: false }
+                                        : x,
+                                    ),
+                                  );
+                                }, 2000);
+                              };
+                              el.addEventListener('scrollend', onScrollEnd);
+                              // Фолбэк на случай если scrollend не сработает
+                              setTimeout(onScrollEnd, 1500);
+                              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             }}
                           >
                             <span className="bubble-reply-name" style={{ color: colorFor(refName) }}>
