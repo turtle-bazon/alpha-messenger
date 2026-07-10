@@ -36,6 +36,7 @@ import { IconAttach, IconCheck, IconChecks, IconEdit, IconSend, IconTrash } from
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
+import { EmojiPicker } from './EmojiPicker';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
 
@@ -159,6 +160,7 @@ export function Conversation({
   // Ответ на сообщение: ID сообщения, на которое отвечаем.
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -1206,6 +1208,15 @@ export function Conversation({
           >
             <IconAttach />
           </button>
+          <button
+            type="button"
+            className="conv-emoji-btn"
+            data-testid="emoji-btn"
+            aria-label="Эмодзи"
+            onClick={() => setEmojiOpen(!emojiOpen)}
+          >
+            😊
+          </button>
           <textarea
             ref={inputRef}
             className="conv-textarea"
@@ -1228,6 +1239,29 @@ export function Conversation({
         >
           <IconSend />
         </button>
+        {emojiOpen && (
+          <EmojiPicker
+            onSelect={(emoji) => {
+              // Вставка эмодзи на позицию курсора
+              const el = inputRef.current;
+              if (el) {
+                const start = el.selectionStart ?? input.length;
+                const end = el.selectionEnd ?? input.length;
+                const newValue = input.slice(0, start) + emoji + input.slice(end);
+                setInput(newValue);
+                // Установить курсор после вставленного эмодзи
+                requestAnimationFrame(() => {
+                  el.selectionStart = start + emoji.length;
+                  el.selectionEnd = start + emoji.length;
+                  el.focus();
+                });
+              } else {
+                setInput(input + emoji);
+              }
+            }}
+            onClose={() => setEmojiOpen(false)}
+          />
+        )}
       </form>
       {pendingImage && (
         <ImageEditor
