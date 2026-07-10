@@ -32,7 +32,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconTrash } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconSend, IconTrash } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -874,7 +874,7 @@ export function Conversation({
                   const canDelete = ownMsg || (chat.createdBy === myId);
                   const canEdit = ownMsg;
                   const items: ContextMenuItem[] = [
-                    { label: 'Ответить', icon: <IconReply />, onClick: () => setReplyTo(m.messageId!) },
+                    { label: 'Ответить', onClick: () => setReplyTo(m.messageId!) },
                   ];
                   if (canEdit) {
                     items.push({ label: 'Редактировать', icon: <IconEdit />, onClick: () => startEdit(m) });
@@ -1112,7 +1112,7 @@ export function Conversation({
                           title="Ответить"
                           onClick={() => setReplyTo(m.messageId!)}
                         >
-                          <IconReply />
+                          ↩
                         </button>
                       )}
                     </span>
