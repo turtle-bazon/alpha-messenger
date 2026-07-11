@@ -107,12 +107,12 @@ export function HomeScreen({
   }, []);
 
   // Глобальный фокус поля ввода при нажатии клавиши или вставке (задача #40).
-  // При открытом модале (members-backdrop, new-chat-backdrop и т.п.) или
-  // эмодзи-пикере фокус не смещаем — иначе ввод попадает не туда (#47, #56).
+  // При открытом модале (members-backdrop, new-chat-backdrop и т.п.),
+  // эмодзи-пикере или пикере реакций фокус не смещаем (#47, #56, #23).
   useEffect(() => {
     const focusInput = () => inputRef.current?.focus();
     const isModalOpen = (): boolean =>
-      !!document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"]');
+      !!document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"], [data-testid="reaction-picker"]');
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;

@@ -14,11 +14,12 @@ import {
   editMessage,
   getMessages,
   sendMessage,
+  toggleReaction,
   unfurl,
   uploadBlob,
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
-import type { Chat, Message, ServerEvent } from '../api/types';
+import type { Chat, Message, ReactionGroup, ServerEvent } from '../api/types';
 import {
   decodeContent,
   encodeContent,
@@ -92,6 +93,7 @@ interface MsgVM {
   edited: boolean;
   replyToMessageId: string | null;
   highlighted: boolean;
+  reactions: ReactionGroup[];
 }
 
 function fromHistory(m: Message): MsgVM {
@@ -106,6 +108,7 @@ function fromHistory(m: Message): MsgVM {
     edited: !!m.editedAt,
     replyToMessageId: m.replyToMessageId ?? null,
     highlighted: false,
+    reactions: m.reactions ?? [],
   };
 }
 
@@ -163,6 +166,8 @@ export function Conversation({
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
+  // Пикер реакций: messageId для которого открыт, или null
+  const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -297,6 +302,20 @@ export function Conversation({
         const p = ev.payload as { userId: string; upToMessageId: string };
         if (p.userId === myId) return; // нас интересует прочтение собеседником
         setReadUpTo((cur) => Math.max(cur, Number(p.upToMessageId)));
+      }),
+      ws.on('message.reaction', (ev: ServerEvent) => {
+        if (ev.chatId !== chatId) return;
+        const p = ev.payload as {
+          messageId: string;
+          reactions: ReactionGroup[];
+        };
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.messageId === p.messageId
+              ? { ...m, reactions: p.reactions }
+              : m,
+          ),
+        );
       }),
     ];
     return () => {
@@ -510,6 +529,7 @@ export function Conversation({
       edited: false,
       replyToMessageId: replyToMessageId ?? null,
       highlighted: false,
+      reactions: [],
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
@@ -886,6 +906,7 @@ export function Conversation({
                     items.push({ label: 'Удалить', icon: <IconTrash />, onClick: () => onDelete(m), danger: true });
                   }
                   setCtxMenu({ items, x: e.clientX, y: e.clientY });
+                  setReactionPickerMsgId(null);
                 }}
               >
                 {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
@@ -1115,10 +1136,46 @@ export function Conversation({
                           <IconReply />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        data-testid="msg-react"
+                        title="Реакция"
+                        onClick={() => setReactionPickerMsgId(
+                          reactionPickerMsgId === m.messageId ? null : m.messageId!,
+                        )}
+                      >
+                        😀
+                      </button>
                     </span>
                   );
                 })()}
+              {/* Пикер реакций */}
+              {reactionPickerMsgId === m.messageId && (
+                <ReactionPicker
+                  onSelect={(emoji) => {
+                    if (m.messageId) toggleReaction(m.messageId, emoji);
+                    setReactionPickerMsgId(null);
+                  }}
+                  onClose={() => setReactionPickerMsgId(null)}
+                />
+              )}
               </div>
+              {/* Реакции на сообщение (#23) */}
+              {m.reactions && m.reactions.length > 0 && (
+                <div className="bubble-reactions">
+                  {m.reactions.map((rx) => (
+                    <button
+                      key={rx.emoji}
+                      type="button"
+                      className={'bubble-reaction' + (rx.users.includes(myId ?? '') ? ' own' : '')}
+                      onClick={() => m.messageId && toggleReaction(m.messageId, rx.emoji)}
+                    >
+                      <span className="bubble-reaction-emoji">{rx.emoji}</span>
+                      <span className="bubble-reaction-count">{rx.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               </Fragment>
             );
           })}
@@ -1320,6 +1377,49 @@ export function Conversation({
           onClose={() => setCtxMenu(null)}
         />
       )}
+    </div>
+  );
+}
+
+// Мини-пикер для реакций: частые эмодзи одной строкой (#23).
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+
+function ReactionPicker({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (emoji: string) => void;
+  onClose: () => void;
+}): JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('keydown', handle);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('keydown', handle);
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="reaction-picker" ref={ref} data-testid="reaction-picker">
+      {QUICK_REACTIONS.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          className="reaction-picker-btn"
+          onClick={() => onSelect(emoji)}
+        >
+          {emoji}
+        </button>
+      ))}
     </div>
   );
 }

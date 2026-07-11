@@ -3,6 +3,7 @@ import { pool } from '../db';
 import { authenticate } from '../auth';
 import { emitToMembers, isMember, markRead } from '../chat-helpers';
 import { HEX64 } from './blobs';
+import { getReactions, ReactionGroup } from './reactions';
 
 interface SendBody {
   clientMessageId?: string;
@@ -183,7 +184,35 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         editedAt: r.edited_at ? r.edited_at.toISOString() : null,
         deleted: r.deleted,
         replyToMessageId: r.reply_to_message_id,
+        reactions: [] as ReactionGroup[],
       }));
+
+      // Подтягиваем реакции для всех сообщений одним запросом
+      if (messages.length > 0) {
+        const msgIds = messages.map((m) => m.messageId);
+        const rxRes = await pool.query(
+          `SELECT message_id, emoji, array_agg(user_id) AS users
+           FROM message_reactions
+           WHERE message_id = ANY($1)
+           GROUP BY message_id, emoji
+           ORDER BY message_id, count(*) DESC, emoji`,
+          [msgIds],
+        );
+        const rxMap = new Map<string, ReactionGroup[]>();
+        for (const r of rxRes.rows) {
+          const mid = r.message_id as string;
+          if (!rxMap.has(mid)) rxMap.set(mid, []);
+          rxMap.get(mid)!.push({
+            emoji: r.emoji as string,
+            users: r.users as string[],
+            count: (r.users as string[]).length,
+          });
+        }
+        for (const m of messages) {
+          m.reactions = rxMap.get(m.messageId) ?? [];
+        }
+      }
+
       const nextBefore =
         hasMore && slice.length > 0 ? slice[slice.length - 1].message_id : null;
 

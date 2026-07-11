@@ -1,6 +1,6 @@
 import { apiUrl } from './config';
 import { getToken } from './session';
-import type { AuthResult, Chat, ChatMembers, Me, Message } from './types';
+import type { AuthResult, Chat, ChatMembers, Me, Message, ReactionGroup } from './types';
 
 // Ошибка с HTTP-статусом и распарсенным телом — экраны различают 400/404/409 и т.п.
 export class ApiError extends Error {
@@ -44,6 +44,8 @@ export const rest = {
   get: <T>(path: string, auth = true) => request<T>('GET', path, { auth }),
   post: <T>(path: string, body?: unknown, auth = true) =>
     request<T>('POST', path, { body, auth }),
+  put: <T>(path: string, body?: unknown, auth = true) =>
+    request<T>('PUT', path, { body, auth }),
   patch: <T>(path: string, body?: unknown, auth = true) =>
     request<T>('PATCH', path, { body, auth }),
   del: <T>(path: string, auth = true) => request<T>('DELETE', path, { auth }),
@@ -227,4 +229,19 @@ export function deleteMessage(
   messageId: string,
 ): Promise<{ messageId: string }> {
   return rest.del(`/messages/${messageId}`);
+}
+
+// ---- Реакции (#23) ----
+
+export interface ReactionResult {
+  reactions: ReactionGroup[];
+  action: 'added' | 'removed' | 'replaced';
+  removedEmoji: string | null;
+}
+
+export function toggleReaction(
+  messageId: string,
+  emoji: string,
+): Promise<ReactionResult> {
+  return rest.put<ReactionResult>(`/messages/${messageId}/reactions`, { emoji });
 }

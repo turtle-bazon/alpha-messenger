@@ -66,6 +66,13 @@ export interface Message {
   editedAt: string | null;
   deleted: boolean;
   replyToMessageId: string | null;
+  reactions?: ReactionGroup[];
+}
+
+export interface ReactionGroup {
+  emoji: string;
+  users: string[];
+  count: number;
 }
 
 // Конверт события из потока WS. payload зависит от type (см. doc/api.md).

@@ -10,6 +10,7 @@ import { blobRoutes } from './routes/blobs';
 import { unfurlRoutes } from './routes/unfurl';
 import { presenceRoutes } from './routes/presence';
 import { pushRoutes } from './routes/push';
+import { reactionRoutes } from './routes/reactions';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -34,6 +35,7 @@ export function buildApp(): FastifyInstance {
       api.register(unfurlRoutes);
       api.register(presenceRoutes);
       api.register(pushRoutes);
+      api.register(reactionRoutes);
     },
     { prefix: '/api' },
   );
