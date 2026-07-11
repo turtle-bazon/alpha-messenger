@@ -1382,7 +1382,16 @@ export function Conversation({
       )}
       {/* Полный эмодзи-пикер (из стрелки в панели реакций) */}
       {fullEmojiPickerMsgId && ctxMenu && (
-        <div className="full-emoji-picker-wrap" style={{ position: 'fixed', left: ctxMenu.x, bottom: 'auto', top: ctxMenu.y - 420, zIndex: 200 }}>
+        <div
+          className="full-emoji-picker-wrap"
+          style={{
+            position: 'fixed',
+            left: Math.min(Math.max(ctxMenu.x - 160, 8), window.innerWidth - 328),
+            top: ctxMenu.y - 430,
+            zIndex: 200,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <EmojiPicker
             onSelect={(emoji) => {
               toggleReaction(fullEmojiPickerMsgId, emoji);
@@ -1412,8 +1421,17 @@ function ReactionBar({
   onSelect: (emoji: string) => void;
   onOpenFull: () => void;
 }): JSX.Element {
+  // Ширина панели ≈ 8*34 + 28 + отступы ≈ 320px
+  const barWidth = 320;
+  const correctedX = Math.min(Math.max(x - barWidth / 2, 8), window.innerWidth - barWidth - 8);
+  const correctedY = y - 52;
   return (
-    <div className="reaction-bar" style={{ left: x, top: y - 48 }} data-testid="reaction-bar">
+    <div
+      className="reaction-bar"
+      style={{ left: correctedX, top: correctedY }}
+      data-testid="reaction-bar"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       {QUICK_REACTIONS.map((emoji) => (
         <button
           key={emoji}
@@ -1427,7 +1445,7 @@ function ReactionBar({
       <button
         type="button"
         className="reaction-bar-more"
-        onClick={onOpenFull}
+        onClick={(e) => { e.stopPropagation(); onOpenFull(); }}
         title="Ещё"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
