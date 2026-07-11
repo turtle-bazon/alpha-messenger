@@ -1356,20 +1356,6 @@ export function Conversation({
       )}
       {ctxMenu && (
         <>
-          {/* Панель быстрых реакций над контекстным меню (#23) */}
-          {reactionPickerMsgId && (
-            <ReactionBar
-              x={ctxMenu.x}
-              y={ctxMenu.y}
-              onSelect={(emoji) => {
-                toggleReaction(reactionPickerMsgId, emoji);
-                setCtxMenu(null);
-                setReactionPickerMsgId(null);
-                setFullEmojiPickerMsgId(null);
-              }}
-              onOpenFull={() => setFullEmojiPickerMsgId(reactionPickerMsgId)}
-            />
-          )}
           <ContextMenu
             items={ctxMenu.items}
             x={ctxMenu.x}
@@ -1379,6 +1365,17 @@ export function Conversation({
               setReactionPickerMsgId(null);
               setFullEmojiPickerMsgId(null);
             }}
+            reactionBar={reactionPickerMsgId ? (
+              <ReactionBar
+                onSelect={(emoji) => {
+                  toggleReaction(reactionPickerMsgId, emoji);
+                  setCtxMenu(null);
+                  setReactionPickerMsgId(null);
+                  setFullEmojiPickerMsgId(null);
+                }}
+                onOpenFull={() => setFullEmojiPickerMsgId(reactionPickerMsgId)}
+              />
+            ) : undefined}
           />
         </>
       )}
@@ -1409,31 +1406,18 @@ export function Conversation({
   );
 }
 
-// Панель быстрых реакций над контекстным меню (#23, как в Telegram).
+// Панель быстрых реакций — внутри контекстного меню (#23, как в Telegram).
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
 
 function ReactionBar({
-  x,
-  y,
   onSelect,
   onOpenFull,
 }: {
-  x: number;
-  y: number;
   onSelect: (emoji: string) => void;
   onOpenFull: () => void;
 }): JSX.Element {
-  // Ширина панели ≈ 8*34 + 28 + отступы ≈ 320px
-  const barWidth = 320;
-  const correctedX = Math.min(Math.max(x - barWidth / 2, 8), window.innerWidth - barWidth - 8);
-  const correctedY = y - 52;
   return (
-    <div
-      className="reaction-bar"
-      style={{ left: correctedX, top: correctedY }}
-      data-testid="reaction-bar"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
+    <div className="reaction-bar" data-testid="reaction-bar">
       {QUICK_REACTIONS.map((emoji) => (
         <button
           key={emoji}

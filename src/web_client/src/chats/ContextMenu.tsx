@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 
 export interface ContextMenuItem {
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   onClick: () => void;
   danger?: boolean;
   separator?: boolean;
@@ -14,9 +14,11 @@ interface ContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
+  /** Панель быстрых реакций — рендерится над пунктами меню в одном контейнере. */
+  reactionBar?: ReactNode;
 }
 
-export function ContextMenu({ items, x, y, onClose }: ContextMenuProps): JSX.Element {
+export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps): JSX.Ele
       style={{ left: correctedX, top: correctedY }}
       data-testid="context-menu"
     >
+      {reactionBar}
       {items.map((item, i) => {
         if (item.separator) {
           return <div key={`sep-${i}`} className="context-menu-separator" />;

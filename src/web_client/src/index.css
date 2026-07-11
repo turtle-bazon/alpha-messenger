@@ -2341,20 +2341,14 @@ body {
   line-height: 1;
 }
 
-/* Панель быстрых реакций (#23, как в Telegram) */
+/* Панель быстрых реакций (#23, как в Telegram) — внутри контекстного меню */
 
 .reaction-bar {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 6px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  position: fixed;
-  z-index: 100;
-  animation: popup-in 0.15s ease-out;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 .reaction-bar-btn {
