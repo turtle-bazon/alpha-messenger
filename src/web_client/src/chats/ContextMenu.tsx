@@ -16,9 +16,11 @@ interface ContextMenuProps {
   onClose: () => void;
   /** Панель быстрых реакций — рендерится над пунктами меню в одном контейнере. */
   reactionBar?: ReactNode;
+  /** Отдаёт скорректированную позицию после измерения (для позиционирования EmojiPicker). */
+  onPositioned?: (pos: { left: number; top: number; width: number; height: number }) => void;
 }
 
-export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuProps): JSX.Element {
+export function ContextMenu({ items, x, y, onClose, reactionBar, onPositioned }: ContextMenuProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
@@ -52,7 +54,8 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     let top = y - menuHeight * 0.4;
     top = Math.max(8, Math.min(top, window.innerHeight - menuHeight - 8));
     setPos({ left, top });
-  }, [x, y]);
+    onPositioned?.({ left, top, width: menuWidth, height: menuHeight });
+  }, [x, y, onPositioned]);
 
   return (
     <div

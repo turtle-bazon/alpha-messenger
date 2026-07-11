@@ -170,8 +170,6 @@ export function Conversation({
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
   // Полный эмодзи-пикер (из стрелки в панели реакций)
   const [fullEmojiPickerMsgId, setFullEmojiPickerMsgId] = useState<string | null>(null);
-  // Позиция для полного эмодзи-пикера (запоминаем перед закрытием контекстного меню)
-  const [fullPickerPos, setFullPickerPos] = useState<{ x: number; y: number } | null>(null);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -188,6 +186,8 @@ export function Conversation({
           .join('|')
       : '';
   const dismissedRef = useRef<Set<string>>(new Set());
+  // Скорректированная позиция контекстного меню (для EmojiPicker)
+  const ctxMenuPosRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
   // Открытый lightbox (полноразмерный просмотр) — blobId и подпись.
   const [viewer, setViewer] = useState<{ blobId: string; caption: string } | null>(
     null,
@@ -1362,11 +1362,12 @@ export function Conversation({
             items={ctxMenu.items}
             x={ctxMenu.x}
             y={ctxMenu.y}
+            onPositioned={(pos) => { ctxMenuPosRef.current = pos; }}
             onClose={() => {
               setCtxMenu(null);
               setReactionPickerMsgId(null);
               setFullEmojiPickerMsgId(null);
-              setFullPickerPos(null);
+              
             }}
             reactionBar={reactionPickerMsgId ? (
               <ReactionBar
@@ -1375,10 +1376,10 @@ export function Conversation({
                   setCtxMenu(null);
                   setReactionPickerMsgId(null);
                   setFullEmojiPickerMsgId(null);
-                  setFullPickerPos(null);
+                  
                 }}
                 onOpenFull={() => {
-                  if (ctxMenu) setFullPickerPos({ x: ctxMenu.x, y: ctxMenu.y });
+                  
                   setFullEmojiPickerMsgId(reactionPickerMsgId);
                   setCtxMenu(null);
                   setReactionPickerMsgId(null);
@@ -1389,13 +1390,13 @@ export function Conversation({
         </>
       )}
       {/* Полный эмодзи-пикер (из стрелки в панели реакций) */}
-      {fullEmojiPickerMsgId && fullPickerPos && (
+      {fullEmojiPickerMsgId && ctxMenuPosRef.current && (
         <div
           className="full-emoji-picker-wrap"
           style={{
             position: 'fixed',
-            left: Math.min(Math.max(fullPickerPos.x - 160, 8), window.innerWidth - 328),
-            top: Math.max(8, fullPickerPos.y - 400),
+            left: Math.min(Math.max(ctxMenuPosRef.current.left, 8), window.innerWidth - 328),
+            top: Math.max(8, ctxMenuPosRef.current.top),
             zIndex: 200,
           }}
           onMouseDown={(e) => e.stopPropagation()}
@@ -1404,11 +1405,11 @@ export function Conversation({
             onSelect={(emoji) => {
               toggleReaction(fullEmojiPickerMsgId, emoji);
               setFullEmojiPickerMsgId(null);
-              setFullPickerPos(null);
+              
             }}
             onClose={() => {
               setFullEmojiPickerMsgId(null);
-              setFullPickerPos(null);
+              
             }}
           />
         </div>
