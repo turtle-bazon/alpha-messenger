@@ -857,14 +857,12 @@ body {
 /* Подсветка сообщения при переходе к нему (#51).
    Полупрозрачная полоска сверху, плавно исчезающая. */
 .bubble.is-highlighted {
-  border-top: 3px solid rgba(51, 144, 236, 0.7);
-  padding-top: 4px; /* компенсация ширины полоски */
-  animation: highlight-stripe 2s ease-out forwards;
+  animation: highlight-bg 2s ease-out forwards;
 }
 
-@keyframes highlight-stripe {
-  0% { border-top-color: rgba(51, 144, 236, 0.7); }
-  100% { border-top-color: transparent; }
+@keyframes highlight-bg {
+  0% { background-color: rgba(51, 144, 236, 0.15); }
+  100% { background-color: transparent; }
 }
 
 .bubble-reply-name {
