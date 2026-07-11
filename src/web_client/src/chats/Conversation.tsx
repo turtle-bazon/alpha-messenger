@@ -1377,8 +1377,8 @@ export function Conversation({
                   setFullEmojiPickerMsgId(null);
                   setFullPickerPos(null);
                 }}
-                onOpenFull={(pos) => {
-                  setFullPickerPos(pos);
+                onOpenFull={() => {
+                  if (ctxMenu) setFullPickerPos({ x: ctxMenu.x, y: ctxMenu.y });
                   setFullEmojiPickerMsgId(reactionPickerMsgId);
                   setCtxMenu(null);
                   setReactionPickerMsgId(null);
@@ -1395,7 +1395,7 @@ export function Conversation({
           style={{
             position: 'fixed',
             left: Math.min(Math.max(fullPickerPos.x - 160, 8), window.innerWidth - 328),
-            top: Math.max(8, fullPickerPos.y - 420),
+            top: Math.max(8, fullPickerPos.y - 400),
             zIndex: 200,
           }}
           onMouseDown={(e) => e.stopPropagation()}
@@ -1425,7 +1425,7 @@ function ReactionBar({
   onOpenFull,
 }: {
   onSelect: (emoji: string) => void;
-  onOpenFull: (pos: { x: number; y: number }) => void;
+  onOpenFull: () => void;
 }): JSX.Element {
   return (
     <div className="reaction-bar" data-testid="reaction-bar">
@@ -1446,7 +1446,7 @@ function ReactionBar({
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
-          onOpenFull({ x: e.clientX, y: e.clientY });
+          onOpenFull();
         }}
         title="Ещё"
       >

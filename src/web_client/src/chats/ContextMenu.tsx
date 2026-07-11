@@ -32,9 +32,11 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     }
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
-    // Фокус на первом пункте меню — не тащить мышь далеко
-    const firstItem = ref.current?.querySelector('.context-menu-item:not(:disabled)') as HTMLElement | null;
-    firstItem?.focus();
+    // Фокус на первом пункте меню — requestAnimationFrame чтобы браузер успел отрисовать
+    requestAnimationFrame(() => {
+      const firstItem = ref.current?.querySelector('.context-menu-item:not(:disabled)') as HTMLElement | null;
+      firstItem?.focus();
+    });
     return () => {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleKey);
