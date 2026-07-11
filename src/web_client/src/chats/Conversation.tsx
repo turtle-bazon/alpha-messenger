@@ -1466,12 +1466,11 @@ function PositionedEmojiPicker({
   });
 
   useEffect(() => {
-    if (!wrapRef.current) return;
-    const rect = wrapRef.current.getBoundingClientRect();
-    const left = Math.min(Math.max(pos.left, 8), window.innerWidth - rect.width - 8);
+    const maxH = 360;
+    const left = Math.min(Math.max(pos.left, 8), window.innerWidth - 328);
     let top = pos.top;
-    if (top + rect.height + 8 > window.innerHeight) {
-      top = window.innerHeight - rect.height - 8;
+    if (top + maxH + 8 > window.innerHeight) {
+      top = window.innerHeight - maxH - 8;
     }
     top = Math.max(8, top);
     setStyle({ position: 'fixed', left, top, zIndex: 200 });
