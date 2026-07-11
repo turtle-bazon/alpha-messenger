@@ -1055,7 +1055,24 @@ export function Conversation({
                   )}
                 </span>
                 {!m.deleted && (
-                  <span className="bubble-meta">
+                  <span className="bubble-footer">
+                    {/* Реакции — слева (#23) */}
+                    {m.reactions && m.reactions.length > 0 && (
+                      <span className="bubble-reactions">
+                        {m.reactions.map((rx) => (
+                          <button
+                            key={rx.emoji}
+                            type="button"
+                            className={'bubble-reaction' + (rx.users.includes(myId ?? '') ? ' own' : '')}
+                            onClick={() => m.messageId && toggleReaction(m.messageId, rx.emoji)}
+                          >
+                            <span className="bubble-reaction-emoji">{rx.emoji}</span>
+                            <span className="bubble-reaction-count">{rx.count}</span>
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                    <span className="bubble-meta">
                     {m.edited && <span className="bubble-edited">ред.</span>}
                     <span className="bubble-time">{formatTime(m.ts)}</span>
                     {/* Статус доставки своих сообщений (#24/#26): отправка —
@@ -1089,6 +1106,7 @@ export function Conversation({
                           {read ? <IconChecks /> : <IconCheck />}
                         </span>
                       ) : null)}
+                    </span>
                   </span>
                 )}
                 {own && m.failed && (
@@ -1142,22 +1160,6 @@ export function Conversation({
                     </span>
                   );
                 })()}
-              {/* Реакции на сообщение — внутри пузыря, снизу справа (#23) */}
-              {m.reactions && m.reactions.length > 0 && (
-                <div className="bubble-reactions">
-                  {m.reactions.map((rx) => (
-                    <button
-                      key={rx.emoji}
-                      type="button"
-                      className={'bubble-reaction' + (rx.users.includes(myId ?? '') ? ' own' : '')}
-                      onClick={() => m.messageId && toggleReaction(m.messageId, rx.emoji)}
-                    >
-                      <span className="bubble-reaction-emoji">{rx.emoji}</span>
-                      <span className="bubble-reaction-count">{rx.count}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
               </div>
               </Fragment>
             );
