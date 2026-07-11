@@ -36,8 +36,9 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps): JSX.Ele
     };
   }, [onClose]);
 
-  // Корректируем позицию, чтобы меню не вылезало за экран
-  const correctedX = Math.min(x, window.innerWidth - 220);
+  // Корректируем позицию: по центру горизонтально, не вылезает за экран
+  const menuWidth = 220;
+  const correctedX = Math.min(Math.max(x - menuWidth / 2, 8), window.innerWidth - menuWidth - 8);
   const correctedY = Math.min(y, window.innerHeight - items.length * 40);
 
   return (
