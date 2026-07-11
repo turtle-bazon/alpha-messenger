@@ -51,8 +51,8 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     const menuWidth = rect.width;
     const menuHeight = rect.height;
     const left = Math.min(Math.max(x - menuWidth / 2, 8), window.innerWidth - menuWidth - 8);
-    // Предпочитаем позицию ниже клика; если не влазит — выше
-    let top = y;
+    // Центрируем по вертикали относительно клика; если не влазит — корректируем
+    let top = y - menuHeight / 2;
     if (y + menuHeight + 8 > window.innerHeight) {
       top = y - menuHeight;
     }
