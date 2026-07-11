@@ -1396,7 +1396,10 @@ export function Conversation({
           style={{
             position: 'fixed',
             left: Math.min(Math.max(ctxMenuPosRef.current.left, 8), window.innerWidth - 328),
-            top: Math.max(8, ctxMenuPosRef.current.top),
+            top: Math.min(
+              ctxMenuPosRef.current.top,
+              window.innerHeight - 368,
+            ),
             zIndex: 200,
           }}
           onMouseDown={(e) => e.stopPropagation()}
