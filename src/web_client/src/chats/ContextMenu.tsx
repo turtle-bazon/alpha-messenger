@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 export interface ContextMenuItem {
   label: string;
@@ -20,6 +20,7 @@ interface ContextMenuProps {
 
 export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number }>({ left: x, top: y });
 
   useEffect(() => {
     function handleClick(e: MouseEvent): void {
@@ -43,22 +44,25 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     };
   }, [onClose]);
 
-  // Корректируем позицию: не вылезает за экран ни по горизонтали, ни по вертикали
-  const menuWidth = 220;
-  const itemHeight = 36;
-  const reactionBarHeight = reactionBar ? 48 : 0;
-  const menuHeight = items.length * itemHeight + reactionBarHeight;
-  const correctedX = Math.min(Math.max(x - menuWidth / 2, 8), window.innerWidth - menuWidth - 8);
-  const correctedY = Math.min(
-    Math.max(y, 8), // не выше верха
-    window.innerHeight - menuHeight - 8, // не ниже низа
-  );
+  // После рендера измеряем реальную высоту и корректируем позицию
+  useEffect(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const menuWidth = rect.width;
+    const menuHeight = rect.height;
+    const left = Math.min(Math.max(x - menuWidth / 2, 8), window.innerWidth - menuWidth - 8);
+    const top = Math.min(
+      Math.max(y, 8),
+      window.innerHeight - menuHeight - 8,
+    );
+    setPos({ left, top });
+  }, [x, y]);
 
   return (
     <div
       ref={ref}
       className="context-menu"
-      style={{ left: correctedX, top: correctedY }}
+      style={{ left: pos.left, top: pos.top }}
       data-testid="context-menu"
     >
       {reactionBar}
