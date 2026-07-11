@@ -427,6 +427,10 @@ body {
   from { opacity: 0; transform: scale(0.95) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
+@keyframes popup-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 .conversation {
   flex: 1;
@@ -807,6 +811,7 @@ body {
 
 .bubble:hover .bubble-actions {
   display: inline-flex;
+  animation: popup-in 0.15s ease-out;
 }
 
 .has-ctx-menu .bubble-actions {
@@ -2063,6 +2068,7 @@ body {
   z-index: 100;
   margin-bottom: 8px;
   overflow: hidden;
+  animation: popup-in 0.15s ease-out;
 }
 
 .emoji-picker-search {
@@ -2165,6 +2171,7 @@ body {
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   padding: 4px 0;
+  animation: popup-in 0.15s ease-out;
 }
 
 .context-menu-item {
@@ -2342,6 +2349,7 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   position: fixed;
   z-index: 100;
+  animation: popup-in 0.15s ease-out;
 }
 
 .reaction-bar-btn {
