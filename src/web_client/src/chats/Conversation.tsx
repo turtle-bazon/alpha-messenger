@@ -1391,31 +1391,16 @@ export function Conversation({
       )}
       {/* Полный эмодзи-пикер (из стрелки в панели реакций) */}
       {fullEmojiPickerMsgId && ctxMenuPosRef.current && (
-        <div
-          className="full-emoji-picker-wrap"
-          style={{
-            position: 'fixed',
-            left: Math.min(Math.max(ctxMenuPosRef.current.left, 8), window.innerWidth - 328),
-            top: Math.min(
-              ctxMenuPosRef.current.top,
-              window.innerHeight - 368,
-            ),
-            zIndex: 200,
+        <PositionedEmojiPicker
+          pos={ctxMenuPosRef.current}
+          onSelect={(emoji) => {
+            toggleReaction(fullEmojiPickerMsgId, emoji);
+            setFullEmojiPickerMsgId(null);
           }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <EmojiPicker
-            onSelect={(emoji) => {
-              toggleReaction(fullEmojiPickerMsgId, emoji);
-              setFullEmojiPickerMsgId(null);
-              
-            }}
-            onClose={() => {
-              setFullEmojiPickerMsgId(null);
-              
-            }}
-          />
-        </div>
+          onClose={() => {
+            setFullEmojiPickerMsgId(null);
+          }}
+        />
       )}
     </div>
   );
@@ -1458,6 +1443,48 @@ function ReactionBar({
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
+    </div>
+  );
+}
+
+// EmojiPicker с авто-коррекцией позиции по экрану (#23).
+function PositionedEmojiPicker({
+  pos,
+  onSelect,
+  onClose,
+}: {
+  pos: { left: number; top: number };
+  onSelect: (emoji: string) => void;
+  onClose: () => void;
+}): JSX.Element {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [style, setStyle] = useState<React.CSSProperties>({
+    position: 'fixed',
+    left: pos.left,
+    top: pos.top,
+    zIndex: 200,
+  });
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const left = Math.min(Math.max(pos.left, 8), window.innerWidth - rect.width - 8);
+    let top = pos.top;
+    if (top + rect.height + 8 > window.innerHeight) {
+      top = window.innerHeight - rect.height - 8;
+    }
+    top = Math.max(8, top);
+    setStyle({ position: 'fixed', left, top, zIndex: 200 });
+  }, [pos]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="full-emoji-picker-wrap"
+      style={style}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <EmojiPicker onSelect={onSelect} onClose={onClose} />
     </div>
   );
 }
