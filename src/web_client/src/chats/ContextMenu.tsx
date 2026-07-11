@@ -20,7 +20,7 @@ interface ContextMenuProps {
 
 export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ left: number; top: number }>({ left: x, top: y });
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent): void {
@@ -33,7 +33,6 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     }
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
-    // Фокус на первом пункте меню — requestAnimationFrame чтобы браузер успел отрисовать
     requestAnimationFrame(() => {
       const firstItem = ref.current?.querySelector('.context-menu-item:not(:disabled)') as HTMLElement | null;
       firstItem?.focus();
@@ -44,18 +43,13 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     };
   }, [onClose]);
 
-  // После рендера измеряем реальную высоту и корректируем позицию
   useEffect(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const menuWidth = rect.width;
     const menuHeight = rect.height;
     const left = Math.min(Math.max(x - menuWidth * 0.4, 8), window.innerWidth - menuWidth - 8);
-    // Клик на 2/5 высоты меню сверху
     let top = y - menuHeight * 0.4;
-    if (y + menuHeight + 8 > window.innerHeight) {
-      top = y - menuHeight;
-    }
     top = Math.max(8, Math.min(top, window.innerHeight - menuHeight - 8));
     setPos({ left, top });
   }, [x, y]);
@@ -64,7 +58,7 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     <div
       ref={ref}
       className="context-menu"
-      style={{ left: pos.left, top: pos.top }}
+      style={pos ? { left: pos.left, top: pos.top } : { visibility: 'hidden' }}
       data-testid="context-menu"
     >
       {reactionBar}
