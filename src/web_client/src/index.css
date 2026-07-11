@@ -2185,8 +2185,10 @@ body {
   transition: background 0.1s;
 }
 
-.context-menu-item:hover {
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
   background: var(--bg-hover);
+  outline: none;
 }
 
 .context-menu-item.danger {

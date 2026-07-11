@@ -32,16 +32,25 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     }
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
+    // Фокус на первом пункте меню — не тащить мышь далеко
+    const firstItem = ref.current?.querySelector('.context-menu-item:not(:disabled)') as HTMLElement | null;
+    firstItem?.focus();
     return () => {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleKey);
     };
   }, [onClose]);
 
-  // Корректируем позицию: по центру горизонтально, не вылезает за экран
+  // Корректируем позицию: не вылезает за экран ни по горизонтали, ни по вертикали
   const menuWidth = 220;
+  const itemHeight = 36;
+  const reactionBarHeight = reactionBar ? 48 : 0;
+  const menuHeight = items.length * itemHeight + reactionBarHeight;
   const correctedX = Math.min(Math.max(x - menuWidth / 2, 8), window.innerWidth - menuWidth - 8);
-  const correctedY = Math.min(y, window.innerHeight - items.length * 40);
+  const correctedY = Math.min(
+    Math.max(y, 8), // не выше верха
+    window.innerHeight - menuHeight - 8, // не ниже низа
+  );
 
   return (
     <div
