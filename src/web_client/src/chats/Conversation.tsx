@@ -1142,8 +1142,7 @@ export function Conversation({
                     </span>
                   );
                 })()}
-              </div>
-              {/* Реакции на сообщение (#23) */}
+              {/* Реакции на сообщение — внутри пузыря, снизу справа (#23) */}
               {m.reactions && m.reactions.length > 0 && (
                 <div className="bubble-reactions">
                   {m.reactions.map((rx) => (
@@ -1159,6 +1158,7 @@ export function Conversation({
                   ))}
                 </div>
               )}
+              </div>
               </Fragment>
             );
           })}
