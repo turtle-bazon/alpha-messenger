@@ -9,10 +9,8 @@ interface ReactionBody {
 
 export async function reactionRoutes(app: FastifyInstance): Promise<void> {
   // PUT /messages/:messageId/reactions — toggle реакции.
-  // Если у пользователя уже стоит реакция на этом сообщении:
-  //   - тот же эмодзи → удаляем (toggle off)
-  //   - другой эмодзи → заменяем
-  // Если реакции нет — добавляем.
+  // Если у пользователя уже стоит такая же реакция (message_id, user_id, emoji) — удаляем.
+  // Если нет — добавляем. Один пользователь может ставить несколько разных реакций.
   app.put(
     '/messages/:messageId/reactions',
     { preHandler: authenticate },
@@ -43,38 +41,28 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
       try {
         await client.query('BEGIN');
 
-        // Проверяем текущую реакцию пользователя
+        // Проверяем, есть ли уже такая exact реакция
         const existing = await client.query(
-          'SELECT emoji FROM message_reactions WHERE message_id = $1 AND user_id = $2',
-          [messageId, userId],
+          'SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3',
+          [messageId, userId, emoji],
         );
 
-        let action: 'added' | 'removed' | 'replaced';
-        let removedEmoji: string | null = null;
+        let action: 'added' | 'removed';
 
         if (existing.rowCount === 0) {
-          // Нет реакции — добавляем
+          // Нет такой реакции — добавляем
           await client.query(
             'INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)',
             [messageId, userId, emoji],
           );
           action = 'added';
-        } else if (existing.rows[0].emoji === emoji) {
-          // Тот же эмодзи — удаляем (toggle off)
-          await client.query(
-            'DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2',
-            [messageId, userId],
-          );
-          action = 'removed';
-          removedEmoji = emoji;
         } else {
-          // Другой эмодзи — заменяем
+          // Есть — удаляем (toggle off)
           await client.query(
-            'UPDATE message_reactions SET emoji = $3 WHERE message_id = $1 AND user_id = $2',
+            'DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3',
             [messageId, userId, emoji],
           );
-          action = 'replaced';
-          removedEmoji = existing.rows[0].emoji;
+          action = 'removed';
         }
 
         // Получаем обновлённый набор реакций
@@ -85,12 +73,11 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
           userId,
           emoji,
           action,
-          removedEmoji,
           reactions,
         });
 
         await client.query('COMMIT');
-        return reply.send({ reactions, action, removedEmoji });
+        return reply.send({ reactions, action });
       } catch (err) {
         await client.query('ROLLBACK').catch(() => undefined);
         throw err;

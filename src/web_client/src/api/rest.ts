@@ -235,8 +235,7 @@ export function deleteMessage(
 
 export interface ReactionResult {
   reactions: ReactionGroup[];
-  action: 'added' | 'removed' | 'replaced';
-  removedEmoji: string | null;
+  action: 'added' | 'removed';
 }
 
 export function toggleReaction(
