@@ -50,7 +50,7 @@ export function ContextMenu({ items, x, y, onClose, reactionBar }: ContextMenuPr
     const rect = ref.current.getBoundingClientRect();
     const menuWidth = rect.width;
     const menuHeight = rect.height;
-    const left = Math.min(Math.max(x - menuWidth / 2, 8), window.innerWidth - menuWidth - 8);
+    const left = Math.min(Math.max(x - menuWidth * 0.4, 8), window.innerWidth - menuWidth - 8);
     // Клик на 2/5 высоты меню сверху
     let top = y - menuHeight * 0.4;
     if (y + menuHeight + 8 > window.innerHeight) {
