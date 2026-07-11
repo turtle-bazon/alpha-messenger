@@ -112,7 +112,7 @@ export function HomeScreen({
   useEffect(() => {
     const focusInput = () => inputRef.current?.focus();
     const isModalOpen = (): boolean =>
-      !!document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"]');
+      !!document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"], [data-testid="context-menu"]');
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;

@@ -1377,8 +1377,8 @@ export function Conversation({
                   setFullEmojiPickerMsgId(null);
                   setFullPickerPos(null);
                 }}
-                onOpenFull={() => {
-                  if (ctxMenu) setFullPickerPos({ x: ctxMenu.x, y: ctxMenu.y });
+                onOpenFull={(pos) => {
+                  setFullPickerPos(pos);
                   setFullEmojiPickerMsgId(reactionPickerMsgId);
                   setCtxMenu(null);
                   setReactionPickerMsgId(null);
@@ -1425,7 +1425,7 @@ function ReactionBar({
   onOpenFull,
 }: {
   onSelect: (emoji: string) => void;
-  onOpenFull: () => void;
+  onOpenFull: (pos: { x: number; y: number }) => void;
 }): JSX.Element {
   return (
     <div className="reaction-bar" data-testid="reaction-bar">
@@ -1444,7 +1444,10 @@ function ReactionBar({
         type="button"
         className="reaction-bar-more"
         onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); onOpenFull(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenFull({ x: e.clientX, y: e.clientY });
+        }}
         title="Ещё"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
