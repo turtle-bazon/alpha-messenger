@@ -1075,8 +1075,8 @@ export function Conversation({
                       </span>
                     )}
                     <span className="bubble-meta">
-                    {m.edited && <span className="bubble-edited">ред.</span>}
                     <span className="bubble-time">{formatTime(m.ts)}</span>
+                    {m.edited && <IconEdit size={14} className="bubble-edited-icon" />}
                     {/* Статус доставки своих сообщений (#24/#26): отправка —
                         спиннер, ошибка — «!», отправлено — одна галочка,
                         прочитано — двойная синяя. */}

@@ -729,6 +729,15 @@ body {
   color: var(--bubble-meta-out); /* приглушённый таймстамп исходящих */
 }
 
+/* Иконка карандаша для отредактированных сообщений (#37). */
+.bubble-edited-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  opacity: 0.6;
+}
+
 /* Статус доставки — SVG-галочки (задача #24). Контур красится currentColor:
    по умолчанию — цвет меты (серый), прочитано — синий. */
 .bubble-status {
