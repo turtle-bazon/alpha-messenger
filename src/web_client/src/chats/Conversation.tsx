@@ -168,6 +168,8 @@ export function Conversation({
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
   // Пикер реакций: messageId для которого открыт, или null
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
+  // Полный эмодзи-пикер (из стрелки в панели реакций)
+  const [fullEmojiPickerMsgId, setFullEmojiPickerMsgId] = useState<string | null>(null);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -906,7 +908,8 @@ export function Conversation({
                     items.push({ label: 'Удалить', icon: <IconTrash />, onClick: () => onDelete(m), danger: true });
                   }
                   setCtxMenu({ items, x: e.clientX, y: e.clientY });
-                  setReactionPickerMsgId(null);
+                  setReactionPickerMsgId(m.messageId!);
+                  setFullEmojiPickerMsgId(null);
                 }}
               >
                 {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
@@ -1136,29 +1139,9 @@ export function Conversation({
                           <IconReply />
                         </button>
                       )}
-                      <button
-                        type="button"
-                        data-testid="msg-react"
-                        title="Реакция"
-                        onClick={() => setReactionPickerMsgId(
-                          reactionPickerMsgId === m.messageId ? null : m.messageId!,
-                        )}
-                      >
-                        😀
-                      </button>
                     </span>
                   );
                 })()}
-              {/* Пикер реакций */}
-              {reactionPickerMsgId === m.messageId && (
-                <ReactionPicker
-                  onSelect={(emoji) => {
-                    if (m.messageId) toggleReaction(m.messageId, emoji);
-                    setReactionPickerMsgId(null);
-                  }}
-                  onClose={() => setReactionPickerMsgId(null)}
-                />
-              )}
               </div>
               {/* Реакции на сообщение (#23) */}
               {m.reactions && m.reactions.length > 0 && (
@@ -1370,56 +1353,87 @@ export function Conversation({
         />
       )}
       {ctxMenu && (
-        <ContextMenu
-          items={ctxMenu.items}
-          x={ctxMenu.x}
-          y={ctxMenu.y}
-          onClose={() => setCtxMenu(null)}
-        />
+        <>
+          {/* Панель быстрых реакций над контекстным меню (#23) */}
+          {reactionPickerMsgId && (
+            <ReactionBar
+              x={ctxMenu.x}
+              y={ctxMenu.y}
+              onSelect={(emoji) => {
+                toggleReaction(reactionPickerMsgId, emoji);
+                setCtxMenu(null);
+                setReactionPickerMsgId(null);
+                setFullEmojiPickerMsgId(null);
+              }}
+              onOpenFull={() => setFullEmojiPickerMsgId(reactionPickerMsgId)}
+            />
+          )}
+          <ContextMenu
+            items={ctxMenu.items}
+            x={ctxMenu.x}
+            y={ctxMenu.y}
+            onClose={() => {
+              setCtxMenu(null);
+              setReactionPickerMsgId(null);
+              setFullEmojiPickerMsgId(null);
+            }}
+          />
+        </>
+      )}
+      {/* Полный эмодзи-пикер (из стрелки в панели реакций) */}
+      {fullEmojiPickerMsgId && ctxMenu && (
+        <div className="full-emoji-picker-wrap" style={{ position: 'fixed', left: ctxMenu.x, bottom: 'auto', top: ctxMenu.y - 420, zIndex: 200 }}>
+          <EmojiPicker
+            onSelect={(emoji) => {
+              toggleReaction(fullEmojiPickerMsgId, emoji);
+              setCtxMenu(null);
+              setReactionPickerMsgId(null);
+              setFullEmojiPickerMsgId(null);
+            }}
+            onClose={() => setFullEmojiPickerMsgId(null)}
+          />
+        </div>
       )}
     </div>
   );
 }
 
-// Мини-пикер для реакций: частые эмодзи одной строкой (#23).
+// Панель быстрых реакций над контекстным меню (#23, как в Telegram).
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
 
-function ReactionPicker({
+function ReactionBar({
+  x,
+  y,
   onSelect,
-  onClose,
+  onOpenFull,
 }: {
+  x: number;
+  y: number;
   onSelect: (emoji: string) => void;
-  onClose: () => void;
+  onOpenFull: () => void;
 }): JSX.Element {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener('keydown', handle);
-    document.addEventListener('mousedown', handleClick);
-    return () => {
-      document.removeEventListener('keydown', handle);
-      document.removeEventListener('mousedown', handleClick);
-    };
-  }, [onClose]);
-
   return (
-    <div className="reaction-picker" ref={ref} data-testid="reaction-picker">
+    <div className="reaction-bar" style={{ left: x, top: y - 48 }} data-testid="reaction-bar">
       {QUICK_REACTIONS.map((emoji) => (
         <button
           key={emoji}
           type="button"
-          className="reaction-picker-btn"
+          className="reaction-bar-btn"
           onClick={() => onSelect(emoji)}
         >
           {emoji}
         </button>
       ))}
+      <button
+        type="button"
+        className="reaction-bar-more"
+        onClick={onOpenFull}
+        title="Ещё"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
     </div>
   );
 }

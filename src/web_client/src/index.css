@@ -2279,6 +2279,11 @@ body {
   transition: background 0.15s;
 }
 
+.full-emoji-picker-wrap .emoji-picker {
+  position: static;
+  margin-bottom: 0;
+}
+
 .about-close:hover {
   background: var(--bg-active);
 }
@@ -2324,38 +2329,56 @@ body {
   line-height: 1;
 }
 
-/* Пикер реакций */
+/* Панель быстрых реакций (#23, как в Telegram) */
 
-.reaction-picker {
+.reaction-bar {
   display: flex;
+  align-items: center;
   gap: 2px;
   padding: 4px 6px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 4px;
-  z-index: 10;
+  position: fixed;
+  z-index: 100;
 }
 
-.reaction-picker-btn {
+.reaction-bar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border: none;
   border-radius: 50%;
   background: none;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 20px;
   transition: background 0.15s, transform 0.15s;
 }
 
-.reaction-picker-btn:hover {
+.reaction-bar-btn:hover {
   background: var(--bg-hover);
-  transform: scale(1.2);
+  transform: scale(1.15);
+}
+
+.reaction-bar-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  cursor: pointer;
+  color: var(--text-muted);
+  margin-left: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.reaction-bar-more:hover {
+  background: var(--bg-active);
+  color: var(--text);
 }
