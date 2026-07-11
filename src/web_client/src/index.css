@@ -739,8 +739,8 @@ body {
 
 .bubble-status svg {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Прочитано (✓✓) — синий, как просит дизайн; не прочитано (✓) — цвет меты. */
