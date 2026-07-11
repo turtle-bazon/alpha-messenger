@@ -809,6 +809,10 @@ body {
   display: inline-flex;
 }
 
+.has-ctx-menu .bubble-actions {
+  display: none !important;
+}
+
 .bubble-actions button {
   display: flex;
   align-items: center;
@@ -819,6 +823,12 @@ body {
   cursor: pointer;
   padding: 2px;
   border-radius: 4px;
+}
+
+.bubble-actions button svg {
+  width: 16px;
+  height: 16px;
+}
   transition: color 0.15s, background 0.15s;
 }
 
