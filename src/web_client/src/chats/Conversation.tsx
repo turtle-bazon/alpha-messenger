@@ -170,6 +170,8 @@ export function Conversation({
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
   // Полный эмодзи-пикер (из стрелки в панели реакций)
   const [fullEmojiPickerMsgId, setFullEmojiPickerMsgId] = useState<string | null>(null);
+  // Позиция для полного эмодзи-пикера (запоминаем перед закрытием контекстного меню)
+  const [fullPickerPos, setFullPickerPos] = useState<{ x: number; y: number } | null>(null);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -1364,6 +1366,7 @@ export function Conversation({
               setCtxMenu(null);
               setReactionPickerMsgId(null);
               setFullEmojiPickerMsgId(null);
+              setFullPickerPos(null);
             }}
             reactionBar={reactionPickerMsgId ? (
               <ReactionBar
@@ -1372,21 +1375,27 @@ export function Conversation({
                   setCtxMenu(null);
                   setReactionPickerMsgId(null);
                   setFullEmojiPickerMsgId(null);
+                  setFullPickerPos(null);
                 }}
-                onOpenFull={() => setFullEmojiPickerMsgId(reactionPickerMsgId)}
+                onOpenFull={() => {
+                  if (ctxMenu) setFullPickerPos({ x: ctxMenu.x, y: ctxMenu.y });
+                  setFullEmojiPickerMsgId(reactionPickerMsgId);
+                  setCtxMenu(null);
+                  setReactionPickerMsgId(null);
+                }}
               />
             ) : undefined}
           />
         </>
       )}
       {/* Полный эмодзи-пикер (из стрелки в панели реакций) */}
-      {fullEmojiPickerMsgId && ctxMenu && (
+      {fullEmojiPickerMsgId && fullPickerPos && (
         <div
           className="full-emoji-picker-wrap"
           style={{
             position: 'fixed',
-            left: Math.min(Math.max(ctxMenu.x - 160, 8), window.innerWidth - 328),
-            top: ctxMenu.y - 430,
+            left: Math.min(Math.max(fullPickerPos.x - 160, 8), window.innerWidth - 328),
+            top: Math.max(8, fullPickerPos.y - 420),
             zIndex: 200,
           }}
           onMouseDown={(e) => e.stopPropagation()}
@@ -1394,11 +1403,13 @@ export function Conversation({
           <EmojiPicker
             onSelect={(emoji) => {
               toggleReaction(fullEmojiPickerMsgId, emoji);
-              setCtxMenu(null);
-              setReactionPickerMsgId(null);
               setFullEmojiPickerMsgId(null);
+              setFullPickerPos(null);
             }}
-            onClose={() => setFullEmojiPickerMsgId(null)}
+            onClose={() => {
+              setFullEmojiPickerMsgId(null);
+              setFullPickerPos(null);
+            }}
           />
         </div>
       )}
@@ -1423,6 +1434,7 @@ function ReactionBar({
           key={emoji}
           type="button"
           className="reaction-bar-btn"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={() => onSelect(emoji)}
         >
           {emoji}
@@ -1431,6 +1443,7 @@ function ReactionBar({
       <button
         type="button"
         className="reaction-bar-more"
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onOpenFull(); }}
         title="Ещё"
       >
