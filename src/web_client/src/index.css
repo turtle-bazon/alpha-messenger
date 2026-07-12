@@ -2403,19 +2403,61 @@ body {
   color: var(--text);
 }
 
-/* Тонкие скроллбары (#59): fade-анимация через @property + scrollbar-color. */
+/* Тонкие скроллбары (#59): fade-анимация. */
 @property --sb-thumb {
   syntax: '<color>';
   inherits: true;
   initial-value: transparent;
 }
 
-.conv-scroll,
-.chat-list-items,
-.modal-body {
-  scrollbar-width: thin;
-  scrollbar-color: var(--sb-thumb) transparent;
-  transition: --sb-thumb 0.3s ease;
+/* Firefox: через scrollbar-color (fade через анимацию custom property). */
+@-moz-document url-prefix() {
+  .conv-scroll,
+  .chat-list-items,
+  .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sb-thumb) transparent;
+    transition: --sb-thumb 0.3s ease;
+  }
+  .conv-scroll:hover,
+  .chat-list-items:hover,
+  .modal-body:hover {
+    --sb-thumb: rgba(0, 0, 0, 0.2);
+  }
+  [data-theme='dark'] .conv-scroll:hover,
+  [data-theme='dark'] .chat-list-items:hover,
+  [data-theme='dark'] .modal-body:hover {
+    --sb-thumb: rgba(255, 255, 255, 0.25);
+  }
+}
+
+/* Chromium/Electron: через webkit-псевдоэлементы (scrollbar-color перебивает их). */
+.conv-scroll::-webkit-scrollbar,
+.chat-list-items::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.conv-scroll::-webkit-scrollbar-button,
+.chat-list-items::-webkit-scrollbar-button,
+.modal-body::-webkit-scrollbar-button {
+  height: 0;
+  display: block;
+  background: transparent;
+  border: none;
+}
+
+.conv-scroll::-webkit-scrollbar-track,
+.chat-list-items::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conv-scroll::-webkit-scrollbar-thumb,
+.chat-list-items::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb);
+  border-radius: 3px;
 }
 
 .conv-scroll:hover,
