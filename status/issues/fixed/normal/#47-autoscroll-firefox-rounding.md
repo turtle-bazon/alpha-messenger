@@ -16,3 +16,10 @@ Firefox может иначе округлять `scrollHeight`, `clientHeight` 
 
 ## Приоритет
 normal
+
+## Решение
+Причина: `el.scrollTop = el.scrollHeight` пытается установить скролл за пределы максимального значения. В Firefox из-за субпиксельного округления `scrollHeight` может быть чуть больше реального максимального значения `scrollHeight - clientHeight`, что приводит к тому, что скролл не достигает конца.
+
+Фикс: замена `el.scrollTop = el.scrollHeight` на `el.scrollTop = el.scrollHeight - el.clientHeight` — это корректное максимальное значение скролла для любого браузера.
+
+Изменённый файл: `src/web_client/src/chats/Conversation.tsx` (строка 384)

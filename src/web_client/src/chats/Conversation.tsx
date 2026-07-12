@@ -381,7 +381,7 @@ export function Conversation({
   // при появлении/исчезновении draft-облачка и при изменении его текста.
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
+    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight - el.clientHeight;
   }, [messages, draftKey]);
 
   // Авторасширение поля ввода под содержимое (задача #25): сбрасываем высоту и
