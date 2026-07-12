@@ -119,8 +119,8 @@ function notify(userId: string): void {
   void sendWakeUp(userId).catch((err) => console.error('wake-up failed', err));
 }
 
-// Транзиентная отправка (typing) — мимо outbox, только подключённым сейчас.
-function sendTransient(userId: string, obj: unknown): void {
+// Транзиентная отправка (typing, draft) — мимо outbox, только подключённым сейчас.
+export function sendTransient(userId: string, obj: unknown): void {
   const set = byUser.get(userId);
   if (!set) return;
   const data = JSON.stringify(obj);

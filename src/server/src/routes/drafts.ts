@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { pool } from '../db';
 import { authenticate } from '../auth';
 import { isMember } from '../chat-helpers';
+import { sendTransient } from '../ws';
 
 interface DraftBody {
   ciphertext?: string;
@@ -58,6 +59,13 @@ export async function draftRoutes(app: FastifyInstance): Promise<void> {
         [chatId, userId, ciphertext],
       );
 
+      // Уведомляем другие устройства пользователя о обновлении черновика
+      sendTransient(userId, {
+        type: 'draft.updated',
+        chatId,
+        payload: { ciphertext },
+      });
+
       return { ok: true };
     },
   );
@@ -78,6 +86,13 @@ export async function draftRoutes(app: FastifyInstance): Promise<void> {
         'DELETE FROM drafts WHERE chat_id = $1 AND user_id = $2',
         [chatId, userId],
       );
+
+      // Уведомляем другие устройства пользователя об удалении черновика
+      sendTransient(userId, {
+        type: 'draft.deleted',
+        chatId,
+        payload: {},
+      });
 
       return { ok: true };
     },

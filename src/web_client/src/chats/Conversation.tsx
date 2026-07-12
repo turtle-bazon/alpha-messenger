@@ -360,6 +360,22 @@ export function Conversation({
     };
   }, [input, chatId]);
 
+  // Обновление черновика в лайв-режиме с других устройств (#41).
+  useEffect(() => {
+    const offDraft = ws.on('draft.updated', (ev) => {
+      const evChatId = ev.chatId ?? (ev.payload as { chatId?: string }).chatId;
+      if (evChatId !== chatId) return;
+      const ciphertext = (ev.payload as { ciphertext?: string }).ciphertext ?? '';
+      setInput(ciphertext);
+    });
+    const offDelete = ws.on('draft.deleted', (ev) => {
+      const evChatId = ev.chatId ?? (ev.payload as { chatId?: string }).chatId;
+      if (evChatId !== chatId) return;
+      setInput('');
+    });
+    return () => { offDraft(); offDelete(); };
+  }, [chatId, ws]);
+
   // Автопрокрутка вниз, если пользователь уже у низа (#49).
   // Зависит от messages и draftKey — скроллим при новом сообщении,
   // при появлении/исчезновении draft-облачка и при изменении его текста.
