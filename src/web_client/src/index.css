@@ -1975,6 +1975,10 @@ body {
   border: 2px solid var(--bg);
 }
 
+.member-online-dot.is-away {
+  background: #ffc107;
+}
+
 .member-info {
   display: flex;
   flex-direction: column;

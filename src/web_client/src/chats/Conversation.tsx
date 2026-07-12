@@ -1418,6 +1418,7 @@ export function Conversation({
           chat={chat}
           myId={myId}
           onlineUsers={onlineUsers}
+          awayUsers={awayUsers}
           typingUsers={typingUsers}
           onClose={() => setMembersOpen(false)}
         />

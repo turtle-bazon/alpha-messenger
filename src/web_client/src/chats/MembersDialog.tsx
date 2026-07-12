@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { addMember, ApiError, getMembers, removeMember } from '../api/rest';
 import type { Chat, ChatMember } from '../api/types';
 import { colorFor, initialFor } from './avatar';
+import { formatLastSeen } from '../util/time';
 
 // Окно со списком участников чата (открывается кликом по заголовку группы).
 // Просмотр — всем участникам; кнопки «удалить» видит только создатель чата.
@@ -11,12 +12,14 @@ export function MembersDialog({
   chat,
   myId,
   onlineUsers,
+  awayUsers,
   typingUsers,
   onClose,
 }: {
   chat: Chat;
   myId: string | null;
   onlineUsers: Set<string>;
+  awayUsers: Set<string>;
   // Печатающие сейчас в этом чате участники — их аватар обводим окантовкой (#27).
   typingUsers: Map<string, string>;
   onClose: () => void;
@@ -143,6 +146,7 @@ export function MembersDialog({
           <ul className="members-list" data-testid="members-list">
             {members.map((m) => {
               const online = isOnline(m.userId);
+              const away = awayUsers.has(m.userId);
               const isOwner = m.userId === createdBy;
               const canRemove = amOwner && !isOwner;
               return (
@@ -163,11 +167,11 @@ export function MembersDialog({
                         aria-hidden="true"
                       />
                     )}
-                    {online && (
+                    {(online || away) && (
                       <span
-                        className="member-online-dot"
+                        className={'member-online-dot' + (away ? ' is-away' : '')}
                         data-testid="member-online"
-                        aria-label="в сети"
+                        aria-label={away ? 'отошёл' : 'в сети'}
                       />
                     )}
                   </span>
@@ -177,7 +181,11 @@ export function MembersDialog({
                       {m.userId === myId && ' (вы)'}
                     </span>
                     <span className="member-status">
-                      {isOwner ? 'создатель' : online ? 'в сети' : 'не в сети'}
+                      {isOwner ? 'создатель' :
+                       online ? 'в сети' :
+                       away ? (m.lastActiveAt ? `отошёл. ${formatLastSeen(m.lastActiveAt)}` : 'отошёл') :
+                       m.lastActiveAt ? formatLastSeen(m.lastActiveAt) :
+                       'не в сети'}
                     </span>
                   </span>
                   {canRemove && (
