@@ -603,7 +603,12 @@ body {
 }
 
 .msg-row {
-  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.msg-row.msg-own {
+  justify-content: flex-end;
 }
 
 /* Разделитель дат: подпись по центру на полупрозрачной «таблетке». */
@@ -625,7 +630,6 @@ body {
 .bubble {
   position: relative;
   max-width: 70%;
-  align-self: flex-start;
   display: flex;
   flex-direction: column;
   padding: 6px 10px;
@@ -645,7 +649,6 @@ body {
 }
 
 .bubble-own {
-  align-self: flex-end;
   /* лёгкий градиент исходящих вместо плоского зелёного */
   background: linear-gradient(var(--bubble-out), var(--bubble-out-grad));
 }

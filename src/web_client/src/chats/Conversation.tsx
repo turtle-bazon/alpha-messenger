@@ -930,7 +930,7 @@ export function Conversation({
                   </div>
                 )}
               <div
-                className={'msg-row' + (m.highlighted ? ' is-highlighted' : '')}
+                className={'msg-row' + (own ? ' msg-own' : '') + (m.highlighted ? ' is-highlighted' : '')}
               >
               <div
                 data-testid="message"
