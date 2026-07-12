@@ -64,3 +64,20 @@
 ## Тесты
 - Сервер: `POST /api/me/activity` обновляет `last_active_at`, presence отдаёт `lastActiveAt`.
 - Клиент e2e: эмуляция away-статуса ( time travel ), проверка отображения «был(а) X мин. назад» в ChatList и заголовке.
+
+## Решение
+### Сервер
+- Миграция `0010_last_active_at.sql` — колонка `last_active_at` в `accounts`
+- `touchActivity()` в `chat-helpers.ts` — обновление `last_active_at`
+- `getLastActiveMap()` — получение `lastActiveAt` для списка пользователей
+- `POST /api/me/activity` — пинг активности
+- `GET /api/presence` — возвращает `{ presence: { [userId]: { online, away, lastActiveAt } } }`
+- `loadChat` — возвращает `lastActiveAt` для участников
+- `isAway` = online && `last_active_at` > 5 минут
+
+### Клиент
+- `reportActivity()` в `rest.ts`
+- Пинг активности в `HomeScreen` — `mousemove`, `keydown`, `focus` с throttle 30с
+- `AvatarBadges` — трёхцветный: online (зелёный), away (жёлтый), offline (серый)
+- `formatLastSeen()` в `time.ts` — форматирование времени
+- Subtitle в Conversation: online → «в сети», away → «отошёл. X мин. назад», offline → «был(а) X назад»
