@@ -17,6 +17,9 @@ import {
   toggleReaction,
   unfurl,
   uploadBlob,
+  getDraft,
+  saveDraft,
+  deleteDraft,
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
 import type { Chat, Message, ReactionGroup, ServerEvent } from '../api/types';
@@ -337,6 +340,27 @@ export function Conversation({
   useEffect(() => {
     inputRef.current?.focus();
   }, [chatId]);
+
+  // Загрузка черновика при открытии чата (#41).
+  useEffect(() => {
+    let cancelled = false;
+    getDraft(chatId).then(({ ciphertext }) => {
+      if (!cancelled && ciphertext) setInput(ciphertext);
+    }).catch(() => { /* ignore */ });
+    return () => { cancelled = true; };
+  }, [chatId]);
+
+  // Сохранение черновика с debounce при вводе (#41).
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      saveDraft(chatId, input).catch(() => { /* ignore */ });
+    }, 1500);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [input, chatId]);
 
   // Автопрокрутка вниз, если пользователь уже у низа (#49).
   // Зависит от messages и draftKey — скроллим при новом сообщении,
@@ -660,7 +684,7 @@ export function Conversation({
     setInput('');
     setReplyTo(null);
     clearPreview();
-    // Очищаем draft на других устройствах
+    deleteDraft(chatId).catch(() => { /* ignore */ });
     ws.sendTyping(chatId);
     enqueueSend(text, [], link, replyId ?? undefined);
   }

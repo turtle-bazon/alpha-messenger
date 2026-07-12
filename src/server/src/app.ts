@@ -11,6 +11,7 @@ import { unfurlRoutes } from './routes/unfurl';
 import { presenceRoutes } from './routes/presence';
 import { pushRoutes } from './routes/push';
 import { reactionRoutes } from './routes/reactions';
+import { draftRoutes } from './routes/drafts';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -36,6 +37,7 @@ export function buildApp(): FastifyInstance {
       api.register(presenceRoutes);
       api.register(pushRoutes);
       api.register(reactionRoutes);
+      api.register(draftRoutes);
     },
     { prefix: '/api' },
   );

@@ -244,3 +244,17 @@ export function toggleReaction(
 ): Promise<ReactionResult> {
   return rest.put<ReactionResult>(`/messages/${messageId}/reactions`, { emoji });
 }
+
+// ---- Черновики (#41) ----
+
+export function getDraft(chatId: string): Promise<{ ciphertext: string }> {
+  return rest.get(`/chats/${chatId}/draft`);
+}
+
+export function saveDraft(chatId: string, ciphertext: string): Promise<{ ok: boolean }> {
+  return rest.put(`/chats/${chatId}/draft`, { ciphertext });
+}
+
+export function deleteDraft(chatId: string): Promise<{ ok: boolean }> {
+  return rest.del(`/chats/${chatId}/draft`);
+}
