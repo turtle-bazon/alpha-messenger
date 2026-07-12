@@ -350,9 +350,11 @@ export function Conversation({
 
   // Сохранение черновика с debounce при вводе (#41).
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedDraftRef = useRef('');
   useEffect(() => {
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
+      lastSavedDraftRef.current = input;
       saveDraft(chatId, input).catch(() => { /* ignore */ });
     }, 1500);
     return () => {
@@ -361,17 +363,23 @@ export function Conversation({
   }, [input, chatId]);
 
   // Обновление черновика в лайв-режиме с других устройств (#41).
+  // Игнорируем draft.updated, если пользователь активно печатает
+  // (есть pending save) — иначе старый draft перезатирает ввод.
   useEffect(() => {
     const offDraft = ws.on('draft.updated', (ev) => {
       const evChatId = ev.chatId ?? (ev.payload as { chatId?: string }).chatId;
       if (evChatId !== chatId) return;
+      if (draftTimerRef.current) return;
       const ciphertext = (ev.payload as { ciphertext?: string }).ciphertext ?? '';
       setInput(ciphertext);
+      lastSavedDraftRef.current = ciphertext;
     });
     const offDelete = ws.on('draft.deleted', (ev) => {
       const evChatId = ev.chatId ?? (ev.payload as { chatId?: string }).chatId;
       if (evChatId !== chatId) return;
+      if (draftTimerRef.current) return;
       setInput('');
+      lastSavedDraftRef.current = '';
     });
     return () => { offDraft(); offDelete(); };
   }, [chatId, ws]);
