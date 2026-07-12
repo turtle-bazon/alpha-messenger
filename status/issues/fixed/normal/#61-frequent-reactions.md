@@ -20,3 +20,9 @@
 
 ## Приоритет
 normal
+
+## Решение
+- `getFrequentReactions()` — читает `localStorage('emoji_frequent')`, сортирует по убыванию, возвращает топ-8, дополняет дефолтными
+- `trackReaction(emoji)` — инкрементирует счётчик в `localStorage`
+- `ReactionBar` — динамический список из `getFrequentReactions()`, `trackReaction` вызывается при каждом выборе
+- Три точки входа: inline-реакция на сообщении, панель быстрых реакций, полный эмодзи-пикер
