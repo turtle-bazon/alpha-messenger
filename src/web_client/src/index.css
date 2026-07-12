@@ -2404,17 +2404,20 @@ body {
 }
 
 /* Тонкие скроллбары (#59): 6px, без стрелок, появляются при hover. */
-.conv-scroll,
-.chat-list-items,
-.modal-body {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-}
-
+/* WebKit/Blink (Chrome, Electron): через псевдо-элементы. */
 .conv-scroll::-webkit-scrollbar,
 .chat-list-items::-webkit-scrollbar,
 .modal-body::-webkit-scrollbar {
   width: 6px;
+}
+
+.conv-scroll::-webkit-scrollbar-button,
+.chat-list-items::-webkit-scrollbar-button,
+.modal-body::-webkit-scrollbar-button {
+  height: 0;
+  display: block;
+  background: transparent;
+  border: none;
 }
 
 .conv-scroll::-webkit-scrollbar-thumb,
@@ -2422,7 +2425,6 @@ body {
 .modal-body::-webkit-scrollbar-thumb {
   background: transparent;
   border-radius: 3px;
-  transition: background 0.3s;
 }
 
 .conv-scroll:hover::-webkit-scrollbar-thumb,
@@ -2434,24 +2436,6 @@ body {
 .conv-scroll::-webkit-scrollbar-track,
 .chat-list-items::-webkit-scrollbar-track,
 .modal-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.conv-scroll::-webkit-scrollbar-button,
-.chat-list-items::-webkit-scrollbar-button,
-.modal-body::-webkit-scrollbar-button {
-  display: none;
-}
-
-[data-theme='dark'] .conv-scroll,
-[data-theme='dark'] .chat-list-items,
-[data-theme='dark'] .modal-body {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-[data-theme='dark'] .conv-scroll::-webkit-scrollbar-thumb,
-[data-theme='dark'] .chat-list-items::-webkit-scrollbar-thumb,
-[data-theme='dark'] .modal-body::-webkit-scrollbar-thumb {
   background: transparent;
 }
 
