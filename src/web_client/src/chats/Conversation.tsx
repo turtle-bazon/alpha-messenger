@@ -930,6 +930,9 @@ export function Conversation({
                   </div>
                 )}
               <div
+                className={'msg-row' + (m.highlighted ? ' is-highlighted' : '')}
+              >
+              <div
                 data-testid="message"
                 data-message-id={m.messageId ?? ''}
                 className={
@@ -939,8 +942,7 @@ export function Conversation({
                   (groupStart ? ' is-group-start' : '') +
                   (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
-                  (m.failed ? ' bubble-failed' : '') +
-                  (m.highlighted ? ' is-highlighted' : '')
+                  (m.failed ? ' bubble-failed' : '')
                 }
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -1225,6 +1227,7 @@ export function Conversation({
                     </span>
                   );
                 })()}
+              </div>
               </div>
               </Fragment>
             );

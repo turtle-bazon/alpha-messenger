@@ -602,6 +602,10 @@ body {
   gap: 2px; /* плотно внутри группы; между группами — margin у is-group-start */
 }
 
+.msg-row {
+  padding: 1px 16px;
+}
+
 /* Разделитель дат: подпись по центру на полупрозрачной «таблетке». */
 .date-divider {
   display: flex;
@@ -872,7 +876,7 @@ body {
 
 /* Подсветка сообщения при переходе к нему (#51).
    Полупрозрачная полоска сверху, плавно исчезающая. */
-.bubble.is-highlighted {
+.msg-row.is-highlighted {
   animation: highlight-bg 2s ease-out forwards;
 }
 
