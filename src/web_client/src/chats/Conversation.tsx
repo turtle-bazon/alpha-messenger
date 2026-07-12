@@ -376,12 +376,18 @@ export function Conversation({
     return () => { offDraft(); offDelete(); };
   }, [chatId, ws]);
 
-  // Автопрокрутка вниз, если пользователь уже у низа (#49).
+  // Автопрокрутка вниз, если пользователь уже у низа (#47).
   // Зависит от messages и draftKey — скроллим при новом сообщении,
   // при появлении/исчезновении draft-облачка и при изменении его текста.
+  // Два прохода: useLayoutEffect (до paint) + rAF (после layout), чтобы
+  // поймать субпиксельный расчёт Firefox и асинхронные картинки.
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight - el.clientHeight;
+    if (!el || !atBottomRef.current) return;
+    const scrollToBottom = () => { el.scrollTop = el.scrollHeight - el.clientHeight; };
+    scrollToBottom();
+    const id = requestAnimationFrame(scrollToBottom);
+    return () => cancelAnimationFrame(id);
   }, [messages, draftKey]);
 
   // Авторасширение поля ввода под содержимое (задача #25): сбрасываем высоту и
