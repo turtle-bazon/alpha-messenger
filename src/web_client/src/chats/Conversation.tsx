@@ -849,7 +849,7 @@ export function Conversation({
   };
 
   return (
-    <div className={'conv' + (ctxMenu ? ' has-ctx-menu' : '')} data-testid="conversation-open">
+    <div className={'conv' + (ctxMenu ? ' has-ctx-menu' : '') + (fullEmojiPickerMsgId ? ' has-emoji-picker' : '')} data-testid="conversation-open">
       <header className="conv-header">
         <button
           type="button"

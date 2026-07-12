@@ -836,6 +836,10 @@ body {
   display: none !important;
 }
 
+.has-emoji-picker .bubble-actions {
+  display: none !important;
+}
+
 .bubble-actions button {
   display: flex;
   align-items: center;
