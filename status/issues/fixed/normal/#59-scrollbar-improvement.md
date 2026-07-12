@@ -22,3 +22,9 @@
 
 ## Приоритет
 normal
+
+## Решение
+Тонкие скроллбары (6px) для `.conv-scroll`, `.chat-list-items`, `.modal-body`:
+- WebKit/Blink: `::-webkit-scrollbar` — 6px ширина, без стрелок, thumb прозрачный по умолчанию, плавно появляется при `:hover` контейнера (transition 0.3s)
+- Firefox: `scrollbar-width: thin` + `scrollbar-color`
+- Dark theme: thumb адаптирован под тёмные тона
