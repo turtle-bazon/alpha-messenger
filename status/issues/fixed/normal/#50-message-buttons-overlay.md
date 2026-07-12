@@ -16,3 +16,6 @@
 
 ## Приоритет
 normal
+
+## Решение
+Реализовано ранее: `.bubble-actions` — `position: absolute; top: -12px; right: 4px; display: inline-flex` при hover, анимация `popup-in`. Кнопки: эмодзи, удалить, редактировать, ответить. Серверная проверка: `own || (chat.createdBy === myId)` для удаления чужих сообщений.
