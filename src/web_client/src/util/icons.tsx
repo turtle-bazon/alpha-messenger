@@ -14,6 +14,7 @@ import {
   Reply,
   Check,
   CheckCheck,
+  SmilePlus,
 } from 'lucide-react';
 
 // Экспортируем Lucide-иконки напрямую.
@@ -31,4 +32,5 @@ export {
   Reply as IconReply,
   Check as IconCheck,
   CheckCheck as IconChecks,
+  SmilePlus as IconSmilePlus,
 };

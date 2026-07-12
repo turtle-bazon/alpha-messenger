@@ -33,7 +33,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconTrash } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -1129,6 +1129,18 @@ export function Conversation({
                   if (!canDelete && !canEdit && !canReply) return null;
                   return (
                     <span className="bubble-actions">
+                      <button
+                        type="button"
+                        data-testid="msg-emoji"
+                        title="Реакция"
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          ctxMenuPosRef.current = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+                          setFullEmojiPickerMsgId(m.messageId!);
+                        }}
+                      >
+                        <IconSmilePlus />
+                      </button>
                       {canDelete && (
                         <button
                           type="button"
