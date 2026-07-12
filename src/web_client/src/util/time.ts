@@ -39,3 +39,24 @@ export function formatDateDivider(iso: string): string {
       : { day: 'numeric', month: 'long', year: 'numeric' };
   return d.toLocaleDateString('ru-RU', opts);
 }
+
+// Форматирование "последний раз был активен" (#36).
+export function formatLastSeen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = Date.now();
+  const diff = now - d.getTime();
+  const mins = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(diff / 86_400_000);
+
+  if (mins < 1) return 'только что';
+  if (mins < 60) return `был(а) ${mins} мин. назад`;
+  if (hours < 24) return `был(а) ${hours} ч. назад`;
+  if (days < 7) return `был(а) ${days} дн. назад`;
+  if (days < 30) {
+    const weeks = Math.floor(days / 7);
+    return `был(а) ${weeks} нед. назад (${d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })})`;
+  }
+  return `был(а) ${d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+}

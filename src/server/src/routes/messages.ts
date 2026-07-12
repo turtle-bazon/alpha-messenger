@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { pool } from '../db';
 import { authenticate } from '../auth';
-import { emitToMembers, isMember, markRead } from '../chat-helpers';
+import { emitToMembers, isMember, markRead, touchActivity } from '../chat-helpers';
 import { HEX64 } from './blobs';
 import { getReactions, ReactionGroup } from './reactions';
 
@@ -125,6 +125,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           isReply: !!replyToId,
         });
         await client.query('COMMIT');
+        void touchActivity(userId);
         return reply.code(201).send({
           messageId,
           clientMessageId,

@@ -119,8 +119,14 @@ export function removeMember(
 }
 
 // Снимок онлайна со-участников для сидирования presence после коннекта.
-export function getPresence(): Promise<{ online: string[] }> {
-  return rest.get<{ online: string[] }>('/presence');
+export interface PresenceInfo {
+  online: boolean;
+  away: boolean;
+  lastActiveAt?: string;
+}
+
+export function getPresence(): Promise<{ presence: Record<string, PresenceInfo> }> {
+  return rest.get<{ presence: Record<string, PresenceInfo> }>('/presence');
 }
 
 // ---- Сообщения ----
@@ -257,4 +263,10 @@ export function saveDraft(chatId: string, ciphertext: string): Promise<{ ok: boo
 
 export function deleteDraft(chatId: string): Promise<{ ok: boolean }> {
   return rest.del(`/chats/${chatId}/draft`);
+}
+
+// ---- Активность (#36) ----
+
+export function reportActivity(): Promise<{ ok: boolean }> {
+  return rest.post('/me/activity');
 }

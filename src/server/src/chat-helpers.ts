@@ -4,6 +4,30 @@ import { emitEvent } from './events';
 
 type Db = Pool | PoolClient;
 
+// Обновление last_active_at — вызывать при любой активности пользователя.
+export async function touchActivity(userId: string): Promise<void> {
+  await pool.query(
+    'UPDATE accounts SET last_active_at = now() WHERE user_id = $1',
+    [userId],
+  );
+}
+
+// Получение lastActiveAt для списка пользователей.
+export async function getLastActiveMap(
+  userIds: string[],
+): Promise<Map<string, Date | null>> {
+  if (userIds.length === 0) return new Map();
+  const res = await pool.query(
+    'SELECT user_id, last_active_at FROM accounts WHERE user_id = ANY($1)',
+    [userIds],
+  );
+  const map = new Map<string, Date | null>();
+  for (const r of res.rows) {
+    map.set(r.user_id, r.last_active_at ?? null);
+  }
+  return map;
+}
+
 export async function isMember(
   chatId: string,
   userId: string,

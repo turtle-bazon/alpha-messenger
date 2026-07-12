@@ -22,6 +22,7 @@ export interface Me {
 export interface Participant {
   userId: string;
   username: string;
+  lastActiveAt?: string;
 }
 
 // Участник в окне списка: к username добавлен признак онлайн на момент запроса.
@@ -29,6 +30,8 @@ export interface ChatMember {
   userId: string;
   username: string;
   online: boolean;
+  away?: boolean;
+  lastActiveAt?: string;
 }
 
 export interface ChatMembers {

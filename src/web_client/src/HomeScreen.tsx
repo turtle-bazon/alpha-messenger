@@ -6,6 +6,7 @@ import {
   getChats,
   getMe,
   getPresence,
+  reportActivity,
 } from './api/rest';
 import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
@@ -66,6 +67,7 @@ export function HomeScreen({
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [awayUsers, setAwayUsers] = useState<Set<string>>(new Set());
   // Кто печатает, по чатам — единый источник для списка чатов, заголовка
   // переписки и окна участников (задача #27).
   const typingByChat = useTyping(ws, myId);
@@ -170,6 +172,27 @@ export function HomeScreen({
     return () => clearInterval(interval);
   }, []);
 
+  // Пинг активности каждые 30 сек (#36): чтобы сервер знал, когда пользователь "away".
+  useEffect(() => {
+    const THROTTLE_MS = 30_000;
+    let lastPing = 0;
+    const ping = () => {
+      if (document.hidden) return;
+      const now = Date.now();
+      if (now - lastPing < THROTTLE_MS) return;
+      lastPing = now;
+      reportActivity().catch(() => {});
+    };
+    document.addEventListener('mousemove', ping);
+    document.addEventListener('keydown', ping);
+    document.addEventListener('focus', ping);
+    return () => {
+      document.removeEventListener('mousemove', ping);
+      document.removeEventListener('keydown', ping);
+      document.removeEventListener('focus', ping);
+    };
+  }, []);
+
   // Подъём списка чатов + WS-соединение на время сессии.
   useEffect(() => {
     let alive = true;
@@ -206,7 +229,17 @@ export function HomeScreen({
       // только для живого события (новый со-участник может быть уже онлайн).
       if (ws.isLive()) {
         void getPresence()
-          .then((p) => alive && setOnlineUsers(new Set(p.online)))
+          .then((p) => {
+            if (!alive) return;
+            const online = new Set<string>();
+            const away = new Set<string>();
+            for (const [uid, info] of Object.entries(p.presence)) {
+              if (info.online) online.add(uid);
+              if (info.away) away.add(uid);
+            }
+            setOnlineUsers(online);
+            setAwayUsers(away);
+          })
           .catch(() => undefined);
       }
     });
@@ -335,7 +368,17 @@ export function HomeScreen({
     // переподключения — на каждом synced пересеиваем множество.
     const offSynced = ws.on('synced', () => {
       void getPresence()
-        .then((p) => alive && setOnlineUsers(new Set(p.online)))
+        .then((p) => {
+          if (!alive) return;
+          const online = new Set<string>();
+          const away = new Set<string>();
+          for (const [uid, info] of Object.entries(p.presence)) {
+            if (info.online) online.add(uid);
+            if (info.away) away.add(uid);
+          }
+          setOnlineUsers(online);
+          setAwayUsers(away);
+        })
         .catch(() => undefined);
     });
 
@@ -368,7 +411,17 @@ export function HomeScreen({
         )
         .catch(() => undefined);
       void getPresence()
-        .then((pr) => alive && setOnlineUsers(new Set(pr.online)))
+        .then((pr) => {
+          if (!alive) return;
+          const online = new Set<string>();
+          const away = new Set<string>();
+          for (const [uid, info] of Object.entries(pr.presence)) {
+            if (info.online) online.add(uid);
+            if (info.away) away.add(uid);
+          }
+          setOnlineUsers(online);
+          setAwayUsers(away);
+        })
         .catch(() => undefined);
     });
 
@@ -533,6 +586,7 @@ export function HomeScreen({
           selectedId={selectedId}
           myId={myId}
           onlineUsers={onlineUsers}
+          awayUsers={awayUsers}
           typingByChat={typingByChat}
           onSelect={onSelect}
           onCreateDirect={onCreateDirect}
@@ -548,6 +602,7 @@ export function HomeScreen({
             ws={ws}
             myId={myId}
             onlineUsers={onlineUsers}
+            awayUsers={awayUsers}
             typingUsers={typingByChat.get(selectedChat.chatId) ?? EMPTY_TYPING}
             inputRef={inputRef}
             onBack={() => setSelectedId(null)}

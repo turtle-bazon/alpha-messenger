@@ -17,6 +17,7 @@ export function ChatList({
   selectedId,
   myId,
   onlineUsers,
+  awayUsers,
   typingByChat,
   onSelect,
   onCreateDirect,
@@ -28,6 +29,7 @@ export function ChatList({
   selectedId: string | null;
   myId: string | null;
   onlineUsers: Set<string>;
+  awayUsers: Set<string>;
   typingByChat: Map<string, Map<string, string>>;
   onSelect: (chatId: string) => void;
   onCreateDirect: (username: string) => Promise<void>;
@@ -124,6 +126,7 @@ export function ChatList({
                 ? chat.participants.find((p) => p.userId !== myId)
                 : undefined;
             const online = other ? onlineUsers.has(other.userId) : undefined;
+            const away = other && awayUsers.has(other.userId);
             const typing = (typingByChat.get(chat.chatId)?.size ?? 0) > 0;
             return (
               <button
@@ -142,7 +145,7 @@ export function ChatList({
                   aria-hidden="true"
                 >
                   {initialFor(title)}
-                  <AvatarBadges online={online} typing={typing} />
+                  <AvatarBadges online={online} away={away} typing={typing} />
                 </span>
                 <span className="chat-item-row chat-item-top">
                   <span className="chat-item-title">{title}</span>

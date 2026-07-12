@@ -575,6 +575,10 @@ body {
   color: var(--accent);
 }
 
+.conv-subtitle--away {
+  color: #ffc107;
+}
+
 .conv-headline--clickable:hover .conv-title {
   color: var(--accent);
 }
@@ -1723,6 +1727,10 @@ body {
 
 .avatar-status-dot.is-offline {
   background: #9aa6b2;
+}
+
+.avatar-status-dot.is-away {
+  background: #ffc107;
 }
 
 /* Окантовка вокруг всего аватара — собеседник/участник печатает. Контрастный

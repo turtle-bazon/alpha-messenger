@@ -35,7 +35,7 @@ import {
   type MessageContent,
 } from '../util/content';
 import { imageBytesToThumb, type PreparedImage } from '../util/image';
-import { formatTime, formatDateDivider, sameDay } from '../util/time';
+import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
 import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
@@ -143,6 +143,7 @@ export function Conversation({
   ws,
   myId,
   onlineUsers,
+  awayUsers,
   typingUsers,
   inputRef,
   onBack,
@@ -151,11 +152,8 @@ export function Conversation({
   ws: WsClient;
   myId: string | null;
   onlineUsers: Set<string>;
-  // Кто печатает в этом чате (без меня) — из общего трекера (#27). Заголовок
-  // показывает «печатает», окно участников — окантовку у их аватаров.
-  // Map<userId, draft> — draft содержит текст набираемого сообщения.
+  awayUsers: Set<string>;
   typingUsers: Map<string, string>;
-  // Ссылка на поле ввода — для глобального фокуса (задача #40).
   inputRef: React.RefObject<HTMLTextAreaElement>;
   onBack: () => void;
 }): JSX.Element {
@@ -786,7 +784,19 @@ export function Conversation({
     if (onlineCount > 0) subtitle += `, ${onlineCount} в сети`;
   } else {
     const other = chat.participants.find((p) => p.userId !== myId);
-    if (other) subtitle = onlineUsers.has(other.userId) ? 'в сети' : 'не в сети';
+    if (other) {
+      if (onlineUsers.has(other.userId)) {
+        subtitle = 'в сети';
+      } else if (awayUsers.has(other.userId)) {
+        subtitle = other.lastActiveAt
+          ? `отошёл. ${formatLastSeen(other.lastActiveAt)}`
+          : 'отошёл';
+      } else if (other.lastActiveAt) {
+        subtitle = formatLastSeen(other.lastActiveAt);
+      } else {
+        subtitle = 'не в сети';
+      }
+    }
   }
   const isGroup = chat.type === 'group';
   // Имя отправителя по id — для идентификации автора в группе (задача #21).
@@ -840,7 +850,8 @@ export function Conversation({
             <span
               className={
                 'conv-subtitle' +
-                (subtitle === 'в сети' ? ' conv-subtitle--online' : '')
+                (subtitle === 'в сети' ? ' conv-subtitle--online' :
+                 subtitle.startsWith('отошёл') ? ' conv-subtitle--away' : '')
               }
               data-testid="conv-subtitle"
             >

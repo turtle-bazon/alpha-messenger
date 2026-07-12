@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { pool } from '../db';
 import { authenticate } from '../auth';
 import { isOnline } from '../ws';
+import { getLastActiveMap } from '../chat-helpers';
 
 // Снимок онлайна для сидирования клиента после коннекта: возвращает тех
 // со-участников (с кем вызывающий делит хотя бы один чат), кто сейчас в сети.
@@ -15,9 +16,23 @@ export async function presenceRoutes(app: FastifyInstance): Promise<void> {
        WHERE m1.user_id = $1 AND m2.user_id <> $1`,
       [userId],
     );
-    const online = res.rows
-      .map((r) => r.user_id as string)
-      .filter((id) => isOnline(id));
-    return { online };
+    const userIds = res.rows.map((r) => r.user_id as string);
+    const onlineIds = userIds.filter((id) => isOnline(id));
+    const lastActiveMap = await getLastActiveMap(userIds);
+    const now = Date.now();
+    const AWAY_MS = 5 * 60 * 1000; // 5 минут
+
+    const presence: Record<string, { online: boolean; away: boolean; lastActiveAt?: string }> = {};
+    for (const id of userIds) {
+      const online = onlineIds.includes(id);
+      const lastActive = lastActiveMap.get(id) ?? null;
+      const away = online && lastActive && (now - lastActive.getTime()) > AWAY_MS;
+      presence[id] = {
+        online,
+        away: !!away,
+        ...(lastActive ? { lastActiveAt: lastActive.toISOString() } : {}),
+      };
+    }
+    return { presence };
   });
 }

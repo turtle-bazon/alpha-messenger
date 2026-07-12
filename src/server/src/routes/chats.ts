@@ -3,7 +3,7 @@ import { pool } from '../db';
 import { authenticate } from '../auth';
 import { emitEvent } from '../events';
 import { loadChat } from '../chats';
-import { emitToMembers, getMemberIds } from '../chat-helpers';
+import { emitToMembers, getMemberIds, getLastActiveMap } from '../chat-helpers';
 import { isOnline } from '../ws';
 
 interface CreateChatBody {
@@ -175,13 +175,25 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       if (!members.rows.some((m) => m.user_id === userId)) {
         return reply.code(404).send({ error: 'not found' });
       }
+      const memberIds = members.rows.map((m) => m.user_id as string);
+      const lastActiveMap = await getLastActiveMap(memberIds);
+      const now = Date.now();
+      const AWAY_MS = 5 * 60 * 1000;
       return {
         createdBy: chat.rows[0].created_by as string | null,
-        members: members.rows.map((m) => ({
-          userId: m.user_id,
-          username: m.username,
-          online: isOnline(m.user_id),
-        })),
+        members: members.rows.map((m) => {
+          const uid = m.user_id as string;
+          const online = isOnline(uid);
+          const lastActive = lastActiveMap.get(uid) ?? null;
+          const away = online && lastActive && (now - lastActive.getTime()) > AWAY_MS;
+          return {
+            userId: uid,
+            username: m.username,
+            online,
+            away: !!away,
+            ...(lastActive ? { lastActiveAt: lastActive.toISOString() } : {}),
+          };
+        }),
       };
     },
   );

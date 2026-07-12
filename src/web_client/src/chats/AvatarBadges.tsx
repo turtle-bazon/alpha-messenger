@@ -5,14 +5,19 @@
 //
 // online: true/false — показать кружок (зелёный/серый); undefined — не показывать
 //   (например, для групп присутствие на аватаре не отражаем).
+// away: true — жёлтый кружок (online > 5 мин).
 // typing: обвести аватар окантовкой.
 export function AvatarBadges({
   online,
+  away,
   typing,
 }: {
   online?: boolean;
+  away?: boolean;
   typing?: boolean;
 }): JSX.Element {
+  const statusClass = away ? 'is-away' : online ? 'is-online' : 'is-offline';
+  const statusLabel = away ? 'away' : online ? 'online' : 'offline';
   return (
     <>
       {typing && (
@@ -24,9 +29,9 @@ export function AvatarBadges({
       )}
       {online !== undefined && (
         <span
-          className={'avatar-status-dot ' + (online ? 'is-online' : 'is-offline')}
+          className={'avatar-status-dot ' + statusClass}
           data-testid="avatar-status"
-          data-status={online ? 'online' : 'offline'}
+          data-status={statusLabel}
         />
       )}
     </>

@@ -7,7 +7,7 @@ export interface ChatView {
   type: 'direct' | 'group';
   title: string | null;
   createdBy: string | null;
-  participants: { userId: string; username: string }[];
+  participants: { userId: string; username: string; lastActiveAt?: string }[];
   lastMessage: {
     messageId: string;
     senderId: string;
@@ -38,7 +38,7 @@ export async function loadChat(
   const row = chat.rows[0];
 
   const members = await db.query(
-    `SELECT a.user_id, a.username FROM chat_members m
+    `SELECT a.user_id, a.username, a.last_active_at FROM chat_members m
      JOIN accounts a ON a.user_id = m.user_id
      WHERE m.chat_id = $1 ORDER BY a.username`,
     [chatId],
@@ -96,6 +96,7 @@ export async function loadChat(
     participants: members.rows.map((m) => ({
       userId: m.user_id,
       username: m.username,
+      ...(m.last_active_at ? { lastActiveAt: m.last_active_at.toISOString() } : {}),
     })),
     lastMessage: lm
       ? {

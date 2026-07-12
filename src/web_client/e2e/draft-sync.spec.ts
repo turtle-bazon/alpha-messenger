@@ -3,12 +3,11 @@ import { createDirectViaUi, registerViaUi } from './helpers/ui';
 
 test('черновик сохраняется и восстанавливается после перезагрузки', async ({
   page,
-  browser,
 }) => {
-  const a = await registerViaUi(page);
+  await registerViaUi(page);
   const b = await registerViaUi(page);
 
-  // A создаёт direct к B
+  // Создаём direct к B
   await createDirectViaUi(page, b.username);
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 

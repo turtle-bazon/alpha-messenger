@@ -4,7 +4,7 @@ import { Client } from 'pg';
 import { config } from './config';
 import { pool } from './db';
 import { lookupSession } from './auth';
-import { getMemberIds, isMember, markRead } from './chat-helpers';
+import { getMemberIds, isMember, markRead, touchActivity } from './chat-helpers';
 import { sendWakeUp } from './push';
 
 interface Conn {
@@ -197,6 +197,7 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
             pending: false,
           };
           register(conn);
+          void touchActivity(conn.userId);
           await drain(conn);
           // Граница реплея: всё выше — история из outbox, всё ниже — live.
           // Управляющий маркер без seq (не событие outbox): клиент по нему

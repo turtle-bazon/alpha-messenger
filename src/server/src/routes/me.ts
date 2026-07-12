@@ -23,4 +23,18 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       })),
     };
   });
+
+  // POST /me/activity — пинг активности клиента (throttle ~30с на клиенте).
+  app.post(
+    '/me/activity',
+    { preHandler: authenticate },
+    async (req) => {
+      const userId = req.user!.userId;
+      await pool.query(
+        'UPDATE accounts SET last_active_at = now() WHERE user_id = $1',
+        [userId],
+      );
+      return { ok: true };
+    },
+  );
 }
