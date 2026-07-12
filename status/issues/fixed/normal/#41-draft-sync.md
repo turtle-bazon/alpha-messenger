@@ -39,3 +39,9 @@ Minor — полезная фича, но не критичная
 
 ## Статус
 Открыта
+
+## Решение
+- Сервер: таблица `drafts` (PK: chat_id + user_id), эндпоинты GET/PUT/DELETE `/api/chats/:chatId/draft`
+- Клиент: `getDraft()`, `saveDraft()`, `deleteDraft()` в `rest.ts`
+- `Conversation.tsx`: загрузка черновика при смене `chatId`, сохранение с debounce 1.5с, удаление при отправке
+- E2E тест: `draft-sync.spec.ts` — восстановление после перезагрузки
