@@ -1066,7 +1066,7 @@ export function Conversation({
                             key={rx.emoji}
                             type="button"
                             className={'bubble-reaction' + (rx.users.includes(myId ?? '') ? ' own' : '')}
-                            onClick={() => m.messageId && toggleReaction(m.messageId, rx.emoji)}
+                            onClick={() => m.messageId && (trackReaction(rx.emoji), toggleReaction(m.messageId, rx.emoji))}
                           >
                             <span className="bubble-reaction-emoji">{rx.emoji}</span>
                             <span className="bubble-reaction-count">{rx.count}</span>
@@ -1406,6 +1406,7 @@ export function Conversation({
         <PositionedEmojiPicker
           pos={ctxMenuPosRef.current}
           onSelect={(emoji) => {
+            trackReaction(emoji);
             toggleReaction(fullEmojiPickerMsgId, emoji);
             setFullEmojiPickerMsgId(null);
           }}
@@ -1419,7 +1420,37 @@ export function Conversation({
 }
 
 // Панель быстрых реакций — внутри контекстного меню (#23, как в Telegram).
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+const QUICK_REACTIONS_DEFAULT = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+
+function getFrequentReactions(): string[] {
+  try {
+    const raw = localStorage.getItem('emoji_frequent');
+    if (!raw) return QUICK_REACTIONS_DEFAULT;
+    const counts: Record<string, number> = JSON.parse(raw);
+    const sorted = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([emoji]) => emoji)
+      .slice(0, 8);
+    if (sorted.length < 8) {
+      for (const e of QUICK_REACTIONS_DEFAULT) {
+        if (sorted.length >= 8) break;
+        if (!sorted.includes(e)) sorted.push(e);
+      }
+    }
+    return sorted;
+  } catch {
+    return QUICK_REACTIONS_DEFAULT;
+  }
+}
+
+function trackReaction(emoji: string): void {
+  try {
+    const raw = localStorage.getItem('emoji_frequent');
+    const counts: Record<string, number> = raw ? JSON.parse(raw) : {};
+    counts[emoji] = (counts[emoji] || 0) + 1;
+    localStorage.setItem('emoji_frequent', JSON.stringify(counts));
+  } catch { /* ignore */ }
+}
 
 function ReactionBar({
   onSelect,
@@ -1428,15 +1459,22 @@ function ReactionBar({
   onSelect: (emoji: string) => void;
   onOpenFull: () => void;
 }): JSX.Element {
+  const [reactions] = useState(getFrequentReactions);
+
+  const handleSelect = (emoji: string) => {
+    trackReaction(emoji);
+    onSelect(emoji);
+  };
+
   return (
     <div className="reaction-bar" data-testid="reaction-bar">
-      {QUICK_REACTIONS.map((emoji) => (
+      {reactions.map((emoji) => (
         <button
           key={emoji}
           type="button"
           className="reaction-bar-btn"
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={() => onSelect(emoji)}
+          onClick={() => handleSelect(emoji)}
         >
           {emoji}
         </button>
