@@ -1,10 +1,13 @@
 // Android-специфичная инициализация.
 // Загружается только при запуске в Capacitor (Android WebView).
-// Используем динамические импорты чтобы не добавлять @capacitor/* в web_client dependencies.
+// Никаких import из @capacitor/* — работаем через window.Capacitor.
 
 import { registerPlatformInit } from './util/platform';
 
 type PushPlatform = 'fcm' | 'unifiedpush' | 'none';
+
+// Capacitor API доступен через window в WebView
+const Capacitor = (window as any).Capacitor;
 
 /**
  * Регистрирует android-init в platform.ts.
@@ -17,9 +20,8 @@ export function setupAndroid(): void {
 async function initAndroid(): Promise<void> {
   console.log('Alpha: Android client initializing...');
 
-  // Динамически импортируем Capacitor модули (доступны только в Android WebView)
-  const { App } = await import('@capacitor/app');
-  const { PushNotifications } = await import('@capacitor/push-notifications');
+  const App = Capacitor.Plugins.App;
+  const PushNotifications = Capacitor.Plugins.PushNotifications;
 
   const registration = await detectAndRegisterPush(PushNotifications);
 
@@ -46,14 +48,7 @@ interface PushRegistration {
   token: string;
 }
 
-interface PushNotificationsPlugin {
-  checkPermissions(): Promise<{ receive: string }>;
-  requestPermissions(): Promise<{ receive: string }>;
-  register(): Promise<void>;
-  addListener(event: string, cb: (data: any) => void): Promise<{ remove(): void }>;
-}
-
-async function detectAndRegisterPush(pn: PushNotificationsPlugin): Promise<PushRegistration | null> {
+async function detectAndRegisterPush(pn: any): Promise<PushRegistration | null> {
   const saved = localStorage.getItem('alpha.push_platform');
   if (saved === 'fcm' || saved === 'unifiedpush') {
     const refreshed = await refreshRegistration(saved, pn);
@@ -67,7 +62,7 @@ async function detectAndRegisterPush(pn: PushNotificationsPlugin): Promise<PushR
   return registerPlatform(platform, pn);
 }
 
-async function detectPlatform(pn: PushNotificationsPlugin): Promise<PushPlatform> {
+async function detectPlatform(pn: any): Promise<PushPlatform> {
   try {
     const result = await pn.checkPermissions();
     if (result.receive !== 'denied') {
@@ -81,12 +76,12 @@ async function detectPlatform(pn: PushNotificationsPlugin): Promise<PushPlatform
   return 'none';
 }
 
-async function registerPlatform(platform: PushPlatform, pn: PushNotificationsPlugin): Promise<PushRegistration | null> {
+async function registerPlatform(platform: PushPlatform, pn: any): Promise<PushRegistration | null> {
   if (platform === 'fcm') return registerFCM(pn);
   return null;
 }
 
-async function registerFCM(pn: PushNotificationsPlugin): Promise<PushRegistration | null> {
+async function registerFCM(pn: any): Promise<PushRegistration | null> {
   try {
     let perm = await pn.checkPermissions();
     if (perm.receive !== 'granted') {
@@ -114,7 +109,7 @@ async function registerFCM(pn: PushNotificationsPlugin): Promise<PushRegistratio
   }
 }
 
-async function refreshRegistration(platform: PushPlatform, pn: PushNotificationsPlugin): Promise<PushRegistration | null> {
+async function refreshRegistration(platform: PushPlatform, pn: any): Promise<PushRegistration | null> {
   if (platform === 'fcm') return registerFCM(pn);
   return null;
 }
