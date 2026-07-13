@@ -2448,6 +2448,7 @@ body {
   border-top: 1px solid var(--border);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
   z-index: 10;
+  animation: popup-in 0.15s ease-out;
 }
 
 .mention-item {
