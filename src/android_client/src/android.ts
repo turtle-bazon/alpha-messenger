@@ -1,11 +1,19 @@
 import { App } from '@capacitor/app';
+import { registerPlatformInit } from '../../web_client/src/util/platform';
 import { detectAndRegisterPush, getSavedPlatform, type PushPlatform } from './push';
 
 /**
- * Инициализация Android-клиента.
- * Вызывается из web-клиента при старте на нативной платформе.
+ * Регистрирует android-инициализацию в platform.ts.
+ * Вызывается из main.tsx android_client при старте.
  */
-export async function initAndroid(): Promise<void> {
+export function setupAndroid(): void {
+  registerPlatformInit(initAndroid);
+}
+
+/**
+ * Инициализация Android-клиента.
+ */
+async function initAndroid(): Promise<void> {
   console.log('Alpha: Android client initializing...');
 
   // Детектим и регистрируем push
@@ -13,18 +21,17 @@ export async function initAndroid(): Promise<void> {
 
   if (registration) {
     console.log(`Alpha: Push registered via ${registration.platform}`);
-    // Сохраняем platform для web-клиента
     localStorage.setItem('alpha.push_platform', registration.platform);
     localStorage.setItem('alpha.push_token', registration.token);
+    localStorage.removeItem('alpha.push_warning');
   } else {
     console.log('Alpha: Push not available');
     localStorage.setItem('alpha.push_platform', 'none');
-    // Показываем предупреждение пользователю
     showPushWarning(getSavedPlatform());
   }
 
   // Обработка жизненного цикла приложения
-  App.addListener('appStateChange', ({ isActive }) => {
+  App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
     if (isActive) {
       console.log('Alpha: App foregrounded');
     } else {
@@ -35,7 +42,6 @@ export async function initAndroid(): Promise<void> {
 
 function showPushWarning(platform: PushPlatform): void {
   if (platform !== 'none') return;
-  // Предупреждение показывается из web-клиента через UI
   localStorage.setItem('alpha.push_warning', 'true');
 }
 
@@ -45,33 +51,4 @@ function showPushWarning(platform: PushPlatform): void {
 export function isPushAvailable(): boolean {
   const platform = getSavedPlatform();
   return platform !== 'none';
-}
-
-/**
- * Получает информацию о push-платформе для UI.
- */
-export function getPushInfo(): { available: boolean; platform: PushPlatform; message: string } {
-  const platform = getSavedPlatform();
-
-  if (platform === 'fcm') {
-    return {
-      available: true,
-      platform: 'fcm',
-      message: 'Уведомления активны (FCM)',
-    };
-  }
-
-  if (platform === 'unifiedpush') {
-    return {
-      available: true,
-      platform: 'unifiedpush',
-      message: 'Уведомления активны (UnifiedPush)',
-    };
-  }
-
-  return {
-    available: false,
-    platform: 'none',
-    message: 'Уведомления недоступны. Установите ntfy для получения уведомлений.',
-  };
 }

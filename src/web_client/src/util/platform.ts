@@ -5,6 +5,17 @@ export type Platform = 'web' | 'android' | 'ios' | 'electron';
 
 let cachedPlatform: Platform | null = null;
 
+// Runtime-callback для android_client: вызывается из android.ts при инициализации.
+let platformInitCallback: (() => Promise<void>) | null = null;
+
+/**
+ * Регистрирует callback инициализации платформы.
+ * Вызывается из android_client/src/android.ts при старте.
+ */
+export function registerPlatformInit(cb: () => Promise<void>): void {
+  platformInitCallback = cb;
+}
+
 /**
  * Определяет текущую платформу.
  */
@@ -33,18 +44,8 @@ export function getPlatform(): Platform {
  * Вызывается при старте приложения.
  */
 export async function initPlatform(): Promise<void> {
-  const platform = getPlatform();
-
-  if (platform === 'android') {
-    // Динамический импорт android_client модуля.
-    // Модуль доступен только при сборке в Capacitor, в dev/vite будет ошибка — это ок.
-    try {
-      // @ts-expect-error android_client — отдельный проект, модуль доступен только в Capacitor
-      const mod = await import('../../android_client/src/android');
-      await mod.initAndroid();
-    } catch {
-      console.warn('Android init skipped (not in Capacitor)');
-    }
+  if (platformInitCallback) {
+    await platformInitCallback();
   }
 }
 
