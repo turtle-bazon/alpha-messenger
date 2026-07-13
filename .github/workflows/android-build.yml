@@ -43,6 +43,10 @@ jobs:
     - name: Copy web client dist to Capacitor www
       run: cp -r src/web_client/dist src/android_client/www
 
+    - name: Add Android platform
+      working-directory: src/android_client
+      run: npx cap add android || true
+
     - name: Capacitor sync
       working-directory: src/android_client
       run: npx cap sync android
