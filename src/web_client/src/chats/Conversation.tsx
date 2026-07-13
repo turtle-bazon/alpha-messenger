@@ -1473,17 +1473,17 @@ export function Conversation({
             textareaRef={inputRef}
           />
         )}
+        {mentionOpen && (
+          <MentionPopup
+            participants={chat.participants}
+            filter={mentionFilter}
+            myId={myId}
+            selected={mentionSelected}
+            onSelect={onMentionSelect}
+            onClose={() => setMentionOpen(false)}
+          />
+        )}
       </form>
-      {mentionOpen && (
-        <MentionPopup
-          participants={chat.participants}
-          filter={mentionFilter}
-          myId={myId}
-          selected={mentionSelected}
-          onSelect={onMentionSelect}
-          onClose={() => setMentionOpen(false)}
-        />
-      )}
       {pendingImage && (
         <ImageEditor
           file={pendingImage}
