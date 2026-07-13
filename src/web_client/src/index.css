@@ -2426,6 +2426,66 @@ body {
   color: var(--text);
 }
 
+/* @-упоминания: подсветка в сообщениях. */
+.mention-highlight {
+  color: var(--accent);
+  background: rgba(51, 144, 236, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Попап @-упоминаний в композере. */
+.mention-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+}
+
+.mention-item.selected,
+.mention-item:hover {
+  background: var(--bg-active);
+}
+
+.mention-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mention-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
 /* Тонкие скроллбары (#59): fade-анимация. */
 @property --sb-thumb {
   syntax: '<color>';

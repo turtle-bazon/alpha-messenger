@@ -42,6 +42,8 @@ import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
 import { EmojiPicker } from './EmojiPicker';
+import { MentionPopup, getFilteredParticipants } from './MentionPopup';
+import { renderMentionText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
 
@@ -171,6 +173,10 @@ export function Conversation({
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
   // Полный эмодзи-пикер (из стрелки в панели реакций)
   const [fullEmojiPickerMsgId, setFullEmojiPickerMsgId] = useState<string | null>(null);
+  // @-упоминания: открыт ли попап и фильтр после @
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [mentionSelected, setMentionSelected] = useState(0);
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -456,6 +462,20 @@ export function Conversation({
 
   function onInputChange(value: string): void {
     setInput(value);
+    // Детект @-упоминаний: ищем последний @ без пробела после
+    const lastAt = value.lastIndexOf('@');
+    if (lastAt >= 0) {
+      const afterAt = value.slice(lastAt + 1);
+      if (!/\s/.test(afterAt)) {
+        setMentionOpen(true);
+        setMentionFilter(afterAt);
+        setMentionSelected(0);
+      } else {
+        setMentionOpen(false);
+      }
+    } else {
+      setMentionOpen(false);
+    }
     if (editing) return;
     const now = Date.now();
     // Сброс предыдущего flush-таймера
@@ -476,6 +496,24 @@ export function Conversation({
     shownUrlRef.current = null;
     previewReqRef.current++;
     setLinkPreview(null);
+  }
+
+  // Выбор пользователя из попапа @-упоминаний.
+  function onMentionSelect(username: string): void {
+    const el = inputRef.current;
+    const cursorPos = el?.selectionStart ?? input.length;
+    const lastAt = input.lastIndexOf('@');
+    if (lastAt < 0) { setMentionOpen(false); return; }
+    const before = input.slice(0, lastAt);
+    const after = input.slice(cursorPos);
+    const newValue = before + '@' + username + ' ' + after;
+    setInput(newValue);
+    setMentionOpen(false);
+    requestAnimationFrame(() => {
+      const newPos = lastAt + username.length + 2;
+      el?.setSelectionRange(newPos, newPos);
+      el?.focus();
+    });
   }
 
   // Развернуть URL через сервер и собрать карточку. Токен previewReqRef отсекает
@@ -728,6 +766,27 @@ export function Conversation({
     if (e.key === 'Escape' && replyTo) {
       setReplyTo(null);
       return;
+    }
+    // Навигация по попапу @-упоминаний
+    if (mentionOpen) {
+      const filtered = getFilteredParticipants(chat.participants, mentionFilter, myId);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionSelected((s) => Math.min(s + 1, filtered.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionSelected((s) => Math.max(s - 1, 0));
+        return;
+      }
+      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+        e.preventDefault();
+        if (filtered[mentionSelected]) {
+          onMentionSelect(filtered[mentionSelected].username);
+        }
+        return;
+      }
     }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -1066,7 +1125,12 @@ export function Conversation({
                         );
                       })()}
                       {m.content.text && (
-                        <span className="bubble-text">{m.content.text}</span>
+                        <span className="bubble-text">
+                          {renderMentionText(
+                            m.content.text,
+                            new Set(chat.participants.map((p) => p.username)),
+                          )}
+                        </span>
                       )}
                       {m.content.attachments.map((a, ai) =>
                         a.kind === 'image' ? (
@@ -1410,6 +1474,16 @@ export function Conversation({
           />
         )}
       </form>
+      {mentionOpen && (
+        <MentionPopup
+          participants={chat.participants}
+          filter={mentionFilter}
+          myId={myId}
+          selected={mentionSelected}
+          onSelect={onMentionSelect}
+          onClose={() => setMentionOpen(false)}
+        />
+      )}
       {pendingImage && (
         <ImageEditor
           file={pendingImage}
