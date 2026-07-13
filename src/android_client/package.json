@@ -1,0 +1,23 @@
+{
+  "name": "alpha-messenger-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Alpha Messenger Android Client (Capacitor)",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "build:web": "cd ../web_client && npm run build",
+    "build:android": "npm run build:web && cp -r ../web_client/dist www && npm run sync",
+    "dev": "npm run build:web && cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/push-notifications": "^6.0.0",
+    "@capacitor/local-notifications": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "typescript": "^5.7.2"
+  }
+}

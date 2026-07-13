@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clearSession, getToken } from './api/session';
 import { LoginScreen } from './auth/LoginScreen';
 import { RegisterScreen } from './auth/RegisterScreen';
 import { HomeScreen } from './HomeScreen';
+import { PushWarningBanner } from './notifications/PushWarningBanner';
+import { initPlatform } from './util/platform';
 
 type View = 'login' | 'register';
 
@@ -21,9 +23,15 @@ export function App(): JSX.Element {
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
 
+  // Инициализация платформы (push, нативные плагины)
+  useEffect(() => {
+    initPlatform();
+  }, []);
+
   if (authed) {
     return (
       <div className="app-shell" data-testid="app-shell">
+        <PushWarningBanner />
         <HomeScreen
           onLogout={() => {
             clearSession();
