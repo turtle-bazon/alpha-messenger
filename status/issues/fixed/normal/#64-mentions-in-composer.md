@@ -21,3 +21,15 @@
 
 ## Приоритет
 normal
+
+## Решение
+Реализовано на клиенте без серверных изменений (`username` уже есть в `participants`):
+
+- `MentionPopup.tsx` — выпадающий список участников с аватарами, фильтрацией и навигацией (ArrowUp/Down, Enter, Escape)
+- `util/mentions.tsx` — `renderMentionText()` парсит `@username` в тексте сообщений и оборачивает в `<span class="mention-highlight">`
+- Композер: `onInputChange` детектит `@` → открывает попап, `onInputKeyDown` управляет навигацией
+- CSS: `.mention-highlight` (accent цвет), `.mention-popup` (absolute над input, popup-in анимация)
+
+Файлы: `src/web_client/src/chats/MentionPopup.tsx`, `src/web_client/src/util/mentions.tsx`, `src/web_client/src/chats/Conversation.tsx`, `src/web_client/src/index.css`
+
+Не реализовано (отложено): уведомления упомянутых, навигация по списку упоминаний — связано с #33.
