@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { clearSession, getToken } from './api/session';
 import { LoginScreen } from './auth/LoginScreen';
 import { RegisterScreen } from './auth/RegisterScreen';
+import { SetupScreen } from './auth/SetupScreen';
 import { HomeScreen } from './HomeScreen';
 import { PushWarningBanner } from './notifications/PushWarningBanner';
-import { initPlatform } from './util/platform';
+import { initPlatform, getPlatform } from './util/platform';
 
 type View = 'login' | 'register';
 
@@ -23,10 +24,26 @@ export function App(): JSX.Element {
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
 
+  // На Android: нужна настройка сервера если нет сохранённого URL
+  const [needsSetup, setNeedsSetup] = useState(() => {
+    if (getPlatform() !== 'android') return false;
+    return !localStorage.getItem('alpha.serverUrl');
+  });
+
   // Инициализация платформы (push, нативные плагины)
   useEffect(() => {
     initPlatform();
   }, []);
+
+  // Setup screen — только на Android
+  if (needsSetup) {
+    return (
+      <SetupScreen onConfigured={() => {
+        setNeedsSetup(false);
+        window.location.reload();
+      }} />
+    );
+  }
 
   if (authed) {
     return (
