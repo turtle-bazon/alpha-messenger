@@ -213,6 +213,12 @@ export function Conversation({
   const lastTypingSent = useRef(0);
   const typingFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReadSent = useRef(0);
+  // Навигация по @: индекс текущего упоминания в списке
+  const [mentionNavIndex, setMentionNavIndex] = useState(-1);
+  // Свайп вправо для ответа на мобильных
+  const swipeRef = useRef<{ startX: number; msgId: string } | null>(null);
+  const [swipeMsgId, setSwipeMsgId] = useState<string | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
   // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
   const chatRef = useRef(chat);
   chatRef.current = chat;
@@ -496,6 +502,63 @@ export function Conversation({
     shownUrlRef.current = null;
     previewReqRef.current++;
     setLinkPreview(null);
+  }
+
+  // Сообщения, упоминающие текущего пользователя (@username).
+  const myUsername = chat.participants.find((p) => p.userId === myId)?.username ?? '';
+  const mentionMessages = myUsername
+    ? messages.filter((m) =>
+        !m.deleted &&
+        m.content.text &&
+        m.content.text.toLowerCase().includes('@' + myUsername.toLowerCase()),
+      )
+    : [];
+
+  // Навигация к следующему упоминанию.
+  function jumpToNextMention(): void {
+    if (mentionMessages.length === 0) return;
+    const nextIdx = (mentionNavIndex + 1) % mentionMessages.length;
+    setMentionNavIndex(nextIdx);
+    const target = mentionMessages[nextIdx];
+    const el = scrollRef.current;
+    if (!el || !target.messageId) return;
+    const targetEl = el.querySelector(`[data-message-id="${target.messageId}"]`);
+    if (!targetEl) return;
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Подсветка
+    setMessages((prev) =>
+      prev.map((x) =>
+        x.messageId === target.messageId ? { ...x, highlighted: true } : x,
+      ),
+    );
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((x) =>
+          x.messageId === target.messageId ? { ...x, highlighted: false } : x,
+        ),
+      );
+    }, 2000);
+  }
+
+  // Свайп вправо для ответа на мобильных: touch handlers
+  function onSwipeTouchStart(e: React.TouchEvent, msgId: string): void {
+    swipeRef.current = { startX: e.touches[0].clientX, msgId };
+  }
+  function onSwipeTouchMove(e: React.TouchEvent): void {
+    if (!swipeRef.current) return;
+    const dx = e.touches[0].clientX - swipeRef.current.startX;
+    if (dx > 0 && dx < 150) {
+      setSwipeX(dx);
+      setSwipeMsgId(swipeRef.current.msgId);
+    }
+  }
+  function onSwipeTouchEnd(): void {
+    if (swipeX > 80 && swipeMsgId) {
+      setReplyTo(swipeMsgId);
+    }
+    swipeRef.current = null;
+    setSwipeX(0);
+    setSwipeMsgId(null);
   }
 
   // Выбор пользователя из попапа @-упоминаний.
@@ -1018,6 +1081,10 @@ export function Conversation({
                   (m.failed ? ' bubble-failed' : '') +
                   (m.replyToMessageId && messages.some((x) => x.messageId === m.replyToMessageId && x.senderId === myId) ? ' bubble-reply-to-me' : '')
                 }
+                style={swipeMsgId === m.messageId ? { transform: `translateX(${swipeX}px)` } : undefined}
+                onTouchStart={(e) => onSwipeTouchStart(e, m.messageId!)}
+                onTouchMove={onSwipeTouchMove}
+                onTouchEnd={onSwipeTouchEnd}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   if (!m.messageId || m.deleted) return;
@@ -1041,6 +1108,12 @@ export function Conversation({
                   setFullEmojiPickerMsgId(null);
                 }}
               >
+                {/* Свайп-индикатор: стрелка ответа при свайпе вправо */}
+                {swipeMsgId === m.messageId && swipeX > 20 && (
+                  <span className="bubble-swipe-indicator" style={{ opacity: Math.min(1, (swipeX - 20) / 60) }}>
+                    ↩
+                  </span>
+                )}
                 {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
                 {isGroup && !own && groupEnd && (
                   <span
@@ -1339,6 +1412,17 @@ export function Conversation({
             return null;
           })()}
         </div>
+        {mentionMessages.length > 0 && (
+          <button
+            type="button"
+            className="conv-mention-nav"
+            data-testid="mention-nav"
+            title={`Упоминания (${mentionNavIndex + 1}/${mentionMessages.length})`}
+            onClick={jumpToNextMention}
+          >
+            @{mentionMessages.length}
+          </button>
+        )}
       </div>
       {editing && (
         <div className="conv-editing" data-testid="editing-banner">
