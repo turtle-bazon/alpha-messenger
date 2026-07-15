@@ -81,3 +81,41 @@ test('код не парсится как markdown', async ({ browser }) => {
   await expect(msg.locator('code')).toContainText('**не жирный**');
   await expect(msg.locator('strong')).toHaveCount(0);
 });
+
+test('markdown: смешанный текст', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const a = await registerViaUi(page);
+  const b = await registerViaUi(page);
+
+  await createDirectViaUi(page, a.username);
+  await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+
+  await page.getByTestId('message-input').fill('привет **мир** https://example.com');
+  await page.getByTestId('message-send').click();
+
+  const msg = page.locator('[data-testid="message"]').last();
+  await expect(msg).toContainText('привет');
+  await expect(msg.locator('strong')).toContainText('мир');
+  await expect(msg.locator('.message-link')).toHaveAttribute('href', 'https://example.com');
+});
+
+test('italic: граница слова', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const a = await registerViaUi(page);
+  const b = await registerViaUi(page);
+
+  await createDirectViaUi(page, a.username);
+  await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+
+  // variable_name не должен стать курсивом
+  await page.getByTestId('message-input').fill('variable_name и _курсив_');
+  await page.getByTestId('message-send').click();
+
+  const msg = page.locator('[data-testid="message"]').last();
+  await expect(msg.locator('em')).toHaveCount(1);
+  await expect(msg.locator('em')).toContainText('курсив');
+});
