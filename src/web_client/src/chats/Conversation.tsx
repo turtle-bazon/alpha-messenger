@@ -46,6 +46,9 @@ import { MentionPopup, getFilteredParticipants } from './MentionPopup';
 import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
+import { FormattingToolbar } from './FormattingToolbar';
+import { WysiwygComposer } from './WysiwygComposer';
+import { LinkDialog } from './LinkDialog';
 
 // Исходящее изображение в очереди: сырые байты (полноразмерный блоб на загрузку)
 // и метаданные вложения. blobId в att заполняется после uploadBlob.
@@ -177,6 +180,12 @@ export function Conversation({
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionSelected, setMentionSelected] = useState(0);
+  // Панель форматирования (#69): видимость и выделение
+  const [formatBarVisible, setFormatBarVisible] = useState(false);
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
+  // Диалог ввода ссылки (#69)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkDialogText, setLinkDialogText] = useState('');
   // Живое превью ссылки в композере (#32) и сопутствующее состояние:
   // previewReqRef — токен против гонок (применяем только последний запрос);
   // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
@@ -489,6 +498,67 @@ export function Conversation({
     typingFlushRef.current = setTimeout(() => {
       ws.sendTyping(chatId, value || undefined);
     }, TYPING_FLUSH_MS);
+  }
+
+  // ─── Форматирование текста (#69) ─────────────────────────────────
+
+  // Обработка выделения текста в композере
+  function handleSelect(start: number, end: number): void {
+    if (start !== end) {
+      setFormatBarVisible(true);
+      setSelection({ start, end });
+    } else {
+      setFormatBarVisible(false);
+      setSelection(null);
+    }
+  }
+
+  // Обёртка выделенного текста markdown-разметкой
+  function wrapSelection(before: string, after: string): void {
+    const el = inputRef.current;
+    if (!el || !selection) return;
+    const { start, end } = selection;
+    const selected = input.slice(start, end);
+    const newValue = input.slice(0, start) + before + selected + after + input.slice(end);
+    setInput(newValue);
+    // Восстанавливаем выделение
+    requestAnimationFrame(() => {
+      el.selectionStart = start + before.length;
+      el.selectionEnd = end + before.length;
+      el.focus();
+    });
+  }
+
+  // Кнопки форматирования
+  function onBold(): void { wrapSelection('**', '**'); }
+  function onItalic(): void { wrapSelection('_', '_'); }
+  function onStrike(): void { wrapSelection('~~', '~~'); }
+  function onCode(): void { wrapSelection('`', '`'); }
+
+  // Диалог ввода ссылки
+  function onLink(): void {
+    const el = inputRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const selected = input.slice(start, end);
+    setLinkDialogText(selected);
+    setLinkDialogOpen(true);
+  }
+
+  function onLinkInsert(text: string, url: string): void {
+    const el = inputRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const markdown = `[${text}](${url})`;
+    const newValue = input.slice(0, start) + markdown + input.slice(end);
+    setInput(newValue);
+    requestAnimationFrame(() => {
+      el.selectionStart = start + markdown.length;
+      el.selectionEnd = start + markdown.length;
+      el.focus();
+    });
   }
 
   // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
@@ -832,6 +902,24 @@ export function Conversation({
     if (e.key === 'Escape' && replyTo) {
       setReplyTo(null);
       return;
+    }
+    // Горячие клавиши форматирования (#69)
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        onBold();
+        return;
+      }
+      if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        onItalic();
+        return;
+      }
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        onLink();
+        return;
+      }
     }
     // Навигация по попапу @-упоминаний
     if (mentionOpen) {
@@ -1479,6 +1567,14 @@ export function Conversation({
           data-testid="image-input"
           onChange={onPickFile}
         />
+        <FormattingToolbar
+          visible={formatBarVisible}
+          onBold={onBold}
+          onItalic={onItalic}
+          onStrike={onStrike}
+          onCode={onCode}
+          onLink={onLink}
+        />
         <div className="conv-input-field">
           <button
             type="button"
@@ -1499,17 +1595,15 @@ export function Conversation({
           >
             😊
           </button>
-          <textarea
-            ref={inputRef}
-            className="conv-textarea"
-            data-testid="message-input"
-            aria-label="Сообщение"
-            placeholder="Сообщение…"
-            rows={1}
+          <WysiwygComposer
             value={input}
-            onChange={(e) => onInputChange(e.target.value)}
+            onChange={onInputChange}
             onKeyDown={onInputKeyDown}
             onPaste={onPaste}
+            onSelect={handleSelect}
+            textareaRef={inputRef}
+            usernames={new Set(chat.participants.map((p) => p.username))}
+            data-testid="message-input"
           />
         </div>
         <button
@@ -1629,6 +1723,14 @@ export function Conversation({
           onClose={() => {
             setFullEmojiPickerMsgId(null);
           }}
+        />
+      )}
+      {/* Диалог ввода ссылки (#69) */}
+      {linkDialogOpen && (
+        <LinkDialog
+          initialText={linkDialogText}
+          onInsert={onLinkInsert}
+          onClose={() => setLinkDialogOpen(false)}
         />
       )}
     </div>

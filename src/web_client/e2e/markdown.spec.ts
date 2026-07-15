@@ -119,3 +119,97 @@ test('italic: граница слова', async ({ browser }) => {
   await expect(msg.locator('em')).toHaveCount(1);
   await expect(msg.locator('em')).toContainText('курсив');
 });
+
+// ─── Панель форматирования (#69) ──────────────────────────────────────
+
+test('WYSIWYG: markdown отображается в композере', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const a = await registerViaUi(page);
+  const b = await registerViaUi(page);
+
+  await createDirectViaUi(page, a.username);
+  await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+
+  // Вводим markdown — проверяем что overlay отображает отформатированный текст
+  await page.getByTestId('message-input').fill('**жирный** и _курсив_');
+  const overlay = page.locator('.composer-rendered');
+  await expect(overlay).toContainText('жирный');
+  await expect(overlay).toContainText('курсив');
+});
+
+test('панель форматирования: появляется при выделении', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const a = await registerViaUi(page);
+  const b = await registerViaUi(page);
+
+  await createDirectViaUi(page, a.username);
+  await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+
+  const input = page.getByTestId('message-input');
+  await input.fill('привет мир');
+
+  // Выделяем текст
+  await input.evaluate((el: HTMLTextAreaElement) => {
+    el.setSelectionRange(0, 6);
+    el.dispatchEvent(new Event('select'));
+  });
+
+  // Панель должна появиться
+  await expect(page.getByTestId('formatting-bar')).toBeVisible();
+});
+
+test('форматирование: клик Bold оборачивает выделение', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const a = await registerViaUi(page);
+  const b = await registerViaUi(page);
+
+  await createDirectViaUi(page, a.username);
+  await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+
+  const input = page.getByTestId('message-input');
+  await input.fill('привет мир');
+
+  // Выделяем "привет"
+  await input.evaluate((el: HTMLTextAreaElement) => {
+    el.setSelectionRange(0, 6);
+    el.dispatchEvent(new Event('select'));
+  });
+
+  // Кликаем Bold
+  await page.getByTestId('format-bold').click();
+
+  // Проверяем что текст обёрнут
+  await expect(input).toHaveValue('**привет** мир');
+});
+
+test('горячие клавиши: Ctrl+B для bold', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const a = await registerViaUi(page);
+  const b = await registerViaUi(page);
+
+  await createDirectViaUi(page, a.username);
+  await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+
+  const input = page.getByTestId('message-input');
+  await input.fill('текст');
+  await input.focus();
+
+  // Выделяем весь текст
+  await input.evaluate((el: HTMLTextAreaElement) => {
+    el.setSelectionRange(0, 4);
+  });
+
+  // Нажимаем Ctrl+B
+  await input.press('Control+b');
+
+  // Проверяем что текст обёрнут
+  await expect(input).toHaveValue('**текст**');
+});

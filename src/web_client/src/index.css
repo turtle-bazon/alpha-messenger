@@ -1351,6 +1351,208 @@ body {
   color: var(--text-muted);
 }
 
+/* ─── WYSIWYG-композер (#69) ─────────────────────────────────────── */
+
+.composer-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.composer-rendered,
+.composer-raw {
+  min-width: 0;
+  padding: 11px 6px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Overlay с отрендеренным markdown */
+.composer-rendered {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow-y: auto;
+  max-height: 160px;
+}
+
+.composer-rendered .mention-highlight {
+  color: var(--accent);
+  background: rgba(51, 144, 236, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.composer-rendered .message-code {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+[data-theme='dark'] .composer-rendered .message-code {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.composer-rendered .message-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Скрытый textarea (источник правды) */
+.composer-raw {
+  position: relative;
+  width: 100%;
+  outline: none;
+  resize: none;
+  max-height: 160px;
+  overflow-y: auto;
+  /* Делаем текст прозрачным, чтобы caret был виден, а текст — нет */
+  color: transparent;
+  caret-color: var(--text);
+}
+
+.composer-raw::placeholder {
+  color: var(--text-muted);
+}
+
+/* Плейсхолдер в overlay */
+.composer-placeholder {
+  color: var(--text-muted);
+}
+
+/* ─── Панель форматирования (#69) ────────────────────────────────── */
+
+.formatting-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.formatting-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.formatting-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='dark'] .formatting-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.formatting-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* ─── Диалог ввода ссылки (#69) ──────────────────────────────────── */
+
+.link-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.link-dialog {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.link-dialog h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.link-dialog label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.link-dialog input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.link-dialog input:focus {
+  border-color: var(--accent);
+}
+
+.link-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.link-dialog-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.link-dialog-buttons button:first-child {
+  background: none;
+  color: var(--text);
+}
+
+.link-dialog-buttons button:last-child {
+  background: var(--accent);
+  color: #fff;
+}
+
+.link-dialog-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Кнопка отправки — круглая, акцентная, ВСЕГДА видна на стабильной позиции
    (задача #19). При пустом поле — погашена (disabled), без анимации появления. */
 .conv-send {
