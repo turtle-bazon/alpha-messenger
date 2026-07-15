@@ -1015,7 +1015,8 @@ export function Conversation({
                   (groupStart ? ' is-group-start' : '') +
                   (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
-                  (m.failed ? ' bubble-failed' : '')
+                  (m.failed ? ' bubble-failed' : '') +
+                  (m.replyToMessageId && messages.some((x) => x.messageId === m.replyToMessageId && x.senderId === myId) ? ' bubble-reply-to-me' : '')
                 }
                 onContextMenu={(e) => {
                   e.preventDefault();

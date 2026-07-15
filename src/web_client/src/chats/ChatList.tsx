@@ -169,6 +169,11 @@ export function ChatList({
                       {chat.unreadCount}
                     </span>
                   )}
+                  {chat.unreadMentions > 0 && (
+                    <span className="chat-item-mention" data-testid="chat-mention">
+                      @{chat.unreadMentions}
+                    </span>
+                  )}
                 </span>
               </button>
             );

@@ -251,6 +251,8 @@ export function HomeScreen({
         senderId: string;
         ciphertext: string;
         ts: string;
+        replyToMessageId?: string;
+        isReply?: boolean;
       };
       const chatId = ev.chatId;
       if (!chatId) return;
@@ -267,6 +269,7 @@ export function HomeScreen({
         notifyIncoming({
           title: chat ? chatTitle(chat, myId) : 'Новое сообщение',
           ciphertext: p.ciphertext,
+          isReply: p.isReply,
           onOpen: () => setSelectedId(chatId),
         });
       }

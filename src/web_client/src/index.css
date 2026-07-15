@@ -881,6 +881,11 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* Сообщение, отвечающее на меня — цветная полоска слева. */
+.bubble-reply-to-me {
+  border-left: 3px solid #e17076;
+}
+
 /* Подсветка сообщения при переходе к нему (#51).
    Полупрозрачная полоска сверху, плавно исчезающая. */
 .msg-row.is-highlighted {
@@ -1829,6 +1834,25 @@ body {
 .chat-item.is-selected .chat-item-unread {
   background: #fff;
   color: var(--accent);
+}
+
+.chat-item-mention {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #e17076;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+.chat-item.is-selected .chat-item-mention {
+  background: #fff;
+  color: #e17076;
 }
 
 /* ---- Hover/active акцентных кнопок ---- */

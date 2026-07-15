@@ -187,6 +187,7 @@ let electronClickRegistered = false;
 export function notifyIncoming(opts: {
   title: string;
   ciphertext: string;
+  isReply?: boolean;
   onOpen: () => void;
 }): void {
   // Пользователь смотрит на приложение — лишний шум не нужен (badge и список
@@ -197,7 +198,9 @@ export function notifyIncoming(opts: {
   // В Electron нативные уведомления не требуют разрешения браузера
   const isElectron = !!window.electronAPI;
   if (prefs.browser && (isElectron || getPermission() === 'granted')) {
-    const body = previewText(decodeContent(opts.ciphertext));
+    const body = opts.isReply
+      ? `Ответил(а) на ваше сообщение: ${previewText(decodeContent(opts.ciphertext))}`
+      : previewText(decodeContent(opts.ciphertext));
     // В Electron регистрируем обработчик клика один раз
     if (isElectron && !electronClickRegistered) {
       electronClickRegistered = true;
