@@ -544,10 +544,7 @@ export function Conversation({
     if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
       doHighlight();
     } else {
-      let done = false;
-      const onEnd = () => { if (!done) { done = true; doHighlight(); } };
-      el.addEventListener('scrollend', onEnd, { once: true });
-      setTimeout(onEnd, 200);
+      el.addEventListener('scrollend', () => doHighlight(), { once: true });
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
@@ -1171,12 +1168,7 @@ export function Conversation({
                                 `[data-message-id="${m.replyToMessageId}"]`,
                               );
                               if (!target) return;
-                              // Сначала скролл, потом подсветка
-                              let done = false;
-                              const startHighlight = () => {
-                                if (done) return;
-                                done = true;
-                                el.removeEventListener('scrollend', onScrollEnd);
+                              const doHighlight = () => {
                                 setMessages((prev) =>
                                   prev.map((x) =>
                                     x.messageId === m.replyToMessageId
@@ -1194,16 +1186,13 @@ export function Conversation({
                                   );
                                 }, 2000);
                               };
-                              const onScrollEnd = () => startHighlight();
                               // Если сообщение уже видно — подсвечиваем сразу
                               const rect = target.getBoundingClientRect();
                               const scrollRect = el.getBoundingClientRect();
                               if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
-                                startHighlight();
+                                doHighlight();
                               } else {
-                                el.addEventListener('scrollend', onScrollEnd, { once: true });
-                                // Фолбэк: 200ms на случай если scrollend не сработает
-                                setTimeout(onScrollEnd, 200);
+                                el.addEventListener('scrollend', () => doHighlight(), { once: true });
                                 target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                               }
                             }}
