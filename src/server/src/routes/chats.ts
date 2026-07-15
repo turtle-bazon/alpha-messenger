@@ -32,22 +32,31 @@ async function createDirect(
     return reply.code(400).send({ error: 'cannot create direct chat with self' });
   }
 
-  // дедупликация: если direct-чат с обоими участниками уже есть — вернуть его
-  const existing = await pool.query(
-    `SELECT c.chat_id FROM chats c
-     JOIN chat_members a ON a.chat_id = c.chat_id AND a.user_id = $1
-     JOIN chat_members b ON b.chat_id = c.chat_id AND b.user_id = $2
-     WHERE c.type = 'direct' LIMIT 1`,
-    [userId, otherId],
-  );
-  if (existing.rowCount! > 0) {
-    const chat = await loadChat(pool, existing.rows[0].chat_id, userId);
-    return reply.code(200).send(chat);
-  }
+  // Advisory lock по канонической паре участников (LEAST, GREATEST)
+  // защищает от гонки: два параллельных запроса не создадут дубликат.
+  const lockKey = userId < otherId
+    ? Buffer.from(userId + otherId).readInt32BE(0)
+    : Buffer.from(otherId + userId).readInt32BE(0);
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
+
+    // дедупликация: если direct-чат с обоими участниками уже есть — вернуть его
+    const existing = await client.query(
+      `SELECT c.chat_id FROM chats c
+       JOIN chat_members a ON a.chat_id = c.chat_id AND a.user_id = $1
+       JOIN chat_members b ON b.chat_id = c.chat_id AND b.user_id = $2
+       WHERE c.type = 'direct' LIMIT 1`,
+      [userId, otherId],
+    );
+    if (existing.rowCount! > 0) {
+      await client.query('COMMIT');
+      const chat = await loadChat(pool, existing.rows[0].chat_id, userId);
+      return reply.code(200).send(chat);
+    }
+
     const c = await client.query(
       "INSERT INTO chats(type, created_by) VALUES ('direct', $1) RETURNING chat_id",
       [userId],
