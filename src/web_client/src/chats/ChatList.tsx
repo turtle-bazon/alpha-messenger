@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Chat, Participant } from '../api/types';
 import { decodeContent, previewText } from '../util/content';
+import { renderMarkdown } from '../util/markdown';
 import { formatListTime } from '../util/time';
 import { IconSearch } from '../util/icons';
 import { chatTitle } from './chatTitle';
@@ -161,7 +162,11 @@ export function ChatList({
                     data-testid="chat-item-preview"
                   >
                     {chat.lastMessage
-                      ? previewText(decodeContent(chat.lastMessage.ciphertext))
+                      ? (() => {
+                          const text = previewText(decodeContent(chat.lastMessage.ciphertext));
+                          const usernames = new Set(chat.participants.map((p) => p.username));
+                          return renderMarkdown(text, usernames);
+                        })()
                       : 'Нет сообщений'}
                   </span>
                   {chat.unreadCount > 0 && (
