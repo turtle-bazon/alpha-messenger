@@ -524,20 +524,32 @@ export function Conversation({
     if (!el || !target.messageId) return;
     const targetEl = el.querySelector(`[data-message-id="${target.messageId}"]`);
     if (!targetEl) return;
-    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Подсветка
-    setMessages((prev) =>
-      prev.map((x) =>
-        x.messageId === target.messageId ? { ...x, highlighted: true } : x,
-      ),
-    );
-    setTimeout(() => {
+    const doHighlight = () => {
       setMessages((prev) =>
         prev.map((x) =>
-          x.messageId === target.messageId ? { ...x, highlighted: false } : x,
+          x.messageId === target.messageId ? { ...x, highlighted: true } : x,
         ),
       );
-    }, 2000);
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((x) =>
+            x.messageId === target.messageId ? { ...x, highlighted: false } : x,
+          ),
+        );
+      }, 2000);
+    };
+    // Если уже видно — подсвечиваем сразу
+    const rect = targetEl.getBoundingClientRect();
+    const scrollRect = el.getBoundingClientRect();
+    if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
+      doHighlight();
+    } else {
+      let done = false;
+      const onEnd = () => { if (!done) { done = true; doHighlight(); } };
+      el.addEventListener('scrollend', onEnd, { once: true });
+      setTimeout(onEnd, 200);
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   // Свайп вправо для ответа на мобильных: touch handlers
@@ -1160,14 +1172,11 @@ export function Conversation({
                               );
                               if (!target) return;
                               // Сначала скролл, потом подсветка
-                              let started = false;
-                              const onScrollEnd = () => {
-                                if (started) return;
-                                started = true;
-                                el.removeEventListener('scrollend', onScrollEnd);
-                                startHighlight();
-                              };
+                              let done = false;
                               const startHighlight = () => {
+                                if (done) return;
+                                done = true;
+                                el.removeEventListener('scrollend', onScrollEnd);
                                 setMessages((prev) =>
                                   prev.map((x) =>
                                     x.messageId === m.replyToMessageId
@@ -1185,10 +1194,18 @@ export function Conversation({
                                   );
                                 }, 2000);
                               };
-                              el.addEventListener('scrollend', onScrollEnd);
-                              // Фолбэк на случай если scrollend не сработает
-                              setTimeout(onScrollEnd, 1500);
-                              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              const onScrollEnd = () => startHighlight();
+                              // Если сообщение уже видно — подсвечиваем сразу
+                              const rect = target.getBoundingClientRect();
+                              const scrollRect = el.getBoundingClientRect();
+                              if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
+                                startHighlight();
+                              } else {
+                                el.addEventListener('scrollend', onScrollEnd, { once: true });
+                                // Фолбэк: 200ms на случай если scrollend не сработает
+                                setTimeout(onScrollEnd, 200);
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }
                             }}
                           >
                             <span className="bubble-reply-name" style={{ color: colorFor(refName) }}>
