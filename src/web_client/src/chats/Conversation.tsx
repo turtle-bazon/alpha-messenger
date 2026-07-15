@@ -43,7 +43,7 @@ import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
 import { EmojiPicker } from './EmojiPicker';
 import { MentionPopup, getFilteredParticipants } from './MentionPopup';
-import { renderMentionText } from '../util/mentions';
+import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
 
@@ -1206,7 +1206,7 @@ export function Conversation({
                       })()}
                       {m.content.text && (
                         <span className="bubble-text">
-                          {renderMentionText(
+                          {renderMessageText(
                             m.content.text,
                             new Set(chat.participants.map((p) => p.username)),
                           )}

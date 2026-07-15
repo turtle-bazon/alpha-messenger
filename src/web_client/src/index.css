@@ -2461,6 +2461,28 @@ body {
   font-weight: 500;
 }
 
+/* Ссылки в тексте сообщений */
+.message-link {
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+.message-link:hover {
+  text-decoration: underline;
+}
+
+/* Инлайн-код в сообщениях */
+.message-code {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+[data-theme='dark'] .message-code {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* Попап @-упоминаний в композере. */
 .mention-popup {
   position: absolute;
