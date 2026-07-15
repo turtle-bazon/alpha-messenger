@@ -345,12 +345,6 @@ export function Conversation({
     };
   }, [chatId, ws, myId]);
 
-  // Автофокус на поле ввода при открытии чата (задача #37): фокусируем после
-  // маунта, чтобы пользователь мог сразу начать набирать текст.
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [chatId]);
-
   // Загрузка черновика при открытии чата (#41).
   useEffect(() => {
     let cancelled = false;
@@ -1035,19 +1029,6 @@ export function Conversation({
         className="conv-scroll"
         ref={scrollRef}
         onScroll={onScroll}
-        onClick={(e) => {
-          // Фокус на поле ввода при клике в пустое место (задача #40).
-          // Игнорируем клики на сообщениях ( bubble) и интерактивных элементах.
-          const target = e.target as HTMLElement;
-          if (
-            !target.closest('.bubble') &&
-            !target.closest('button') &&
-            !target.closest('input') &&
-            !target.closest('textarea')
-          ) {
-            inputRef.current?.focus();
-          }
-        }}
       >
         {loadingMore && <div className="conv-loading">Загрузка…</div>}
         <div className="conv-messages" data-testid="messages">
@@ -1583,6 +1564,7 @@ export function Conversation({
             setPendingImage(null);
             onImagePrepared(prepared, caption);
           }}
+          onClose={() => inputRef.current?.focus()}
         />
       )}
       {viewer && (

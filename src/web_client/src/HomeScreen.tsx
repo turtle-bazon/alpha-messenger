@@ -118,7 +118,11 @@ export function HomeScreen({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;
-      if (!isModalOpen()) focusInput();
+      if (isModalOpen()) return;
+      // Если фокус уже на input/textarea — не перехватываем
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+      focusInput();
     };
     const onPaste = () => { if (!isModalOpen()) focusInput(); };
     document.addEventListener('keydown', onKeyDown);

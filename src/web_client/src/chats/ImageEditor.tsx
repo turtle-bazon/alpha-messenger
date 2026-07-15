@@ -13,10 +13,12 @@ export function ImageEditor({
   file,
   onCancel,
   onSend,
+  onClose,
 }: {
   file: File;
   onCancel: () => void;
   onSend: (prepared: PreparedImage, caption: string) => void;
+  onClose?: () => void;
 }): JSX.Element {
   const [src, setSrc] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -24,6 +26,17 @@ export function ImageEditor({
   const [rotation, setRotation] = useState(0);
   const [caption, setCaption] = useState('');
   const imgRef = useRef<HTMLImageElement>(null);
+  const captionRef = useRef<HTMLInputElement>(null);
+
+  // Фокус на поле подписи при открытии (#57)
+  useEffect(() => {
+    captionRef.current?.focus();
+  }, []);
+
+  // Возврат фокуса при закрытии (#57)
+  useEffect(() => {
+    return () => { onClose?.(); };
+  }, [onClose]);
 
   useEffect(() => {
     let alive = true;
@@ -76,6 +89,7 @@ export function ImageEditor({
             Повернуть
           </button>
           <input
+            ref={captionRef}
             data-testid="image-caption"
             aria-label="Подпись к изображению"
             placeholder="Подпись…"
