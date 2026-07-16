@@ -1359,13 +1359,12 @@ body {
   min-width: 0;
 }
 
-/* contentEditable div — как textarea */
-.composer-editable {
+/* Overlay: видимый слой с отрендеренным HTML */
+.composer-overlay {
   min-width: 0;
   padding: 11px 6px;
   border: none;
   background: none;
-  outline: none;
   font-family: inherit;
   font-size: 15px;
   line-height: 1.35;
@@ -1374,25 +1373,50 @@ body {
   word-break: break-word;
   max-height: 160px;
   overflow-y: auto;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* Textarea: невидимый, принимает ввод */
+.composer-textarea {
+  position: relative;
+  min-width: 0;
+  padding: 11px 6px;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  color: transparent;
+  caret-color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  resize: none;
+  max-height: 160px;
+  overflow-y: auto;
   flex: 1;
   width: 100%;
+  z-index: 2;
 }
 
-/* Плейсхолдер */
-.composer-editable:empty::before {
-  content: attr(data-placeholder);
+.composer-textarea::placeholder {
   color: var(--text-muted);
-  pointer-events: none;
 }
 
-.composer-rendered .mention-highlight {
+.composer-overlay .mention-highlight {
   color: var(--accent);
   background: rgba(51, 144, 236, 0.1);
   border-radius: 3px;
   padding: 0 2px;
 }
 
-.composer-rendered .message-code {
+.composer-overlay .message-code {
   background: rgba(0, 0, 0, 0.06);
   border-radius: 4px;
   padding: 1px 5px;
@@ -1400,11 +1424,11 @@ body {
   font-size: 0.9em;
 }
 
-[data-theme='dark'] .composer-rendered .message-code {
+[data-theme='dark'] .composer-overlay .message-code {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.composer-rendered .message-link {
+.composer-overlay .message-link {
   color: var(--accent);
   text-decoration: none;
 }

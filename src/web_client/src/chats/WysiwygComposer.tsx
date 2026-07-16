@@ -1,64 +1,18 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 
-// ─── HTML → Markdown конвертер ───────────────────────────────────────
-// Обходит DOM-ноды и конвертирует <strong> → **, <em> → _, и т.д.
-// Вызывается при отправке и при синхронизации состояния.
-
-function htmlToMarkdown(html: string): string {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return nodeToMarkdown(div);
-}
-
-function nodeToMarkdown(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) {
-    return node.textContent ?? '';
-  }
-  if (node.nodeType !== Node.ELEMENT_NODE) return '';
-
-  const el = node as HTMLElement;
-  const tag = el.tagName.toLowerCase();
-  const children = Array.from(el.childNodes).map(nodeToMarkdown).join('');
-
-  switch (tag) {
-    case 'strong':
-    case 'b':
-      return children.trim() ? `**${children}**` : '';
-    case 'em':
-    case 'i':
-      return children.trim() ? `_${children}_` : '';
-    case 'code':
-      return `\`${children}\``;
-    case 'del':
-    case 's':
-      return children.trim() ? `~~${children}~~` : '';
-    case 'a': {
-      const href = el.getAttribute('href') ?? '';
-      return children.trim() ? `[${children}](${href})` : '';
-    }
-    case 'br':
-      return '\n';
-    case 'div':
-    case 'p':
-      return children + '\n';
-    default:
-      return children;
-  }
-}
-
-// ─── Markdown → HTML (для начального рендера/восстановления черновика) ──
+// ─── Markdown → HTML (для рендера в overlay-div) ────────────────────
 
 function markdownToHtml(md: string): string {
-  let result = md;
-  result = result.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
-  result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  result = result.replace(/_(.+?)_/g, '<em>$1</em>');
-  result = result.replace(/~~(.+?)~~/g, '<del>$1</del>');
-  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  result = result.replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1">$1</a>');
-  result = result.replace(/\n/g, '<br>');
-  return result;
+  let r = md;
+  r = r.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  r = r.replace(/`([^`]+)`/g, '<code>$1</code>');
+  r = r.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  r = r.replace(/_(.+?)_/g, '<em>$1</em>');
+  r = r.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  r = r.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  r = r.replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1">$1</a>');
+  r = r.replace(/\n/g, '<br>');
+  return r;
 }
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -71,16 +25,22 @@ export interface WysiwygComposerHandle {
 export interface WysiwygComposerProps {
   value: string;
   onChange: (value: string) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
-  onPaste?: (e: React.ClipboardEvent<HTMLDivElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onSelect?: (selectionStart: number, selectionEnd: number) => void;
-  divRef: React.RefObject<HTMLDivElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
   usernames: Set<string>;
   placeholder?: string;
   'data-testid'?: string;
 }
 
 // ─── Компонент ───────────────────────────────────────────────────────
+//
+// Два слоя:
+// 1. Textarea (z-index 2, opacity 0) — принимает ввод, хранит raw-текст
+// 2. Div (z-index 1, pointer-events none) — рендерит отформатированный HTML
+//
+// Пользователь видит ТОЛЬКО div. Textarea невидима, но получает фокус и ввод.
 
 export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposerProps>(
   function WysiwygComposer(
@@ -90,97 +50,80 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       onKeyDown,
       onPaste,
       onSelect,
-      divRef,
+      textareaRef,
       usernames: _usernames,
       placeholder = 'Сообщение…',
       'data-testid': testId = 'message-input',
     },
     ref,
   ): JSX.Element {
-    const lastValueRef = useRef(value);
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const isProgrammaticRef = useRef(false);
 
-    // Expose getMarkdown / setMarkdown родителю
+    // Expose getMarkdown / setMarkdown
     useImperativeHandle(ref, () => ({
-      getMarkdown(): string {
-        const el = divRef.current;
-        if (!el) return '';
-        return htmlToMarkdown(el.innerHTML);
-      },
+      getMarkdown(): string { return textareaRef.current?.value ?? ''; },
       setMarkdown(md: string): void {
-        const el = divRef.current;
-        if (!el) return;
-        if (md) {
-          el.innerHTML = markdownToHtml(md);
-        } else {
-          el.innerHTML = '';
-        }
-        lastValueRef.current = md;
+        const ta = textareaRef.current;
+        if (!ta) return;
+        isProgrammaticRef.current = true;
+        ta.value = md;
+        onChange(md);
+        isProgrammaticRef.current = false;
       },
     }));
 
-    // Синхронизация извне (восстановление черновика, отправленное сообщение → очистка).
-    // Ключевой guard: если div в фокусе — НЕ трогаем innerHTML,
-    // чтобы не ломать редактирование и не показывать raw markdown.
+    // Рендер markdown → overlay div при изменении value
     useEffect(() => {
-      const el = divRef.current;
-      if (!el) return;
-      // Пользователь редактирует — не вмешиваемся
-      if (el === document.activeElement) return;
-      // Значение не изменилось — пропускаем
-      if (value === lastValueRef.current) return;
-      lastValueRef.current = value;
+      const overlay = overlayRef.current;
+      if (!overlay) return;
+      if (isProgrammaticRef.current) return;
+      overlay.innerHTML = value ? markdownToHtml(value) : '';
+    }, [value]);
 
-      const html = value ? markdownToHtml(value) : '';
-      if (el.innerHTML !== html) {
-        el.innerHTML = html;
-      }
-    }, [value, divRef]);
-
-    // Ввод текста — конвертируем innerHTML → markdown и передаём родителю.
-    // useEffect-guard предотвращает обратную конвертацию (innerHTML overwrite),
-    // потому что div в фокусе.
+    // Ввод текста → передаём родителю
     const handleInput = useCallback(() => {
-      const el = divRef.current;
-      if (!el) return;
-      const md = htmlToMarkdown(el.innerHTML);
-      lastValueRef.current = md;
-      onChange(md);
-    }, [divRef, onChange]);
+      const ta = textareaRef.current;
+      if (!ta) return;
+      onChange(ta.value);
+    }, [textareaRef, onChange]);
 
-    // Выделение текста — определяем реальную позицию курсора/выделения
-    // для видимости панели форматирования.
-    const checkSelection = useCallback(() => {
+    // Выделение текста → позиция для тулбара форматирования
+    const handleSelect = useCallback(() => {
       if (!onSelect) return;
-      const el = divRef.current;
-      if (!el) return;
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return;
+      const ta = textareaRef.current;
+      if (!ta) return;
+      onSelect(ta.selectionStart, ta.selectionEnd);
+    }, [textareaRef, onSelect]);
 
-      const range = sel.getRangeAt(0);
-      const preRange = document.createRange();
-      preRange.selectNodeContents(el);
-      preRange.setEnd(range.startContainer, range.startOffset);
-      const start = preRange.toString().length;
-      const end = start + range.toString().length;
-      onSelect(start, end);
-    }, [divRef, onSelect]);
+    // Синхронизация скролла textarea → overlay
+    const handleScroll = useCallback(() => {
+      const ta = textareaRef.current;
+      const ov = overlayRef.current;
+      if (ta && ov) ov.scrollTop = ta.scrollTop;
+    }, [textareaRef]);
 
     return (
       <div className="composer-wrapper">
+        {/* Overlay: видимый слой с отрендеренным HTML */}
         <div
-          ref={divRef}
-          className="composer-editable"
+          ref={overlayRef}
+          className="composer-overlay"
+          aria-hidden="true"
+        />
+        {/* Textarea: невидимый, но получает фокус и ввод */}
+        <textarea
+          ref={textareaRef}
+          className="composer-textarea"
           data-testid={testId}
-          contentEditable
-          role="textbox"
-          aria-label="Сообщение"
-          data-placeholder={placeholder}
+          placeholder={placeholder}
+          rows={1}
           onInput={handleInput}
-          onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLDivElement>}
-          onPaste={onPaste as React.ClipboardEventHandler<HTMLDivElement>}
-          onClick={checkSelection}
-          onKeyUp={checkSelection}
-          suppressContentEditableWarning
+          onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLTextAreaElement>}
+          onPaste={onPaste as React.ClipboardEventHandler<HTMLTextAreaElement>}
+          onSelect={handleSelect}
+          onClick={handleSelect}
+          onScroll={handleScroll}
         />
       </div>
     );

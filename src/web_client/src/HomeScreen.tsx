@@ -84,7 +84,7 @@ export function HomeScreen({
   const chatsRef = useRef<Chat[]>([]);
   chatsRef.current = chats;
   // Ссылка на поле ввода сообщений — для глобального фокуса (задача #40).
-  const inputRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   function toggleTheme(): void {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';

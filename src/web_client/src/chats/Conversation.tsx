@@ -159,7 +159,7 @@ export function Conversation({
   onlineUsers: Set<string>;
   awayUsers: Set<string>;
   typingUsers: Map<string, string>;
-  inputRef: React.RefObject<HTMLDivElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement>;
   onBack: () => void;
 }): JSX.Element {
   const chatId = chat.chatId;
@@ -514,67 +514,53 @@ export function Conversation({
     }
   }
 
-  // Форматирование через execCommand (contentEditable)
-  function execFormat(command: string, value?: string): void {
-    document.execCommand(command, false, value);
-    // Обновляем state после форматирования
-    const el = inputRef.current;
-    if (el) {
-      const markdown = htmlToMarkdownSimple(el.innerHTML);
-      setInput(markdown);
-    }
-  }
-
-  // Простая конвертация HTML → markdown
-  function htmlToMarkdownSimple(html: string): string {
-    let result = html;
-    result = result.replace(/<strong>(.*?)<\/strong>/g, '**$1**');
-    result = result.replace(/<b>(.*?)<\/b>/g, '**$1**');
-    result = result.replace(/<em>(.*?)<\/em>/g, '_$1_');
-    result = result.replace(/<i>(.*?)<\/i>/g, '_$1_');
-    result = result.replace(/<code>(.*?)<\/code>/g, '`$1`');
-    result = result.replace(/<del>(.*?)<\/del>/g, '~~$1~~');
-    result = result.replace(/<s>(.*?)<\/s>/g, '~~$1~~');
-    result = result.replace(/<a href="([^"]*)">(.*?)<\/a>/g, '[$2]($1)');
-    result = result.replace(/<br\s*\/?>/g, '\n');
-    result = result.replace(/<div>(.*?)<\/div>/g, '$1\n');
-    result = result.replace(/<p>(.*?)<\/p>/g, '$1\n');
-    // Убираем оставшиеся теги
-    result = result.replace(/<[^>]+>/g, '');
-    return result;
+  // Форматирование выделенного текста в textarea
+  function wrapSelection(before: string, after: string): void {
+    const ta = inputRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = input.slice(start, end);
+    const newValue = input.slice(0, start) + before + selected + after + input.slice(end);
+    setInput(newValue);
+    // Восстанавливаем выделение после React re-render
+    requestAnimationFrame(() => {
+      ta.selectionStart = start + before.length;
+      ta.selectionEnd = end + before.length;
+      ta.focus();
+    });
   }
 
   // Кнопки форматирования
-  function onBold(): void { execFormat('bold'); }
-  function onItalic(): void { execFormat('italic'); }
-  function onStrike(): void { execFormat('strikeThrough'); }
-  function onCode(): void {
-    // execCommand('code') не стандартный — оборачиваем вручную
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    const text = range.toString();
-    if (!text) return;
-    range.deleteContents();
-    range.insertNode(document.createTextNode('`' + text + '`'));
-    // Обновляем state
-    const el = inputRef.current;
-    if (el) {
-      const markdown = htmlToMarkdownSimple(el.innerHTML);
-      setInput(markdown);
-    }
-  }
+  function onBold(): void { wrapSelection('**', '**'); }
+  function onItalic(): void { wrapSelection('_', '_'); }
+  function onStrike(): void { wrapSelection('~~', '~~'); }
+  function onCode(): void { wrapSelection('`', '`'); }
 
   // Диалог ввода ссылки
   function onLink(): void {
-    const sel = window.getSelection();
-    const selected = sel?.toString() ?? '';
+    const ta = inputRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = input.slice(start, end);
     setLinkDialogText(selected);
     setLinkDialogOpen(true);
   }
 
   function onLinkInsert(_text: string, url: string): void {
-    execFormat('createLink', url);
+    const ta = inputRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const markdown = `[${_text}](${url})`;
+    const newValue = input.slice(0, start) + markdown + input.slice(end);
+    setInput(newValue);
+    requestAnimationFrame(() => {
+      ta.selectionStart = start + markdown.length;
+      ta.selectionEnd = start + markdown.length;
+      ta.focus();
+    });
   }
 
   // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
@@ -914,7 +900,7 @@ export function Conversation({
 
   // Enter — отправка, Shift+Enter — перенос строки (задача #25). isComposing
   // отсекает Enter, подтверждающий ввод IME (иероглифы и т.п.).
-  function onInputKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
+  function onInputKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
     if (e.key === 'Escape' && replyTo) {
       setReplyTo(null);
       return;
@@ -973,7 +959,7 @@ export function Conversation({
   // Вставка изображения из буфера (Ctrl/Cmd+V): если в буфере есть картинка —
   // открываем тот же редактор, что и при прикреплении через 📎 (issue #17).
   // При редактировании вложения не добавляем — обычная вставка текста.
-  function onPaste(e: ClipboardEvent<HTMLDivElement>): void {
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>): void {
     if (editing) return;
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -1619,7 +1605,7 @@ export function Conversation({
             onKeyDown={onInputKeyDown}
             onPaste={onPaste}
             onSelect={handleSelect}
-            divRef={inputRef}
+            textareaRef={inputRef}
             usernames={new Set(chat.participants.map((p) => p.username))}
             data-testid="message-input"
           />
@@ -1636,14 +1622,18 @@ export function Conversation({
         {emojiOpen && (
           <EmojiPicker
             onSelect={(emoji) => {
-              // Вставка эмодзи через execCommand
-              const el = inputRef.current;
-              if (el) {
-                el.focus();
-                document.execCommand('insertText', false, emoji);
-                // Обновляем state
-                const md = htmlToMarkdownSimple(el.innerHTML);
-                setInput(md);
+              // Вставка эмодзи в textarea
+              const ta = inputRef.current;
+              if (ta) {
+                const start = ta.selectionStart;
+                const end = ta.selectionEnd;
+                const newValue = input.slice(0, start) + emoji + input.slice(end);
+                setInput(newValue);
+                requestAnimationFrame(() => {
+                  ta.selectionStart = start + emoji.length;
+                  ta.selectionEnd = start + emoji.length;
+                  ta.focus();
+                });
               } else {
                 setInput(input + emoji);
               }
