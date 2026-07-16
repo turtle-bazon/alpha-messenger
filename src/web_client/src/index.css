@@ -1373,16 +1373,19 @@ body {
   word-break: break-word;
 }
 
-/* Overlay с отрендеренным markdown */
+/* Overlay с отрендеренным markdown — скрыт, textarea видна напрямую */
 .composer-rendered {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow-y: auto;
+  display: none;
+}
+
+/* textarea — видимый текст, как обычно */
+.composer-raw {
+  flex: 1;
+  width: 100%;
+  outline: none;
+  resize: none;
   max-height: 160px;
+  overflow-y: auto;
 }
 
 .composer-rendered .mention-highlight {
@@ -1407,28 +1410,6 @@ body {
 .composer-rendered .message-link {
   color: var(--accent);
   text-decoration: none;
-}
-
-/* Скрытый textarea (источник правды) */
-.composer-raw {
-  position: relative;
-  width: 100%;
-  outline: none;
-  resize: none;
-  max-height: 160px;
-  overflow-y: auto;
-  /* Делаем текст прозрачным, чтобы caret был виден, а текст — нет */
-  color: transparent;
-  caret-color: var(--text);
-}
-
-.composer-raw::placeholder {
-  color: var(--text-muted);
-}
-
-/* Плейсхолдер в overlay */
-.composer-placeholder {
-  color: var(--text-muted);
 }
 
 /* ─── Обёртка композера с тулбаром (#69) ─────────────────────────── */
