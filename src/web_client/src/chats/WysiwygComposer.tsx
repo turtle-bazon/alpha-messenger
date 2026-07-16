@@ -36,7 +36,7 @@ function nodeToMd(node: Node): string {
     case 'strong': case 'b': return ch.trim() ? `**${ch}**` : '';
     case 'em': case 'i': return ch.trim() ? `_${ch}_` : '';
     case 'code': return `\`${ch}\``;
-    case 'del': case 's': return ch.trim() ? `~~${ch}~~` : '';
+    case 'del': case 's': case 'strike': return ch.trim() ? `~~${ch}~~` : '';
     case 'a': { const h = el.getAttribute('href') ?? ''; return ch.trim() ? `[${ch}](${h})` : ''; }
     case 'br': return '\n';
     case 'div': case 'p': return ch + '\n';
