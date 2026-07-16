@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 
-// ─── Markdown → HTML ────────────────────────────────────────────────
+// ─── Markdown → HTML (для setMarkdown — restore draft) ──────────────
 
 function markdownToHtml(md: string): string {
   let r = md;
@@ -15,7 +15,7 @@ function markdownToHtml(md: string): string {
   return r;
 }
 
-// ─── HTML → Markdown ────────────────────────────────────────────────
+// ─── HTML → Markdown (для getMarkdown — send) ───────────────────────
 
 function htmlToMarkdown(html: string): string {
   const div = document.createElement('div');
@@ -53,7 +53,7 @@ export interface WysiwygComposerProps {
   onChange: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLDivElement>) => void;
-  onSelect?: (selectionStart: number, selectionEnd: number) => void;
+  onSelect?: (start: number, end: number) => void;
   divRef: React.RefObject<HTMLDivElement>;
   usernames: Set<string>;
   placeholder?: string;
@@ -61,10 +61,6 @@ export interface WysiwygComposerProps {
 }
 
 // ─── Компонент ───────────────────────────────────────────────────────
-//
-// Один contentEditable div. Пользователь видит отформатированный HTML.
-// Markdown-состояние синхронизируется ТОЛЬКО при blur/send,
-// чтобы не ломать innerHTML на каждом keystroke.
 
 export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposerProps>(
   function WysiwygComposer(
@@ -81,7 +77,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
     },
     ref,
   ): JSX.Element {
-    const isUpdatingRef = useRef(false);
+    const skipNextInputRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
       getMarkdown(): string {
@@ -92,13 +88,12 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       setMarkdown(md: string): void {
         const el = divRef.current;
         if (!el) return;
-        isUpdatingRef.current = true;
+        skipNextInputRef.current = true;
         el.innerHTML = md ? markdownToHtml(md) : '';
-        isUpdatingRef.current = false;
       },
     }));
 
-    // Синхронизация извне (восстановление черновика, очистка после отправки).
+    // Синхронизация извне (restore draft, clear after send).
     // При фокусе — НЕ трогаем innerHTML.
     useEffect(() => {
       const el = divRef.current;
@@ -106,29 +101,25 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       if (el === document.activeElement) return;
       const html = value ? markdownToHtml(value) : '';
       if (el.innerHTML !== html) {
-        isUpdatingRef.current = true;
+        skipNextInputRef.current = true;
         el.innerHTML = html;
-        isUpdatingRef.current = false;
       }
     }, [value, divRef]);
 
-    // Ввод текста — НЕ конвертируем innerHTML → markdown.
-    // contentEditable = source of truth для отображения.
-    // Markdown нужен только при blur/send (getMarkdown).
+    // Ввод текста — пусто. Браузер сам рендерит <strong>, <em> и т.д.
     const handleInput = useCallback(() => {
-      // No-op: innerHTML обновляется браузером напрямую.
-      // Состояние синхронизируется при blur/send.
+      if (skipNextInputRef.current) { skipNextInputRef.current = false; return; }
+      // contentEditable = source of truth. Markdown конвертируется только при send.
     }, []);
 
-    // При потере фокуса — конвертируем innerHTML → markdown и передаём родителю.
+    // Blur — синхронизируем markdown state (для draft, link preview, send button)
     const handleBlur = useCallback(() => {
       const el = divRef.current;
       if (!el) return;
-      const md = htmlToMarkdown(el.innerHTML);
-      onChange(md);
+      onChange(htmlToMarkdown(el.innerHTML));
     }, [divRef, onChange]);
 
-    // Выделение текста
+    // Выделение текста — позиция для тулбара
     const checkSelection = useCallback(() => {
       if (!onSelect) return;
       const el = divRef.current;

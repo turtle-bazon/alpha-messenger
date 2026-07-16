@@ -514,33 +514,17 @@ export function Conversation({
     }
   }
 
-  // Форматирование выделенного текста в contentEditable div
-  function wrapSelection(before: string, after: string): void {
-    const el = inputRef.current;
-    if (!el) return;
+  // Форматирование через execCommand — WYSIWYG
+  function onBold(): void { document.execCommand('bold'); }
+  function onItalic(): void { document.execCommand('italic'); }
+  function onStrike(): void { document.execCommand('strikeThrough'); }
+  function onCode(): void {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    const selected = range.toString();
-    // Вставляем текст с форматированием
-    document.execCommand('insertText', false, before + selected + after);
-    // Восстанавливаем выделение на внутренний текст
-    requestAnimationFrame(() => {
-      const newSel = window.getSelection();
-      if (newSel && newSel.rangeCount > 0) {
-        const r = newSel.getRangeAt(0);
-        r.setStart(r.startContainer, r.startOffset - after.length);
-        r.setEnd(r.endContainer, r.endOffset - after.length);
-      }
-      el.focus();
-    });
+    const text = sel.getRangeAt(0).toString();
+    if (!text) return;
+    document.execCommand('insertText', false, '`' + text + '`');
   }
-
-  // Кнопки форматирования
-  function onBold(): void { wrapSelection('**', '**'); }
-  function onItalic(): void { wrapSelection('_', '_'); }
-  function onStrike(): void { wrapSelection('~~', '~~'); }
-  function onCode(): void { wrapSelection('`', '`'); }
 
   // Диалог ввода ссылки
   function onLink(): void {
@@ -551,8 +535,7 @@ export function Conversation({
   }
 
   function onLinkInsert(_text: string, url: string): void {
-    const markdown = `[${_text}](${url})`;
-    document.execCommand('insertText', false, markdown);
+    document.execCommand('createLink', false, url);
   }
 
   // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
