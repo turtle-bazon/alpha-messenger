@@ -191,7 +191,7 @@ function renderToken(
     case 'italic':
       return <em key={`italic-${t.value.slice(0, 8)}`}>{t.value}</em>;
     case 'strike':
-      return <del key={`strike-${t.value.slice(0, 8)}`}>{t.value}</del>;
+      return <del key={`strike-${t.value.slice(0, 8)}`} style={{ textDecoration: 'line-through' }}>{t.value}</del>;
     case 'link':
       return (
         <a

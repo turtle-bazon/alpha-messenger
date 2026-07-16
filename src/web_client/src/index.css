@@ -2672,7 +2672,7 @@ body {
 
 /* Зачёркивание в сообщениях */
 .bubble del {
-  text-decoration: line-through;
+  text-decoration: line-through !important;
 }
 [data-theme='dark'] .message-code {
   background: rgba(255, 255, 255, 0.1);
