@@ -1431,15 +1431,25 @@ body {
   color: var(--text-muted);
 }
 
-/* ─── Панель форматирования (#69) ────────────────────────────────── */
+/* ─── Панель форматирования (#69) — оверлей над композером ────────── */
 
 .formatting-bar {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
   background: var(--bg);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+[data-theme='dark'] .formatting-bar {
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .formatting-btn {
