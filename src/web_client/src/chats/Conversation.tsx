@@ -47,7 +47,7 @@ import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
 import { FormattingToolbar } from './FormattingToolbar';
-import { WysiwygComposer } from './WysiwygComposer';
+import { WysiwygComposer, WysiwygComposerHandle } from './WysiwygComposer';
 import { LinkDialog } from './LinkDialog';
 
 // Исходящее изображение в очереди: сырые байты (полноразмерный блоб на загрузку)
@@ -183,6 +183,7 @@ export function Conversation({
   // Панель форматирования (#69): видимость и выделение
   const [formatBarVisible, setFormatBarVisible] = useState(false);
   const [, setSelection] = useState<{ start: number; end: number } | null>(null);
+  const composerRef = useRef<WysiwygComposerHandle>(null);
   // Диалог ввода ссылки (#69)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkDialogText, setLinkDialogText] = useState('');
@@ -869,13 +870,14 @@ export function Conversation({
   }
 
   async function doSubmit(): Promise<void> {
-    const text = input.trim();
+    const text = (composerRef.current?.getMarkdown() ?? '').trim();
     if (!text) return;
 
     if (editing) {
       const messageId = editing;
       setEditing(null);
       setInput('');
+      composerRef.current?.setMarkdown('');
       // оптимистично + событие message.edited подтвердит (правим только текст)
       setMessages((prev) =>
         prev.map((m) =>
@@ -897,6 +899,7 @@ export function Conversation({
       linkPreview && text.includes(linkPreview.url) ? linkPreview : undefined;
     const replyId = replyTo;
     setInput('');
+    composerRef.current?.setMarkdown('');
     setReplyTo(null);
     clearPreview();
     deleteDraft(chatId).catch(() => { /* ignore */ });
@@ -1610,6 +1613,7 @@ export function Conversation({
             😊
           </button>
           <WysiwygComposer
+            ref={composerRef}
             value={input}
             onChange={onInputChange}
             onKeyDown={onInputKeyDown}
