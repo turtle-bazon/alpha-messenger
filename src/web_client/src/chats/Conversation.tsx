@@ -872,6 +872,7 @@ export function Conversation({
   }
 
   async function doSubmit(): Promise<void> {
+    console.log('[DEBUG doSubmit] innerHTML:', inputRef.current?.innerHTML);
     const text = (composerRef.current?.getMarkdown() ?? '').trim();
     console.log('[DEBUG doSubmit] text:', JSON.stringify(text));
     if (!text) return;

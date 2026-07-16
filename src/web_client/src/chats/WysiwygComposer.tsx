@@ -18,9 +18,12 @@ function markdownToHtml(md: string): string {
 // ─── HTML → Markdown (для getMarkdown — send) ───────────────────────
 
 function htmlToMarkdown(html: string): string {
+  console.log('[DEBUG htmlToMarkdown] input:', html);
   const div = document.createElement('div');
   div.innerHTML = html;
-  return nodeToMd(div);
+  const result = nodeToMd(div);
+  console.log('[DEBUG htmlToMarkdown] output:', result);
+  return result;
 }
 
 function nodeToMd(node: Node): string {
