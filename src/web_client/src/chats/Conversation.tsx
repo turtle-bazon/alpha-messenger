@@ -1558,14 +1558,6 @@ export function Conversation({
           </div>
         );
       })()}
-      <FormattingToolbar
-        visible={formatBarVisible}
-        onBold={onBold}
-        onItalic={onItalic}
-        onStrike={onStrike}
-        onCode={onCode}
-        onLink={onLink}
-      />
       <form className="conv-input" onSubmit={onSubmit}>
         <input
           ref={fileInputRef}
@@ -1574,6 +1566,14 @@ export function Conversation({
           hidden
           data-testid="image-input"
           onChange={onPickFile}
+        />
+        <FormattingToolbar
+          visible={formatBarVisible}
+          onBold={onBold}
+          onItalic={onItalic}
+          onStrike={onStrike}
+          onCode={onCode}
+          onLink={onLink}
         />
         <div className="conv-input-field">
           <button
