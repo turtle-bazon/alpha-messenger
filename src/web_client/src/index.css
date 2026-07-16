@@ -1388,6 +1388,10 @@ body {
 .composer-editable::-webkit-scrollbar {
   width: 6px;
 }
+.composer-editable::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+}
 .composer-editable::-webkit-scrollbar-track {
   background: transparent;
 }
