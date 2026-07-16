@@ -1645,6 +1645,7 @@ export function Conversation({
             onKeyDown={onInputKeyDown}
             onPaste={onPaste}
             onSelect={handleSelect}
+            onBlur={() => { setFormatBarVisible(false); setSelection(null); }}
             divRef={inputRef}
             usernames={new Set(chat.participants.map((p) => p.username))}
             data-testid="message-input"

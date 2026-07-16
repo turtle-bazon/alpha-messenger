@@ -1375,6 +1375,31 @@ body {
   overflow-y: auto;
   flex: 1;
   width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+.composer-editable:focus {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+[data-theme='dark'] .composer-editable:focus {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.composer-editable::-webkit-scrollbar {
+  width: 6px;
+}
+.composer-editable::-webkit-scrollbar-track {
+  background: transparent;
+}
+.composer-editable::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+.composer-editable:focus::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+[data-theme='dark'] .composer-editable:focus::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Плейсхолдер */

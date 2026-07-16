@@ -61,6 +61,7 @@ export interface WysiwygComposerProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLDivElement>) => void;
   onSelect?: (start: number, end: number) => void;
+  onBlur?: () => void;
   divRef: React.RefObject<HTMLDivElement>;
   usernames: Set<string>;
   placeholder?: string;
@@ -77,6 +78,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       onKeyDown,
       onPaste,
       onSelect,
+      onBlur,
       divRef,
       usernames: _usernames,
       placeholder = 'Сообщение…',
@@ -123,8 +125,9 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
     const handleBlur = useCallback(() => {
       const el = divRef.current;
       if (!el) return;
-      onChange(htmlToMarkdown(el.innerHTML));
-    }, [divRef, onChange]);
+      onChange(htmlToMarkdown(el.innerHTML).replace(/\n+$/, ''));
+      onBlur?.();
+    }, [divRef, onChange, onBlur]);
 
     // Выделение текста — позиция для тулбара
     const checkSelection = useCallback(() => {
