@@ -246,7 +246,6 @@ export function renderMarkdown(
   onMentionClick?: (username: string) => void,
 ): React.ReactNode[] {
   if (!text) return [];
-  console.log('[DEBUG renderMarkdown] text:', JSON.stringify(text), 'tokens:', tokenize(extractCodeSpans(text).result).map(t => t.type + ':' + t.value).join(' | '));
 
   // Pass 1: извлекаем code-spans
   const { result, codes } = extractCodeSpans(text);
