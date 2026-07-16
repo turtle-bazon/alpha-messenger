@@ -2670,6 +2670,11 @@ body {
   font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
   font-size: 0.9em;
 }
+
+/* Зачёркивание в сообщениях */
+.bubble del {
+  text-decoration: line-through;
+}
 [data-theme='dark'] .message-code {
   background: rgba(255, 255, 255, 0.1);
 }
