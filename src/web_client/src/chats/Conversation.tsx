@@ -159,7 +159,7 @@ export function Conversation({
   onlineUsers: Set<string>;
   awayUsers: Set<string>;
   typingUsers: Map<string, string>;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  inputRef: React.RefObject<HTMLDivElement>;
   onBack: () => void;
 }): JSX.Element {
   const chatId = chat.chatId;
@@ -514,20 +514,25 @@ export function Conversation({
     }
   }
 
-  // Форматирование выделенного текста в textarea
+  // Форматирование выделенного текста в contentEditable div
   function wrapSelection(before: string, after: string): void {
-    const ta = inputRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = input.slice(start, end);
-    const newValue = input.slice(0, start) + before + selected + after + input.slice(end);
-    setInput(newValue);
-    // Восстанавливаем выделение после React re-render
+    const el = inputRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const selected = range.toString();
+    // Вставляем текст с форматированием
+    document.execCommand('insertText', false, before + selected + after);
+    // Восстанавливаем выделение на внутренний текст
     requestAnimationFrame(() => {
-      ta.selectionStart = start + before.length;
-      ta.selectionEnd = end + before.length;
-      ta.focus();
+      const newSel = window.getSelection();
+      if (newSel && newSel.rangeCount > 0) {
+        const r = newSel.getRangeAt(0);
+        r.setStart(r.startContainer, r.startOffset - after.length);
+        r.setEnd(r.endContainer, r.endOffset - after.length);
+      }
+      el.focus();
     });
   }
 
@@ -539,28 +544,15 @@ export function Conversation({
 
   // Диалог ввода ссылки
   function onLink(): void {
-    const ta = inputRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = input.slice(start, end);
+    const sel = window.getSelection();
+    const selected = sel?.toString() ?? '';
     setLinkDialogText(selected);
     setLinkDialogOpen(true);
   }
 
   function onLinkInsert(_text: string, url: string): void {
-    const ta = inputRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
     const markdown = `[${_text}](${url})`;
-    const newValue = input.slice(0, start) + markdown + input.slice(end);
-    setInput(newValue);
-    requestAnimationFrame(() => {
-      ta.selectionStart = start + markdown.length;
-      ta.selectionEnd = start + markdown.length;
-      ta.focus();
-    });
+    document.execCommand('insertText', false, markdown);
   }
 
   // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
@@ -639,17 +631,26 @@ export function Conversation({
   // Выбор пользователя из попапа @-упоминаний.
   function onMentionSelect(username: string): void {
     const el = inputRef.current;
-    const lastAt = input.lastIndexOf('@');
+    if (!el) { setMentionOpen(false); return; }
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) { setMentionOpen(false); return; }
+    const range = sel.getRangeAt(0);
+    const preRange = document.createRange();
+    preRange.selectNodeContents(el);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    const cursorPos = preRange.toString().length;
+    const currentText = el.textContent ?? '';
+    const lastAt = currentText.lastIndexOf('@');
     if (lastAt < 0) { setMentionOpen(false); return; }
-    // Удаляем текст от @ до курсора и вставляем @username
-    const before = input.slice(0, lastAt);
-    const newValue = before + '@' + username + ' ' + input.slice(lastAt + 1 + (input.slice(lastAt + 1).indexOf(' ') + 1 || input.length));
-    setInput(newValue);
+    // Выделяем от @ до курсора
+    const selectRange = document.createRange();
+    selectRange.setStart(range.startContainer, range.startOffset - (cursorPos - lastAt));
+    selectRange.setEnd(range.startContainer, range.startOffset);
+    sel.removeAllRanges();
+    sel.addRange(selectRange);
+    document.execCommand('insertText', false, '@' + username + ' ');
     setMentionOpen(false);
-    // Фокус возвращаем
-    requestAnimationFrame(() => {
-      el?.focus();
-    });
+    el.focus();
   }
 
   // Развернуть URL через сервер и собрать карточку. Токен previewReqRef отсекает
@@ -900,7 +901,7 @@ export function Conversation({
 
   // Enter — отправка, Shift+Enter — перенос строки (задача #25). isComposing
   // отсекает Enter, подтверждающий ввод IME (иероглифы и т.п.).
-  function onInputKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
+  function onInputKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     if (e.key === 'Escape' && replyTo) {
       setReplyTo(null);
       return;
@@ -959,7 +960,7 @@ export function Conversation({
   // Вставка изображения из буфера (Ctrl/Cmd+V): если в буфере есть картинка —
   // открываем тот же редактор, что и при прикреплении через 📎 (issue #17).
   // При редактировании вложения не добавляем — обычная вставка текста.
-  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>): void {
+  function onPaste(e: ClipboardEvent<HTMLDivElement>): void {
     if (editing) return;
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -1605,7 +1606,7 @@ export function Conversation({
             onKeyDown={onInputKeyDown}
             onPaste={onPaste}
             onSelect={handleSelect}
-            textareaRef={inputRef}
+            divRef={inputRef}
             usernames={new Set(chat.participants.map((p) => p.username))}
             data-testid="message-input"
           />
@@ -1622,18 +1623,11 @@ export function Conversation({
         {emojiOpen && (
           <EmojiPicker
             onSelect={(emoji) => {
-              // Вставка эмодзи в textarea
-              const ta = inputRef.current;
-              if (ta) {
-                const start = ta.selectionStart;
-                const end = ta.selectionEnd;
-                const newValue = input.slice(0, start) + emoji + input.slice(end);
-                setInput(newValue);
-                requestAnimationFrame(() => {
-                  ta.selectionStart = start + emoji.length;
-                  ta.selectionEnd = start + emoji.length;
-                  ta.focus();
-                });
+              // Вставка эмодзи через execCommand
+              const el = inputRef.current;
+              if (el) {
+                el.focus();
+                document.execCommand('insertText', false, emoji);
               } else {
                 setInput(input + emoji);
               }
