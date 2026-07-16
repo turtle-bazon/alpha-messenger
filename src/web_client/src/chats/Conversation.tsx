@@ -1558,15 +1558,7 @@ export function Conversation({
           </div>
         );
       })()}
-      <form className="conv-input" onSubmit={onSubmit}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          hidden
-          data-testid="image-input"
-          onChange={onPickFile}
-        />
+      <div className="conv-composer-wrap">
         <FormattingToolbar
           visible={formatBarVisible}
           onBold={onBold}
@@ -1575,7 +1567,16 @@ export function Conversation({
           onCode={onCode}
           onLink={onLink}
         />
-        <div className="conv-input-field">
+        <form className="conv-input" onSubmit={onSubmit}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            data-testid="image-input"
+            onChange={onPickFile}
+          />
+          <div className="conv-input-field">
           <button
             type="button"
             className="conv-attach"
@@ -1650,6 +1651,7 @@ export function Conversation({
           />
         )}
       </form>
+      </div>
       {pendingImage && (
         <ImageEditor
           file={pendingImage}
