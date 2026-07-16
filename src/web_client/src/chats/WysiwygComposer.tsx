@@ -133,6 +133,18 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       onSelect(preRange.toString().length, preRange.toString().length + range.toString().length);
     }, [divRef, onSelect]);
 
+    // Копирование — гарантируем rich text (HTML) в буфере
+    const handleCopy = useCallback((e: React.ClipboardEvent) => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      const fragment = range.cloneContents();
+      const div = document.createElement('div');
+      div.appendChild(fragment);
+      e.clipboardData.setData('text/html', div.innerHTML);
+      e.clipboardData.setData('text/plain', sel.toString());
+    }, []);
+
     return (
       <div className="composer-wrapper">
         <div
@@ -147,6 +159,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
           onBlur={handleBlur}
           onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLDivElement>}
           onPaste={onPaste as React.ClipboardEventHandler<HTMLDivElement>}
+          onCopy={handleCopy}
           onClick={checkSelection}
           onKeyUp={checkSelection}
           suppressContentEditableWarning

@@ -1162,7 +1162,16 @@ export function Conversation({
                     items.push({ label: 'Редактировать', icon: <IconEdit />, onClick: () => startEdit(m) });
                   }
                   items.push({ separator: true, label: '', onClick: () => {} });
-                  items.push({ label: 'Копировать текст', icon: <IconCopy />, onClick: () => navigator.clipboard.writeText(m.content.text) });
+                  items.push({ label: 'Копировать текст', icon: <IconCopy />, onClick: () => {
+                    // Strip markdown: **, _, ~~, `
+                    const plain = m.content.text
+                      .replace(/\*\*(.+?)\*\*/g, '$1')
+                      .replace(/_(.+?)_/g, '$1')
+                      .replace(/~~(.+?)~~/g, '$1')
+                      .replace(/`([^`]+)`/g, '$1')
+                      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+                    navigator.clipboard.writeText(plain);
+                  } });
                   if (canDelete) {
                     items.push({ separator: true, label: '', onClick: () => {} });
                     items.push({ label: 'Удалить', icon: <IconTrash />, onClick: () => onDelete(m), danger: true });
@@ -1260,7 +1269,20 @@ export function Conversation({
                         );
                       })()}
                       {m.content.text && (
-                        <span className="bubble-text">
+                        <span
+                          className="bubble-text"
+                          onCopy={(e) => {
+                            e.preventDefault();
+                            const sel = window.getSelection();
+                            if (!sel || sel.rangeCount === 0) return;
+                            const range = sel.getRangeAt(0);
+                            const fragment = range.cloneContents();
+                            const div = document.createElement('div');
+                            div.appendChild(fragment);
+                            e.clipboardData?.setData('text/html', div.innerHTML);
+                            e.clipboardData?.setData('text/plain', sel.toString());
+                          }}
+                        >
                           {renderMessageText(
                             m.content.text,
                             new Set(chat.participants.map((p) => p.username)),
