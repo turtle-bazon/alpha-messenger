@@ -37,7 +37,14 @@ function nodeToMd(node: Node): string {
     case 'a': { const h = el.getAttribute('href') ?? ''; return ch.trim() ? `[${ch}](${h})` : ''; }
     case 'br': return '\n';
     case 'div': case 'p': return ch + '\n';
-    default: return ch;
+    default: {
+      // <span style="text-decoration: line-through"> из execCommand('strikeThrough')
+      const style = el.getAttribute('style') ?? '';
+      if (/text-decoration\s*:\s*line-through/.test(style)) {
+        return ch.trim() ? `~~${ch}~~` : '';
+      }
+      return ch;
+    }
   }
 }
 
