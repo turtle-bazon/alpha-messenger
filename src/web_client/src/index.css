@@ -1373,19 +1373,64 @@ body {
   word-break: break-word;
 }
 
-/* Overlay с отрендеренным markdown — скрыт, textarea видна напрямую */
+/* Overlay с отрендеренным markdown — поверх textarea */
 .composer-rendered {
-  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow-y: auto;
+  max-height: 160px;
+  z-index: 1;
 }
 
-/* textarea — видимый текст, как обычно */
+.composer-rendered .mention-highlight {
+  color: var(--accent);
+  background: rgba(51, 144, 236, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.composer-rendered .message-code {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+[data-theme='dark'] .composer-rendered .message-code {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.composer-rendered .message-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Плейсхолдер в overlay */
+.composer-placeholder {
+  color: var(--text-muted);
+}
+
+/* Textarea — текст прозрачный, caret виден */
 .composer-raw {
+  position: relative;
   flex: 1;
   width: 100%;
   outline: none;
   resize: none;
   max-height: 160px;
   overflow-y: auto;
+  color: transparent;
+  caret-color: var(--text);
+  z-index: 2;
+}
+
+.composer-raw::placeholder {
+  color: transparent;
 }
 
 .composer-rendered .mention-highlight {
