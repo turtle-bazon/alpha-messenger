@@ -48,6 +48,11 @@ import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
 import { FormattingToolbar } from './FormattingToolbar';
 import { WysiwygComposer, WysiwygComposerHandle } from './WysiwygComposer';
+import {
+  getChatMessages,
+  putMessages,
+  patchMessage,
+} from '../util/messageCache';
 import { LinkDialog } from './LinkDialog';
 
 // Исходящее изображение в очереди: сырые байты (полноразмерный блоб на загрузку)
@@ -270,6 +275,13 @@ export function Conversation({
     shownUrlRef.current = null;
     previewReqRef.current++;
     dismissedRef.current.clear();
+    // Показываем кеш мгновенно, параллельно тянем свежие данные с сервера.
+    getChatMessages(chatId).then((cached) => {
+      if (!alive || !cached.length) return;
+      setMessages(cached.map(fromHistory).sort(order));
+      atBottomRef.current = true;
+    }).catch(() => undefined);
+
     getMessages(chatId, { limit: PAGE })
       .then((page) => {
         if (!alive) return;
@@ -277,6 +289,7 @@ export function Conversation({
         setHasMore(page.hasMore);
         setNextBefore(page.nextBefore);
         atBottomRef.current = true;
+        putMessages(chatId, page.messages).catch(() => undefined);
       })
       .catch(() => undefined);
 
@@ -305,6 +318,16 @@ export function Conversation({
             replyToMessageId: p.replyToMessageId ?? null,
           }),
         );
+        // Кеш: сохраняем wire-объект
+        putMessages(chatId, [{
+          messageId: p.messageId,
+          senderId: p.senderId,
+          ciphertext: p.ciphertext,
+          ts: p.ts,
+          editedAt: null,
+          deleted: false,
+          replyToMessageId: p.replyToMessageId ?? null,
+        }]).catch(() => undefined);
       }),
       ws.on('message.edited', (ev: ServerEvent) => {
         if (ev.chatId !== chatId) return;
@@ -316,6 +339,10 @@ export function Conversation({
               : m,
           ),
         );
+        patchMessage(chatId, p.messageId, {
+          ciphertext: p.ciphertext,
+          editedAt: new Date().toISOString(),
+        }).catch(() => undefined);
       }),
       ws.on('message.deleted', (ev: ServerEvent) => {
         if (ev.chatId !== chatId) return;
@@ -325,6 +352,7 @@ export function Conversation({
             m.messageId === p.messageId ? { ...m, deleted: true } : m,
           ),
         );
+        patchMessage(chatId, p.messageId, { deleted: true }).catch(() => undefined);
       }),
       ws.on('message.read', (ev: ServerEvent) => {
         if (ev.chatId !== chatId) return;
@@ -345,6 +373,7 @@ export function Conversation({
               : m,
           ),
         );
+        patchMessage(chatId, p.messageId, { reactions: p.reactions }).catch(() => undefined);
       }),
     ];
     return () => {
@@ -705,6 +734,7 @@ export function Conversation({
         });
         setHasMore(page.hasMore);
         setNextBefore(page.nextBefore);
+        putMessages(chatId, page.messages).catch(() => undefined);
         requestAnimationFrame(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollTop =

@@ -2,6 +2,8 @@
 // deviceId генерится один раз и переживает перезагрузки (одно «устройство» = один
 // браузерный профиль). Постоянного кэша сообщений в v1 нет (см. architecture.md).
 
+import { clearAll as clearMessageCache } from '../util/messageCache';
+
 const TOKEN_KEY = 'alpha.token';
 const DEVICE_KEY = 'alpha.deviceId';
 const USER_KEY = 'alpha.userId';
@@ -25,6 +27,7 @@ export function clearSession(): void {
   if (uid) localStorage.removeItem(`${SEQ_KEY}.${uid}`);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  clearMessageCache().catch(() => undefined);
 }
 
 // Курсор потока событий (последний виденный seq из outbox), сохранённый между
