@@ -101,3 +101,7 @@
 
 ## Связь с другими задачами
 - #68 (markdown) — парсер уже готов, эта задача добавляет UI для создания markdown
+
+## Исправления по ходу
+- Баг: Chromium создаёт `<strike>` при `execCommand('strikeThrough')`, а `nodeToMd` обрабатывал только `<del>` и `<s>`. Исправлено: добавлен `case 'strike'` в switch.
+- CSS: `.bubble del { text-decoration: line-through !important }` + инлайн-стиль `style={{ textDecoration: 'line-through' }}` на `<del>` в renderToken как страховка.
