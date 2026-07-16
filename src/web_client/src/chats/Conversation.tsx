@@ -159,7 +159,7 @@ export function Conversation({
   onlineUsers: Set<string>;
   awayUsers: Set<string>;
   typingUsers: Map<string, string>;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  inputRef: React.RefObject<HTMLDivElement>;
   onBack: () => void;
 }): JSX.Element {
   const chatId = chat.chatId;
@@ -182,7 +182,7 @@ export function Conversation({
   const [mentionSelected, setMentionSelected] = useState(0);
   // Панель форматирования (#69): видимость и выделение
   const [formatBarVisible, setFormatBarVisible] = useState(false);
-  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
+  const [, setSelection] = useState<{ start: number; end: number } | null>(null);
   // Диалог ввода ссылки (#69)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkDialogText, setLinkDialogText] = useState('');
@@ -513,52 +513,67 @@ export function Conversation({
     }
   }
 
-  // Обёртка выделенного текста markdown-разметкой
-  function wrapSelection(before: string, after: string): void {
+  // Форматирование через execCommand (contentEditable)
+  function execFormat(command: string, value?: string): void {
+    document.execCommand(command, false, value);
+    // Обновляем state после форматирования
     const el = inputRef.current;
-    if (!el || !selection) return;
-    const { start, end } = selection;
-    const selected = input.slice(start, end);
-    const newValue = input.slice(0, start) + before + selected + after + input.slice(end);
-    setInput(newValue);
-    // Восстанавливаем выделение
-    requestAnimationFrame(() => {
-      el.selectionStart = start + before.length;
-      el.selectionEnd = end + before.length;
-      el.focus();
-    });
+    if (el) {
+      const markdown = htmlToMarkdownSimple(el.innerHTML);
+      setInput(markdown);
+    }
+  }
+
+  // Простая конвертация HTML → markdown
+  function htmlToMarkdownSimple(html: string): string {
+    let result = html;
+    result = result.replace(/<strong>(.*?)<\/strong>/g, '**$1**');
+    result = result.replace(/<b>(.*?)<\/b>/g, '**$1**');
+    result = result.replace(/<em>(.*?)<\/em>/g, '_$1_');
+    result = result.replace(/<i>(.*?)<\/i>/g, '_$1_');
+    result = result.replace(/<code>(.*?)<\/code>/g, '`$1`');
+    result = result.replace(/<del>(.*?)<\/del>/g, '~~$1~~');
+    result = result.replace(/<s>(.*?)<\/s>/g, '~~$1~~');
+    result = result.replace(/<a href="([^"]*)">(.*?)<\/a>/g, '[$2]($1)');
+    result = result.replace(/<br\s*\/?>/g, '\n');
+    result = result.replace(/<div>(.*?)<\/div>/g, '$1\n');
+    result = result.replace(/<p>(.*?)<\/p>/g, '$1\n');
+    // Убираем оставшиеся теги
+    result = result.replace(/<[^>]+>/g, '');
+    return result;
   }
 
   // Кнопки форматирования
-  function onBold(): void { wrapSelection('**', '**'); }
-  function onItalic(): void { wrapSelection('_', '_'); }
-  function onStrike(): void { wrapSelection('~~', '~~'); }
-  function onCode(): void { wrapSelection('`', '`'); }
+  function onBold(): void { execFormat('bold'); }
+  function onItalic(): void { execFormat('italic'); }
+  function onStrike(): void { execFormat('strikeThrough'); }
+  function onCode(): void {
+    // execCommand('code') не стандартный — оборачиваем вручную
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const text = range.toString();
+    if (!text) return;
+    range.deleteContents();
+    range.insertNode(document.createTextNode('`' + text + '`'));
+    // Обновляем state
+    const el = inputRef.current;
+    if (el) {
+      const markdown = htmlToMarkdownSimple(el.innerHTML);
+      setInput(markdown);
+    }
+  }
 
   // Диалог ввода ссылки
   function onLink(): void {
-    const el = inputRef.current;
-    if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    const selected = input.slice(start, end);
+    const sel = window.getSelection();
+    const selected = sel?.toString() ?? '';
     setLinkDialogText(selected);
     setLinkDialogOpen(true);
   }
 
-  function onLinkInsert(text: string, url: string): void {
-    const el = inputRef.current;
-    if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    const markdown = `[${text}](${url})`;
-    const newValue = input.slice(0, start) + markdown + input.slice(end);
-    setInput(newValue);
-    requestAnimationFrame(() => {
-      el.selectionStart = start + markdown.length;
-      el.selectionEnd = start + markdown.length;
-      el.focus();
-    });
+  function onLinkInsert(_text: string, url: string): void {
+    execFormat('createLink', url);
   }
 
   // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
@@ -637,17 +652,15 @@ export function Conversation({
   // Выбор пользователя из попапа @-упоминаний.
   function onMentionSelect(username: string): void {
     const el = inputRef.current;
-    const cursorPos = el?.selectionStart ?? input.length;
     const lastAt = input.lastIndexOf('@');
     if (lastAt < 0) { setMentionOpen(false); return; }
+    // Удаляем текст от @ до курсора и вставляем @username
     const before = input.slice(0, lastAt);
-    const after = input.slice(cursorPos);
-    const newValue = before + '@' + username + ' ' + after;
+    const newValue = before + '@' + username + ' ' + input.slice(lastAt + 1 + (input.slice(lastAt + 1).indexOf(' ') + 1 || input.length));
     setInput(newValue);
     setMentionOpen(false);
+    // Фокус возвращаем
     requestAnimationFrame(() => {
-      const newPos = lastAt + username.length + 2;
-      el?.setSelectionRange(newPos, newPos);
       el?.focus();
     });
   }
@@ -898,7 +911,7 @@ export function Conversation({
 
   // Enter — отправка, Shift+Enter — перенос строки (задача #25). isComposing
   // отсекает Enter, подтверждающий ввод IME (иероглифы и т.п.).
-  function onInputKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
+  function onInputKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     if (e.key === 'Escape' && replyTo) {
       setReplyTo(null);
       return;
@@ -957,7 +970,7 @@ export function Conversation({
   // Вставка изображения из буфера (Ctrl/Cmd+V): если в буфере есть картинка —
   // открываем тот же редактор, что и при прикреплении через 📎 (issue #17).
   // При редактировании вложения не добавляем — обычная вставка текста.
-  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>): void {
+  function onPaste(e: ClipboardEvent<HTMLDivElement>): void {
     if (editing) return;
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -1602,7 +1615,7 @@ export function Conversation({
             onKeyDown={onInputKeyDown}
             onPaste={onPaste}
             onSelect={handleSelect}
-            textareaRef={inputRef}
+            divRef={inputRef}
             usernames={new Set(chat.participants.map((p) => p.username))}
             data-testid="message-input"
           />
@@ -1619,19 +1632,14 @@ export function Conversation({
         {emojiOpen && (
           <EmojiPicker
             onSelect={(emoji) => {
-              // Вставка эмодзи на позицию курсора
+              // Вставка эмодзи через execCommand
               const el = inputRef.current;
               if (el) {
-                const start = el.selectionStart ?? input.length;
-                const end = el.selectionEnd ?? input.length;
-                const newValue = input.slice(0, start) + emoji + input.slice(end);
-                setInput(newValue);
-                // Установить курсор после вставленного эмодзи
-                requestAnimationFrame(() => {
-                  el.selectionStart = start + emoji.length;
-                  el.selectionEnd = start + emoji.length;
-                  el.focus();
-                });
+                el.focus();
+                document.execCommand('insertText', false, emoji);
+                // Обновляем state
+                const md = htmlToMarkdownSimple(el.innerHTML);
+                setInput(md);
               } else {
                 setInput(input + emoji);
               }

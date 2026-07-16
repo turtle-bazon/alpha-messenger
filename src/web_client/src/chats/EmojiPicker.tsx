@@ -394,7 +394,7 @@ function saveRecent(emoji: string): void {
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
   onClose: () => void;
-  textareaRef?: React.RefObject<HTMLTextAreaElement>;
+  textareaRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function EmojiPicker({ onSelect, onClose, textareaRef }: EmojiPickerProps): JSX.Element {
