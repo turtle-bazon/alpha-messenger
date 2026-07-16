@@ -856,7 +856,6 @@ body {
 .bubble-actions button svg {
   width: 16px;
   height: 16px;
-}
   transition: color 0.15s, background 0.15s;
 }
 
