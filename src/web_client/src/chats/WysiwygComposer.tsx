@@ -44,8 +44,9 @@ export function WysiwygComposer({
     }
   }, [textareaRef, syncScroll]);
 
-  // Обработка выделения текста
-  const handleSelect = useCallback(() => {
+  // Обработка выделения текста — используем onClick + onKeyUp вместо onSelect
+  // (React onSelect на textarea ненадёжный).
+  const checkSelection = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea && onSelect) {
       onSelect(textarea.selectionStart, textarea.selectionEnd);
@@ -79,7 +80,8 @@ export function WysiwygComposer({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
-        onSelect={handleSelect}
+        onClick={checkSelection}
+        onKeyUp={checkSelection}
       />
     </div>
   );
