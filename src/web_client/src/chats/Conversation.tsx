@@ -183,6 +183,8 @@ export function Conversation({
   // Панель форматирования (#69): видимость и выделение
   const [formatBarVisible, setFormatBarVisible] = useState(false);
   const [, setSelection] = useState<{ start: number; end: number } | null>(null);
+  // Скрывать панель когда поле пустое
+  useEffect(() => { if (!input) setFormatBarVisible(false); }, [input]);
   const composerRef = useRef<WysiwygComposerHandle>(null);
   // Диалог ввода ссылки (#69)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -848,6 +850,7 @@ export function Conversation({
       setEditing(null);
       setInput('');
       composerRef.current?.setMarkdown('');
+      setFormatBarVisible(false);
       // оптимистично + событие message.edited подтвердит (правим только текст)
       setMessages((prev) =>
         prev.map((m) =>
@@ -870,6 +873,7 @@ export function Conversation({
     const replyId = replyTo;
     setInput('');
     composerRef.current?.setMarkdown('');
+    setFormatBarVisible(false);
     setReplyTo(null);
     clearPreview();
     deleteDraft(chatId).catch(() => { /* ignore */ });
