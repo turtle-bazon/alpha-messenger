@@ -873,6 +873,7 @@ export function Conversation({
 
   async function doSubmit(): Promise<void> {
     const text = (composerRef.current?.getMarkdown() ?? '').trim();
+    console.log('[DEBUG doSubmit] text:', JSON.stringify(text));
     if (!text) return;
 
     if (editing) {
