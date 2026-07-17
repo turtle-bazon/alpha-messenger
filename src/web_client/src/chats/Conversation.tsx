@@ -445,6 +445,17 @@ export function Conversation({
     return () => cancelAnimationFrame(id);
   }, [messages, draftKey]);
 
+  // На мобилках при открытии чата contentEditable может получить фокус и
+  // открыть клавиатуру — снимаем фокус с поля ввода при маунте (#72).
+  useEffect(() => {
+    if (!('ontouchstart' in window)) return;
+    const el = inputRef.current;
+    if (el && el === document.activeElement) {
+      el.blur();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]);
+
   // Авторасширение поля ввода под содержимое (задача #25): сбрасываем высоту и
   // подгоняем под scrollHeight, но не выше потолка — дальше внутренний скролл.
   useLayoutEffect(() => {
