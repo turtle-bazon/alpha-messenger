@@ -120,6 +120,28 @@ body {
   background: var(--page-bg);
 }
 
+/* Глобальный скроллбар — тонкий, без стрелок, одинаковый везде */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
 /* Корневой контейнер: центрирован по горизонтали, ограничен max-width.
    На узких экранах (мобильные) занимает всю доступную ширину. */
 .app-shell {
@@ -1375,35 +1397,6 @@ body {
   overflow-y: auto;
   flex: 1;
   width: 100%;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s;
-}
-.composer-editable:focus {
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-}
-[data-theme='dark'] .composer-editable:focus {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-.composer-editable::-webkit-scrollbar {
-  width: 6px;
-}
-.composer-editable::-webkit-scrollbar-button {
-  display: none;
-  height: 0;
-}
-.composer-editable::-webkit-scrollbar-track {
-  background: transparent;
-}
-.composer-editable::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 3px;
-}
-.composer-editable:focus::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-}
-[data-theme='dark'] .composer-editable:focus::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Плейсхолдер */
@@ -2953,10 +2946,8 @@ body {
 .conv-scroll::-webkit-scrollbar-button,
 .chat-list-items::-webkit-scrollbar-button,
 .modal-body::-webkit-scrollbar-button {
+  display: none;
   height: 0;
-  display: block;
-  background: transparent;
-  border: none;
 }
 
 .conv-scroll::-webkit-scrollbar-track,
