@@ -123,7 +123,10 @@ body {
 /* Глобальный скроллбар — тонкий, без стрелок, одинаковый везде */
 * {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+[data-theme='dark'] * {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
@@ -138,8 +141,11 @@ body {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
+}
+[data-theme='dark'] *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* Корневой контейнер: центрирован по горизонтали, ограничен max-width.
