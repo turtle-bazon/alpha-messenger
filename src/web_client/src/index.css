@@ -129,13 +129,14 @@ body {
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 *::-webkit-scrollbar-button {
-  display: none;
-  height: 0;
-  width: 0;
+  background: transparent !important;
+  border: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
@@ -2945,15 +2946,17 @@ body {
 .conv-scroll::-webkit-scrollbar,
 .chat-list-items::-webkit-scrollbar,
 .modal-body::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
   transition: --sb-thumb 0.3s ease;
 }
 
 .conv-scroll::-webkit-scrollbar-button,
 .chat-list-items::-webkit-scrollbar-button,
 .modal-body::-webkit-scrollbar-button {
-  display: none;
-  height: 0;
+  background: transparent !important;
+  border: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 
 .conv-scroll::-webkit-scrollbar-track,
