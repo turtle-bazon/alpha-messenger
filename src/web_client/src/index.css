@@ -133,10 +133,7 @@ body {
   height: 4px;
 }
 *::-webkit-scrollbar-button {
-  background: transparent !important;
-  border: none !important;
-  height: 0 !important;
-  width: 0 !important;
+  display: none;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
@@ -2953,10 +2950,7 @@ body {
 .conv-scroll::-webkit-scrollbar-button,
 .chat-list-items::-webkit-scrollbar-button,
 .modal-body::-webkit-scrollbar-button {
-  background: transparent !important;
-  border: none !important;
-  height: 0 !important;
-  width: 0 !important;
+  display: none;
 }
 
 .conv-scroll::-webkit-scrollbar-track,

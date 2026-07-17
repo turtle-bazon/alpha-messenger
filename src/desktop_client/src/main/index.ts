@@ -5,6 +5,11 @@ import { setupNotifications } from './notifications';
 
 let mainWindow: BrowserWindow | null = null;
 
+// Linux: Chromium overlay scrollbars вместо GTK-стрелок
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
