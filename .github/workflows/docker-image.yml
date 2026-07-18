@@ -39,6 +39,8 @@ jobs:
       with:
         context: src/server
         push: ${{ github.event_name != 'pull_request' }}
+        build-args: |
+          GIT_HASH=${{ github.sha }}
         tags: |
           ${{ env.SERVER_IMAGE }}:latest
           ${{ env.SERVER_IMAGE }}:${{ github.sha }}

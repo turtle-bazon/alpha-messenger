@@ -1,4 +1,6 @@
 FROM node:22-alpine AS build
+ARG GIT_HASH=dev
+ENV GIT_HASH=${GIT_HASH}
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
@@ -7,6 +9,8 @@ COPY src ./src
 RUN npm run build
 
 FROM node:22-alpine
+ARG GIT_HASH=dev
+ENV GIT_HASH=${GIT_HASH}
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev

@@ -145,11 +145,13 @@ export function HomeScreen({
 
   // Периодическая проверка версии клиента. Если на сервере новая сборка —
   // перезагружаем страницу (обновление без Ctrl+Shift+R).
-  // Для bundled-клиента (file://) проверяем version.json на сервере напрямую.
+  // На Android/ desktop bundled-клиенте проверяем version.json на сервере напрямую.
   useEffect(() => {
     let currentVersion: string | null = null;
-    const isBundled = window.location.protocol === 'file:';
-    const serverUrl = isBundled ? localStorage.getItem('alpha.serverUrl') : null;
+    const savedServerUrl = localStorage.getItem('alpha.serverUrl');
+    const isBundled = window.location.protocol === 'file:'
+      || (savedServerUrl && window.location.origin === 'https://localhost');
+    const serverUrl = isBundled ? savedServerUrl : null;
     const versionUrl = serverUrl ? `${serverUrl}/version.json` : '/version.json';
     const reloadUrl = serverUrl || undefined;
 

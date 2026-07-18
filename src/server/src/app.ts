@@ -12,6 +12,7 @@ import { presenceRoutes } from './routes/presence';
 import { pushRoutes } from './routes/push';
 import { reactionRoutes } from './routes/reactions';
 import { draftRoutes } from './routes/drafts';
+import { versionRoutes } from './routes/version';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -43,6 +44,8 @@ export function buildApp(): FastifyInstance {
   );
   // WebSocket остаётся в корне (/ws) — у прокси для него своё правило (upgrade).
   app.register(wsRoutes);
+  // version.json в корне — клиент проверяет авто-обновление.
+  app.register(versionRoutes);
 
   return app;
 }

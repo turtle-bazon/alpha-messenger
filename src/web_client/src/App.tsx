@@ -39,8 +39,16 @@ export function App(): JSX.Element {
   if (needsSetup) {
     return (
       <SetupScreen onConfigured={() => {
-        setNeedsSetup(false);
-        window.location.reload();
+        const url = localStorage.getItem('alpha.serverUrl');
+        if (url) {
+          // Загружаем web-клиент с сервера (всегда актуальная версия,
+          // как в desktop-приложении). Фолбэк на bundled не нужен —
+          // сервер отдаёт тот же SPA.
+          window.location.href = url;
+        } else {
+          setNeedsSetup(false);
+          window.location.reload();
+        }
       }} />
     );
   }
