@@ -115,11 +115,16 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       }
     }, [value, divRef]);
 
-    // Ввод текста — пусто. Браузер сам рендерит <strong>, <em> и т.д.
+    // Ввод текста — передаём plain text наружу (для @mention детекта,
+    // драфта и т.п.). Markdown конвертируется только при send.
     const handleInput = useCallback(() => {
       if (skipNextInputRef.current) { skipNextInputRef.current = false; return; }
-      // contentEditable = source of truth. Markdown конвертируется только при send.
-    }, []);
+      const el = divRef.current;
+      if (!el) return;
+      // innerText сохраняет \n для <br>/<div>, но не порождает markdown-синтаксис.
+      const text = el.innerText.replace(/\n+$/, '');
+      onChange(text);
+    }, [divRef, onChange]);
 
     // Blur — синхронизируем markdown state (для draft, link preview, send button)
     const handleBlur = useCallback(() => {
