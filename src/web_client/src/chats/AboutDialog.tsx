@@ -25,6 +25,7 @@ export function AboutDialog({ onClose }: AboutDialogProps): JSX.Element {
       >
         <h2>Alpha Messenger</h2>
         <p className="about-version">Мессенджер</p>
+        <p className="about-hash" data-testid="build-hash">{__BUILD_HASH__.slice(0, 8)}</p>
         <div className="about-section">
           <h3>Иконки</h3>
           <p>

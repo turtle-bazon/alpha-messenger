@@ -6,6 +6,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: './',
   plugins: [react()],
+  define: {
+    __BUILD_HASH__: JSON.stringify(process.env.BUILD_HASH || 'dev'),
+  },
   server: {
     port: 5173,
     strictPort: true,

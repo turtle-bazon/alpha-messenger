@@ -60,6 +60,7 @@ jobs:
         build-args: |
           VITE_API_URL=
           CLIENT_VERSION=${{ github.sha }}
+          BUILD_HASH=${{ github.sha }}
         tags: |
           ${{ env.CLIENT_IMAGE }}:latest
           ${{ env.CLIENT_IMAGE }}:${{ github.sha }}

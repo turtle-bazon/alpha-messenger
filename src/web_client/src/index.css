@@ -2512,8 +2512,16 @@ body {
 
 .about-version {
   color: var(--text-muted);
-  margin: 0 0 20px;
+  margin: 0 0 4px;
   font-size: 13px;
+}
+
+.about-hash {
+  color: var(--text-muted);
+  margin: 0 0 20px;
+  font-size: 11px;
+  font-family: monospace;
+  opacity: 0.6;
 }
 
 .about-section {

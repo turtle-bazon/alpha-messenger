@@ -12,6 +12,8 @@ ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
 # Версия клиента для автообновления (см. HomeScreen.tsx)
 ARG CLIENT_VERSION=dev
+ARG BUILD_HASH=dev
+ENV BUILD_HASH=$BUILD_HASH
 RUN npm run build && echo "{\"version\":\"${CLIENT_VERSION}\",\"ts\":$(date +%s)000}" > dist/version.json
 
 FROM nginx:alpine
