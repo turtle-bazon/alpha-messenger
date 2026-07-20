@@ -1399,8 +1399,13 @@ body {
   word-break: break-word;
   max-height: 160px;
   overflow-y: auto;
+  scrollbar-width: none;
   flex: 1;
   width: 100%;
+}
+
+.composer-editable::-webkit-scrollbar {
+  display: none;
 }
 
 /* Плейсхолдер */
