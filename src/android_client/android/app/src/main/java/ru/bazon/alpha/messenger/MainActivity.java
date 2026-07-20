@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
+import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 /**
  * Основная activity. Инициализирует Capacitor WebView и загружает
@@ -27,6 +28,9 @@ public class MainActivity extends BridgeActivity {
             finish();
             return;
         }
+
+        // Регистрируем локальный плагин UnifiedPush
+        this.bridge.registerPlugin(new UnifiedPushPlugin());
 
         // Инициализируем Capacitor (загружает bundled www/)
         super.onCreate(savedInstanceState);
