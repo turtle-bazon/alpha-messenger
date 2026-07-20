@@ -3,11 +3,15 @@
 // Никаких import из @capacitor/* — работаем через window.Capacitor.
 
 import { registerPlatformInit } from './util/platform';
+import { getToken } from './api/session';
+import { subscribePush } from './api/rest';
 
 type PushPlatform = 'fcm' | 'unifiedpush' | 'none';
 
 // Capacitor API доступен через window в WebView
 const Capacitor = (window as any).Capacitor;
+
+const DEVICE_ID_KEY = 'alpha.device_id';
 
 /**
  * Регистрирует android-init в platform.ts.
@@ -21,15 +25,24 @@ async function initAndroid(): Promise<void> {
   console.log('Alpha: Android client initializing...');
 
   const App = Capacitor.Plugins.App;
-  const PushNotifications = Capacitor.Plugins.PushNotifications;
 
-  const registration = await detectAndRegisterPush(PushNotifications);
+  // Устройство должно быть зарегистрировано (через auth/register или auth/login).
+  // Если токена нет — ещё не вошли, push не регистрируем.
+  if (!getToken()) {
+    console.log('Alpha: Not logged in, skipping push registration');
+    return;
+  }
+
+  const registration = await detectAndRegisterPush();
 
   if (registration) {
     console.log(`Alpha: Push registered via ${registration.platform}`);
     localStorage.setItem('alpha.push_platform', registration.platform);
     localStorage.setItem('alpha.push_token', registration.token);
     localStorage.removeItem('alpha.push_warning');
+
+    // Отправляем токен на сервер
+    await sendTokenToServer(registration);
   } else {
     console.log('Alpha: Push not available');
     localStorage.setItem('alpha.push_platform', 'none');
@@ -41,6 +54,17 @@ async function initAndroid(): Promise<void> {
   });
 }
 
+// --- Device ID ---
+
+function getDeviceId(): string {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
 // --- Push Detection ---
 
 interface PushRegistration {
@@ -48,37 +72,72 @@ interface PushRegistration {
   token: string;
 }
 
-async function detectAndRegisterPush(pn: any): Promise<PushRegistration | null> {
+async function detectAndRegisterPush(): Promise<PushRegistration | null> {
   const saved = localStorage.getItem('alpha.push_platform');
   if (saved === 'fcm' || saved === 'unifiedpush') {
-    const refreshed = await refreshRegistration(saved, pn);
+    const refreshed = await refreshRegistration(saved);
     if (refreshed) return refreshed;
     localStorage.removeItem('alpha.push_platform');
   }
 
-  const platform = await detectPlatform(pn);
-  if (platform === 'none') return null;
+  // Пробуем сначала UnifiedPush (дефолт), потом FCM (фолбэк)
+  const upResult = await tryUnifiedPush();
+  if (upResult) return upResult;
 
-  return registerPlatform(platform, pn);
-}
+  const fcmResult = await tryFCM();
+  if (fcmResult) return fcmResult;
 
-async function detectPlatform(pn: any): Promise<PushPlatform> {
-  try {
-    const result = await pn.checkPermissions();
-    if (result.receive !== 'denied') {
-      return 'fcm';
-    }
-  } catch {
-    // Google Play Services недоступны
-  }
-
-  // TODO: UnifiedPush (ntfy distributor)
-  return 'none';
-}
-
-async function registerPlatform(platform: PushPlatform, pn: any): Promise<PushRegistration | null> {
-  if (platform === 'fcm') return registerFCM(pn);
   return null;
+}
+
+async function tryUnifiedPush(): Promise<PushRegistration | null> {
+  try {
+    // UnifiedPush через Capacitor HTTP или WebView fetch
+    // Проверяем доступность ntfy distributor
+    const upPlugin = Capacitor?.Plugins?.UnifiedPush;
+    if (upPlugin) {
+      return await registerUnifiedPushNative(upPlugin);
+    }
+
+    // Фолбэк: Web UnifiedPush API (если доступен)
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      return await registerUnifiedPushWeb();
+    }
+  } catch (err) {
+    console.log('Alpha: UnifiedPush not available', err);
+  }
+  return null;
+}
+
+async function registerUnifiedPushNative(upPlugin: any): Promise<PushRegistration | null> {
+  try {
+    // Запрашиваем список доступных дистрибьюторов
+    const distributors = await upPlugin.getDistributors();
+    if (!distributors || distributors.length === 0) return null;
+
+    // Если несколько — выбираем первый (в будущем: UI выбора)
+    const distributor = distributors[0];
+
+    // Регистрируемся у дистрибьютора
+    const endpoint = await upPlugin.register({ distributor });
+    if (!endpoint) return null;
+
+    return { platform: 'unifiedpush', token: endpoint };
+  } catch {
+    return null;
+  }
+}
+
+async function registerUnifiedPushWeb(): Promise<PushRegistration | null> {
+  // Web Push через service worker — требует VAPID ключ
+  // Пока заглушка, основной путь — нативный
+  return null;
+}
+
+async function tryFCM(): Promise<PushRegistration | null> {
+  const pn = Capacitor?.Plugins?.PushNotifications;
+  if (!pn) return null;
+  return registerFCM(pn);
 }
 
 async function registerFCM(pn: any): Promise<PushRegistration | null> {
@@ -109,7 +168,29 @@ async function registerFCM(pn: any): Promise<PushRegistration | null> {
   }
 }
 
-async function refreshRegistration(platform: PushPlatform, pn: any): Promise<PushRegistration | null> {
-  if (platform === 'fcm') return registerFCM(pn);
+async function refreshRegistration(platform: PushPlatform): Promise<PushRegistration | null> {
+  if (platform === 'fcm') {
+    const pn = Capacitor?.Plugins?.PushNotifications;
+    if (pn) return registerFCM(pn);
+  }
+  if (platform === 'unifiedpush') {
+    return tryUnifiedPush();
+  }
   return null;
+}
+
+// --- Server Registration ---
+
+async function sendTokenToServer(reg: PushRegistration): Promise<void> {
+  try {
+    const deviceId = getDeviceId();
+    await subscribePush({
+      deviceId,
+      provider: reg.platform,
+      endpoint: reg.token,
+    });
+    console.log(`Alpha: Push subscription sent to server (${reg.platform})`);
+  } catch (err) {
+    console.error('Alpha: Failed to send push subscription to server', err);
+  }
 }

@@ -270,3 +270,17 @@ export function deleteDraft(chatId: string): Promise<{ ok: boolean }> {
 export function reportActivity(): Promise<{ ok: boolean }> {
   return rest.post('/me/activity');
 }
+
+// ---- Push-уведомления (#74) ----
+
+export function subscribePush(input: {
+  deviceId: string;
+  provider: string;
+  endpoint: string;
+}): Promise<{ subscriptionId: string }> {
+  return rest.post<{ subscriptionId: string }>('/push/subscriptions', input);
+}
+
+export function unsubscribePush(subscriptionId: string): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>(`/push/subscriptions/${subscriptionId}`);
+}
