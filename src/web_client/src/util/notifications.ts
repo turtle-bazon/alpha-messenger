@@ -211,3 +211,27 @@ export function notifyIncoming(opts: {
     showBrowserNotification(opts.title, body, opts.onOpen);
   }
 }
+
+// Реакция на сообщение пользователя (звук + браузерное уведомление).
+// Вызывать только для чужих реакций — свою реакцию вызывающая сторона отсекает.
+export function notifyReaction(opts: {
+  title: string;
+  reactor: string;
+  emoji: string;
+  onOpen: () => void;
+}): void {
+  if (inForeground()) return;
+  const prefs = getNotifPrefs();
+  if (prefs.sound) playSound();
+  const isElectron = !!window.electronAPI;
+  if (prefs.browser && (isElectron || getPermission() === 'granted')) {
+    const body = `${opts.reactor} поставил(а) ${opts.emoji}`;
+    if (isElectron && !electronClickRegistered) {
+      electronClickRegistered = true;
+      window.electronAPI!.onNotificationClick(() => {
+        window.electronAPI?.focus();
+      });
+    }
+    showBrowserNotification(opts.title, body, opts.onOpen);
+  }
+}

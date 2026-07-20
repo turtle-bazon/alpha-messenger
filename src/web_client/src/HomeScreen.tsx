@@ -24,6 +24,7 @@ import {
   getPermission,
   initNotifDefaults,
   notifyIncoming,
+  notifyReaction,
   requestPermission,
   setNotifBrowser,
   setUnreadBadge,
@@ -353,6 +354,32 @@ export function HomeScreen({
       );
     });
 
+    // Реакция на сообщение — уведомление (звук + browser notification).
+    // Свои реакции не уведомляем; уведомление срабатывает только когда вкладка не активна.
+    const offReaction = ws.on('message.reaction', (ev: ServerEvent) => {
+      const p = ev.payload as {
+        messageId: string;
+        userId: string;
+        emoji: string;
+        action: 'added' | 'removed';
+      };
+      const chatId = ev.chatId;
+      if (!chatId) return;
+      if (p.userId === myId) return;
+      if (p.action !== 'added') return;
+      const chat = chatsRef.current.find((c) => c.chatId === chatId);
+      const title = chat ? chatTitle(chat, myId) : 'Чат';
+      // Ищем имя реактора среди участников чата
+      const reactor = chat?.participants.find((pt) => pt.userId === p.userId);
+      const reactorName = reactor?.username ?? 'Пользователь';
+      notifyReaction({
+        title,
+        reactor: reactorName,
+        emoji: p.emoji,
+        onOpen: () => setSelectedId(chatId),
+      });
+    });
+
     // Собеседник прочитал — двигаем peerReadUpTo в объекте чата вперёд, даже если
     // чат сейчас закрыт. Тогда при открытии Conversation сидит верный статус ✓✓.
     const offReadMarker = ws.on('message.read', (ev: ServerEvent) => {
@@ -462,6 +489,7 @@ export function HomeScreen({
       offNew();
       offEdited();
       offDeleted();
+      offReaction();
       offReadMarker();
       offSynced();
       offPresence();
