@@ -12,8 +12,6 @@ type PushPlatform = 'fcm' | 'unifiedpush' | 'none';
 const Capacitor = (window as any).Capacitor;
 
 const DEVICE_ID_KEY = 'alpha.device_id';
-const UP_DISTRIBUTOR_KEY = 'alpha.up_distributor';
-const UP_ENDPOINT_KEY = 'alpha.up_endpoint';
 
 /**
  * Регистрирует android-init в platform.ts.
@@ -122,34 +120,31 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
 
     console.log('Alpha: UP distributors found:', distributors);
 
-    // Если只有一个 — используем его, если несколько — показываем выбор
+    // Если один — используем его, если несколько — показываем выбор
     let selectedDistributor: string | null;
     if (distributors.length === 1) {
       selectedDistributor = distributors[0];
     } else {
-      // Сохраняем список и показываем UI выбора
       selectedDistributor = await showDistributorPicker(distributors);
-      if (!selectedDistributor) return null; // Пользователь отменил
+      if (!selectedDistributor) return null;
     }
 
-    // Устанавливаем дистрибьютора
-    await upPlugin.setDistributor({ distributor: selectedDistributor! });
-    localStorage.setItem(UP_DISTRIBUTOR_KEY, selectedDistributor!);
-
-    // Генерируем уникальный топик
-    const topic = `alpha-${crypto.randomUUID()}`;
+    // Сохраняем дистрибьютора
+    await upPlugin.saveDistributor({ distributor: selectedDistributor });
+    console.log('Alpha: UP distributor saved:', selectedDistributor);
 
     // Регистрируемся
-    const { token } = await upPlugin.register({ topic });
-    if (!token) return null;
+    await upPlugin.register();
+    console.log('Alpha: UP registration initiated, waiting for endpoint...');
 
-    // ntfy: endpoint URL = https://ntfy.sh/{topic}
-    // Другие дистрибьюторы могут вернуть другой формат
-    const endpoint = buildEndpointUrl(selectedDistributor!, topic);
+    // Ждём endpoint от PushService (до 15 секунд)
+    const { endpoint } = await upPlugin.waitForEndpoint({ timeout: 15000 });
+    if (!endpoint) {
+      console.log('Alpha: No endpoint received from UP');
+      return null;
+    }
 
-    // Сохраняем endpoint для отправки на сервер
-    localStorage.setItem(UP_ENDPOINT_KEY, endpoint);
-
+    console.log('Alpha: UP endpoint received:', endpoint);
     return { platform: 'unifiedpush', token: endpoint };
   } catch (err) {
     console.error('Alpha: Native UP registration failed', err);
@@ -158,25 +153,108 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
 }
 
 /**
- * Построение endpoint URL из дистрибьютора и топика.
+ * Пробуем ntfy HTTP API (если ntfy запущен локально).
  */
-function buildEndpointUrl(distributor: string, topic: string): string {
-  // ntfy: https://ntfy.sh/{topic} или https://{server}/{topic}
-  // Формат: {distributor}/{topic}
-  if (distributor.startsWith('http://') || distributor.startsWith('https://')) {
-    return `${distributor.replace(/\/$/, '')}/${topic}`;
+async function tryNtfyHttp(): Promise<PushRegistration | null> {
+  try {
+    const resp = await fetch('http://localhost:80/v1/health', {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!resp.ok) return null;
+
+    console.log('Alpha: ntfy HTTP API available');
+
+    const topic = `alpha-${crypto.randomUUID()}`;
+    const endpoint = `http://localhost:80/${topic}`;
+
+    return { platform: 'unifiedpush', token: endpoint };
+  } catch {
+    return null;
   }
-  // Дефолт для ntfy.sh
-  return `https://ntfy.sh/${topic}`;
 }
 
-/**
- * Показывает UI выбора дистрибьютора.
- * Возвращает промис с выбранным дистрибьютором.
- */
+// --- FCM ---
+
+async function tryFCM(): Promise<PushRegistration | null> {
+  const pn = Capacitor?.Plugins?.PushNotifications;
+  if (!pn) return null;
+  return registerFCM(pn);
+}
+
+async function registerFCM(pn: any): Promise<PushRegistration | null> {
+  try {
+    let perm = await pn.checkPermissions();
+    if (perm.receive !== 'granted') {
+      perm = await pn.requestPermissions();
+    }
+    if (perm.receive !== 'granted') return null;
+
+    await pn.register();
+
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 10000);
+
+      pn.addListener('registration', (token: { value: string }) => {
+        clearTimeout(timeout);
+        resolve({ platform: 'fcm', token: token.value });
+      });
+
+      pn.addListener('registrationError', () => {
+        clearTimeout(timeout);
+        resolve(null);
+      });
+    });
+  } catch {
+    return null;
+  }
+}
+
+// --- Refresh ---
+
+async function refreshRegistration(platform: PushPlatform): Promise<PushRegistration | null> {
+  if (platform === 'fcm') {
+    const pn = Capacitor?.Plugins?.PushNotifications;
+    if (pn) return registerFCM(pn);
+  }
+  if (platform === 'unifiedpush') {
+    const upPlugin = Capacitor?.Plugins?.UnifiedPush;
+    if (upPlugin) {
+      try {
+        // Проверяем сохранённый endpoint
+        const { endpoint } = await upPlugin.getEndpoint();
+        if (endpoint) {
+          return { platform: 'unifiedpush', token: endpoint };
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return tryUnifiedPush();
+  }
+  return null;
+}
+
+// --- Server Registration ---
+
+async function sendTokenToServer(reg: PushRegistration): Promise<void> {
+  try {
+    const deviceId = getDeviceId();
+    await subscribePush({
+      deviceId,
+      provider: reg.platform,
+      endpoint: reg.token,
+    });
+    console.log(`Alpha: Push subscription sent to server (${reg.platform})`);
+  } catch (err) {
+    console.error('Alpha: Failed to send push subscription to server', err);
+  }
+}
+
+// --- UI ---
+
 function showDistributorPicker(distributors: string[]): Promise<string | null> {
   return new Promise((resolve) => {
-    // Создаём overlay
     const overlay = document.createElement('div');
     overlay.setAttribute('data-testid', 'up-distributor-overlay');
     overlay.style.cssText = `
@@ -185,7 +263,6 @@ function showDistributorPicker(distributors: string[]): Promise<string | null> {
       display: flex; align-items: center; justify-content: center;
     `;
 
-    // Создаём модальное окно
     const modal = document.createElement('div');
     modal.style.cssText = `
       background: var(--bg, #fff); border-radius: 12px;
@@ -244,109 +321,4 @@ function showDistributorPicker(distributors: string[]): Promise<string | null> {
 
     document.body.appendChild(overlay);
   });
-}
-
-/**
- * Пробуем ntfy HTTP API (если ntfy запущен локально).
- */
-async function tryNtfyHttp(): Promise<PushRegistration | null> {
-  try {
-    // Проверяем доступность ntfy
-    const resp = await fetch('http://localhost:80/v1/health', {
-      method: 'GET',
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!resp.ok) return null;
-
-    console.log('Alpha: ntfy HTTP API available');
-
-    // ntfy доступен — генерируем топик и регистрируемся
-    const topic = `alpha-${crypto.randomUUID()}`;
-    const endpoint = `http://localhost:80/${topic}`;
-
-    localStorage.setItem(UP_ENDPOINT_KEY, endpoint);
-    localStorage.setItem(UP_DISTRIBUTOR_KEY, 'ntfy-local');
-
-    return { platform: 'unifiedpush', token: endpoint };
-  } catch {
-    return null;
-  }
-}
-
-// --- FCM ---
-
-async function tryFCM(): Promise<PushRegistration | null> {
-  const pn = Capacitor?.Plugins?.PushNotifications;
-  if (!pn) return null;
-  return registerFCM(pn);
-}
-
-async function registerFCM(pn: any): Promise<PushRegistration | null> {
-  try {
-    let perm = await pn.checkPermissions();
-    if (perm.receive !== 'granted') {
-      perm = await pn.requestPermissions();
-    }
-    if (perm.receive !== 'granted') return null;
-
-    await pn.register();
-
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 10000);
-
-      pn.addListener('registration', (token: { value: string }) => {
-        clearTimeout(timeout);
-        resolve({ platform: 'fcm', token: token.value });
-      });
-
-      pn.addListener('registrationError', () => {
-        clearTimeout(timeout);
-        resolve(null);
-      });
-    });
-  } catch {
-    return null;
-  }
-}
-
-// --- Refresh ---
-
-async function refreshRegistration(platform: PushPlatform): Promise<PushRegistration | null> {
-  if (platform === 'fcm') {
-    const pn = Capacitor?.Plugins?.PushNotifications;
-    if (pn) return registerFCM(pn);
-  }
-  if (platform === 'unifiedpush') {
-    // Пробуем нативный плагин
-    const upPlugin = Capacitor?.Plugins?.UnifiedPush;
-    if (upPlugin) {
-      try {
-        const { token } = await upPlugin.getToken();
-        const endpoint = localStorage.getItem(UP_ENDPOINT_KEY);
-        if (token && endpoint) {
-          return { platform: 'unifiedpush', token: endpoint };
-        }
-      } catch {
-        // ignore
-      }
-    }
-    return tryUnifiedPush();
-  }
-  return null;
-}
-
-// --- Server Registration ---
-
-async function sendTokenToServer(reg: PushRegistration): Promise<void> {
-  try {
-    const deviceId = getDeviceId();
-    await subscribePush({
-      deviceId,
-      provider: reg.platform,
-      endpoint: reg.token,
-    });
-    console.log(`Alpha: Push subscription sent to server (${reg.platform})`);
-  } catch (err) {
-    console.error('Alpha: Failed to send push subscription to server', err);
-  }
 }
