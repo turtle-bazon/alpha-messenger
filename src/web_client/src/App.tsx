@@ -9,25 +9,6 @@ import { initPlatform, getPlatform } from './util/platform';
 
 type View = 'login' | 'register';
 
-// Загрузка web-клиента с сервера внутри WebView (Android).
-// WebView остаётся тем же — браузер не открывается.
-// <base href> резолвит относительные пути JS/CSS относительно сервера.
-async function loadFromServer(serverUrl: string): Promise<void> {
-  try {
-    const r = await fetch(`${serverUrl}/index.html`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const html = await r.text();
-    // Вставляем <base href> перед </head>, чтобы относительные пути работали
-    const base = `<base href="${serverUrl}/">`;
-    const patched = html.replace(/<head([^>]*)>/i, `<head$1>${base}`);
-    document.open();
-    document.write(patched);
-    document.close();
-  } catch {
-    // Сервер недоступен — работаем из bundled (ничего не делаем)
-  }
-}
-
 // Простейшая маршрутизация по location: /register?invite=CODE открывает
 // регистрацию, иначе — вход. Полноценный роутер v1 не нужен.
 function initialView(): { view: View; invite: string } {
@@ -43,21 +24,19 @@ export function App(): JSX.Element {
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
 
-  // На Android: если сервер настроен — загружаем web-клиент с сервера
-  // (всегда актуальная версия, как desktop). Bundled www/ служит только
-  // bootstrap'ом. Если сервер недоступен — работаем из bundled.
+  // На Android: нативный SetupActivity показывает экран настройки
+  // и сохраняет URL в SharedPreferences. WebView загружает
+  // web-клиент с сервера напрямую (см. MainActivity.java).
+  // Если сервер не настроен — нативный UI, без WebView.
+  // Когда WebView уже загрузился с сервера — localStorage пустой
+  // (другой origin), но это нормально: API использует window.location.origin.
   const [needsSetup, setNeedsSetup] = useState(() => {
     if (getPlatform() !== 'android') return false;
-    const saved = localStorage.getItem('alpha.serverUrl');
-    if (saved) {
-      // Загружаем index.html с сервера и заменяем текущий документ.
-      // <base href> гарантирует, что все относительные пути (JS/CSS)
-      // резолвятся относительно сервера, а не bundled https://localhost.
-      // WebView остаётся тем же — браузер не открывается.
-      loadFromServer(saved);
-      return false;
-    }
-    return true;
+    // На Android setup делает нативный SetupActivity.
+    // Проверяем localStorage на случай если web-клиент загружен
+    // из bundled (фолбэк) — тогда нужен web-setup.
+    return !localStorage.getItem('alpha.serverUrl')
+      && window.location.protocol === 'file:';
   });
 
   // Инициализация платформы (push, нативные плагины)
@@ -65,17 +44,12 @@ export function App(): JSX.Element {
     initPlatform();
   }, []);
 
-  // Setup screen — только на Android
+  // Setup screen — только на Android (пока нативный SetupActivity не реализован полностью)
   if (needsSetup) {
     return (
       <SetupScreen onConfigured={() => {
-        const url = localStorage.getItem('alpha.serverUrl');
-        if (url) {
-          loadFromServer(url);
-        } else {
-          setNeedsSetup(false);
-          window.location.reload();
-        }
+        setNeedsSetup(false);
+        window.location.reload();
       }} />
     );
   }

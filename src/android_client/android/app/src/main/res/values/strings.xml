@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Alpha</string>
+    <string name="title_activity_main">Alpha</string>
+    <string name="package_name">ru.bazon.alpha.messenger</string>
+    <string name="custom_url_scheme">ru.bazon.alpha.messenger</string>
+</resources>
