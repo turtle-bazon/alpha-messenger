@@ -461,6 +461,7 @@ body {
 .conversation {
   flex: 1;
   display: flex;
+  position: relative;
   /* Мягкий фон области переписки: лёгкий диагональный градиент поверх базового
      цвета + ненавязчивый точечный узор (как в Telegram, но сдержанно). Чистый
      CSS, без картинок. */
@@ -3230,4 +3231,59 @@ body {
 
 .settings-logout:hover {
   background: rgba(229, 57, 53, 0.08);
+}
+
+/* ==================== Scroll-to-bottom button ==================== */
+
+.scroll-to-bottom {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  animation: fadeInUp 0.2s ease;
+}
+
+.scroll-to-bottom:hover {
+  background: var(--bg-hover);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-to-bottom-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #3390ec;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
 }

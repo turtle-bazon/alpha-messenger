@@ -227,6 +227,8 @@ export function Conversation({
   const [readUpTo, setReadUpTo] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [newCount, setNewCount] = useState(0);
   const lastTypingSent = useRef(0);
   const typingFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReadSent = useRef(0);
@@ -304,6 +306,10 @@ export function Conversation({
           ts: string;
           replyToMessageId?: string;
         };
+        // Если пользователь от скролла — считаем новые
+        if (!atBottomRef.current && p.senderId !== myId) {
+          setNewCount((c) => c + 1);
+        }
         setMessages((prev) =>
           upsert(prev, {
             messageId: p.messageId,
@@ -718,7 +724,10 @@ export function Conversation({
   async function onScroll(): Promise<void> {
     const el = scrollRef.current;
     if (!el) return;
-    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    atBottomRef.current = atBottom;
+    setShowScrollBtn(!atBottom);
+    if (atBottom) setNewCount(0);
     if (el.scrollTop < 40 && hasMore && !loadingMoreRef.current && nextBefore) {
       loadingMoreRef.current = true;
       setLoadingMore(true);
@@ -757,6 +766,12 @@ export function Conversation({
         setLoadingMore(false);
       }
     }
+  }
+
+  function scrollToBottom(): void {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }
 
   // Общий путь отправки (текст и/или картинки): оптимистичное сообщение ставится
@@ -1552,6 +1567,17 @@ export function Conversation({
           </button>
         )}
       </div>
+      {showScrollBtn && (
+        <button
+          type="button"
+          className="scroll-to-bottom"
+          data-testid="scroll-to-bottom"
+          title="К последнему сообщению"
+          onClick={scrollToBottom}
+        >
+          ↓{newCount > 0 && <span className="scroll-to-bottom-badge">{newCount}</span>}
+        </button>
+      )}
       {editing && (
         <div className="conv-editing" data-testid="editing-banner">
           <span>Редактирование</span>
