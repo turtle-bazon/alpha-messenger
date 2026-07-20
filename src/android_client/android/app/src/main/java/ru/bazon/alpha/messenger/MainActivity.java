@@ -23,20 +23,16 @@ public class MainActivity extends BridgeActivity {
         String serverUrl = prefs.getString(KEY_SERVER_URL, null);
 
         if (serverUrl == null) {
-            // Сервер не настроен — нативный экран настройки
             startActivity(new Intent(this, SetupActivity.class));
             finish();
             return;
         }
 
-        // Регистрируем локальный плагин UnifiedPush
-        this.bridge.registerPlugin(new UnifiedPushPlugin());
+        // Регистрируем локальный плагин UnifiedPush (ДО super.onCreate)
+        registerPlugin(UnifiedPushPlugin.class);
 
-        // Инициализируем Capacitor (загружает bundled www/)
         super.onCreate(savedInstanceState);
 
-        // Загружаем web-клиент с сервера поверх bundled контента.
-        // WebView остаётся тем же — браузер не открывается.
         runOnUiThread(() -> getBridge().getWebView().loadUrl(serverUrl));
     }
 }

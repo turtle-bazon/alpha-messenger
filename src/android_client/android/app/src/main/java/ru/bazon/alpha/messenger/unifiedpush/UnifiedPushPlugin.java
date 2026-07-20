@@ -1,7 +1,6 @@
 package ru.bazon.alpha.messenger.unifiedpush;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
@@ -10,6 +9,8 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import static org.unifiedpush.android.connector.ConstantsKt.INSTANCE_DEFAULT;
 
 import org.unifiedpush.android.connector.UnifiedPush;
 
@@ -27,9 +28,6 @@ public class UnifiedPushPlugin extends Plugin {
     private static final String TAG = "UnifiedPushPlugin";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    /**
-     * Возвращает список доступных UP-дистрибьюторов.
-     */
     @PluginMethod
     public void getDistributors(PluginCall call) {
         executor.execute(() -> {
@@ -45,9 +43,6 @@ public class UnifiedPushPlugin extends Plugin {
         });
     }
 
-    /**
-     * Сохраняет выбранного дистрибьютора (перед register).
-     */
     @PluginMethod
     public void saveDistributor(PluginCall call) {
         String distributor = call.getString("distributor");
@@ -66,24 +61,18 @@ public class UnifiedPushPlugin extends Plugin {
         }
     }
 
-    /**
-     * Регистрирует приложение у выбранного дистрибьютора.
-     * Endpoint будет получен асинхронно через PushService → SharedPreferences.
-     * Используйте waitForEndpoint() чтобы дождаться результата.
-     */
     @PluginMethod
     public void register(PluginCall call) {
         executor.execute(() -> {
             try {
-                // Очищаем старый endpoint
                 getActivity().getSharedPreferences("unifiedpush", Context.MODE_PRIVATE)
                         .edit().remove("endpoint").apply();
 
                 UnifiedPush.register(
                         getActivity(),
-                        UnifiedPush.INSTANCE_DEFAULT,
-                        null,  // messageForDistributor
-                        null   // vapid
+                        INSTANCE_DEFAULT,
+                        null,
+                        null
                 );
 
                 JSObject result = new JSObject();
@@ -96,10 +85,6 @@ public class UnifiedPushPlugin extends Plugin {
         });
     }
 
-    /**
-     * Ожидает endpoint от PushService (поллинг SharedPreferences с таймаутом).
-     * Вызывать после register().
-     */
     @PluginMethod
     public void waitForEndpoint(PluginCall call) {
         int timeoutMs = call.getInt("timeout", 15000);
@@ -130,9 +115,6 @@ public class UnifiedPushPlugin extends Plugin {
         });
     }
 
-    /**
-     * Возвращает сохранённый endpoint (если есть).
-     */
     @PluginMethod
     public void getEndpoint(PluginCall call) {
         try {
@@ -148,14 +130,11 @@ public class UnifiedPushPlugin extends Plugin {
         }
     }
 
-    /**
-     * Отменяет регистрацию у дистрибьютора.
-     */
     @PluginMethod
     public void unregister(PluginCall call) {
         executor.execute(() -> {
             try {
-                UnifiedPush.unregister(getActivity(), UnifiedPush.INSTANCE_DEFAULT);
+                UnifiedPush.unregister(getActivity(), INSTANCE_DEFAULT);
 
                 getActivity().getSharedPreferences("unifiedpush", Context.MODE_PRIVATE)
                         .edit().clear().apply();
@@ -170,9 +149,6 @@ public class UnifiedPushPlugin extends Plugin {
         });
     }
 
-    /**
-     * Проверяет, есть ли выбранный дистрибьютор.
-     */
     @PluginMethod
     public void getAckDistributor(PluginCall call) {
         try {

@@ -1,10 +1,13 @@
 package ru.bazon.alpha.messenger.unifiedpush;
 
-import android.content.Intent;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import org.unifiedpush.android.connector.FailedReason;
 import org.unifiedpush.android.connector.PushService;
+import org.unifiedpush.android.connector.data.PushEndpoint;
+import org.unifiedpush.android.connector.data.PushMessage;
 
 /**
  * Сервис для получения push-событий от UnifiedPush дистрибьютора.
@@ -15,40 +18,33 @@ public class AlphaPushService extends PushService {
     private static final String TAG = "AlphaPushService";
 
     @Override
-    protected void onNewEndpoint(String endpoint, String instance) {
-        Log.d(TAG, "New endpoint: " + endpoint + " (instance=" + instance + ")");
+    public void onNewEndpoint(PushEndpoint endpoint, String instance) {
+        Log.d(TAG, "New endpoint: " + endpoint.getUrl() + " (instance=" + instance + ")");
 
-        // Сохраняем endpoint в SharedPreferences чтобы JavaScript мог его забрать
         SharedPreferences prefs = getApplicationContext()
-                .getSharedPreferences("unifiedpush", MODE_PRIVATE);
+                .getSharedPreferences("unifiedpush", Context.MODE_PRIVATE);
         prefs.edit()
-                .putString("endpoint", endpoint)
+                .putString("endpoint", endpoint.getUrl())
                 .putString("instance", instance)
                 .apply();
-
-        // Уведомляем JavaScript что endpoint готов
-        Intent intent = new Intent("ru.bazon.alpha.messenger.UP_ENDPOINT");
-        intent.putExtra("endpoint", endpoint);
-        intent.putExtra("instance", instance);
-        getApplicationContext().sendBroadcast(intent);
     }
 
     @Override
-    protected void onUnregistered(String instance) {
+    public void onUnregistered(String instance) {
         Log.d(TAG, "Unregistered: instance=" + instance);
 
         SharedPreferences prefs = getApplicationContext()
-                .getSharedPreferences("unifiedpush", MODE_PRIVATE);
+                .getSharedPreferences("unifiedpush", Context.MODE_PRIVATE);
         prefs.edit().clear().apply();
     }
 
     @Override
-    protected void onRegistrationFailed(String instance) {
-        Log.e(TAG, "Registration failed: instance=" + instance);
+    public void onRegistrationFailed(FailedReason reason, String instance) {
+        Log.e(TAG, "Registration failed: reason=" + reason + " instance=" + instance);
     }
 
     @Override
-    protected void onRegistrationRefused(String instance) {
-        Log.e(TAG, "Registration refused: instance=" + instance);
+    public void onMessage(PushMessage message, String instance) {
+        Log.d(TAG, "Message received: instance=" + instance);
     }
 }
