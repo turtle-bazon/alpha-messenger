@@ -9,10 +9,6 @@ import { pool } from './db';
 const FCM_PROJECT_ID = process.env.FCM_PROJECT_ID ?? '';
 const FCM_SERVICE_ACCOUNT_KEY = process.env.FCM_SERVICE_ACCOUNT_KEY ?? ''; // JSON ключ
 
-// UnifiedPush: дефолт — ntfy.sh, можно переопределить self-hosted сервером
-const UP_SERVER = process.env.UP_SERVER ?? 'https://ntfy.sh';
-const UP_TOPIC_PREFIX = process.env.UP_TOPIC_PREFIX ?? 'alpha-';
-
 // --- FCM HTTP v1 API ---
 
 interface FCMMessage {
@@ -115,8 +111,9 @@ async function getFCMAccessToken(): Promise<string | null> {
 
 async function sendUnifiedPush(endpoint: string): Promise<boolean> {
   try {
-    // endpoint — это URL дистрибьютора (например, https://ntfy.sh/alpha-xxx)
-    // ntfy API: POST с JSON телом
+    // endpoint — полный URL топика клиента (например, https://ntfy.sh/alpha-abc123)
+    // Клиент сам генерирует топик и подписывается на него в ntfy-приложении.
+    // Мы просто шлём POST на этот URL.
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

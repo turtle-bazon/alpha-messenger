@@ -118,10 +118,14 @@ async function registerUnifiedPushNative(upPlugin: any): Promise<PushRegistratio
     // Если несколько — выбираем первый (в будущем: UI выбора)
     const distributor = distributors[0];
 
-    // Регистрируемся у дистрибьютора
-    const endpoint = await upPlugin.register({ distributor });
+    // Генерируем уникальный топик для этого клиента
+    const topic = `alpha-${crypto.randomUUID()}`;
+
+    // Регистрируемся у дистрибьютора с нашим топиком
+    const endpoint = await upPlugin.register({ distributor, topic });
     if (!endpoint) return null;
 
+    // endpoint — полный URL для отправки (например, https://ntfy.sh/alpha-xxx)
     return { platform: 'unifiedpush', token: endpoint };
   } catch {
     return null;
