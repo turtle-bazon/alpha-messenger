@@ -3050,3 +3050,184 @@ body {
   pointer-events: none;
   transition: opacity 0.1s ease;
 }
+
+/* ==================== Settings Screen ==================== */
+
+.home-header-title {
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.settings-header-title {
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.settings-back {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+}
+
+.settings-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.settings-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.settings-username {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-items {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 15px;
+  transition: background var(--t-fast);
+}
+
+.settings-row:hover {
+  background: var(--bg-hover);
+}
+
+.settings-row--button {
+  cursor: pointer;
+}
+
+.settings-row-icon {
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.settings-row-text {
+  flex: 1;
+}
+
+.settings-row-value {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.settings-row-arrow {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+/* Toggle switch (iOS/Telegram style) */
+.settings-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--text-muted);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.settings-toggle::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+
+.settings-toggle:checked {
+  background: #3390ec;
+}
+
+.settings-toggle:checked::before {
+  transform: translateX(18px);
+}
+
+.settings-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-hint {
+  padding: 8px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-footer {
+  padding: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.settings-logout {
+  width: 100%;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: #e53935;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background var(--t-fast);
+}
+
+.settings-logout:hover {
+  background: rgba(229, 57, 53, 0.08);
+}

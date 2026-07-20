@@ -49,7 +49,9 @@ test('повторный логин: реплей не дёргает getChat н
   ).toBeVisible();
 
   // Выход: clearSession стирает lastSeq → следующий вход реплеит всё с нуля.
-  await page.getByRole('button', { name: 'Выйти' }).click();
+  await page.getByTestId('settings-btn').click();
+  await expect(page.getByTestId('settings-screen')).toBeVisible();
+  await page.getByTestId('settings-logout').click();
   await expect(page.getByTestId('login-screen')).toBeVisible();
 
   // Считаем точечные GET /api/chats/{uuid} (getChat) и список GET /api/chats.

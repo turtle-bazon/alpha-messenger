@@ -18,8 +18,10 @@ test('регистрация по инвайту, выход и повторны
   await expect(page.getByTestId('app-home')).toBeVisible();
   await expect(page.getByTestId('home-username')).toHaveText(username);
 
-  // Выход -> экран входа
-  await page.getByRole('button', { name: 'Выйти' }).click();
+  // Выход -> экран входа (через настройки)
+  await page.getByTestId('settings-btn').click();
+  await expect(page.getByTestId('settings-screen')).toBeVisible();
+  await page.getByTestId('settings-logout').click();
   await expect(page.getByTestId('login-screen')).toBeVisible();
 
   // Повторный вход теми же кредами

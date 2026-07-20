@@ -12,10 +12,10 @@ import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
 import type { Chat, MessagePreview, ServerEvent } from './api/types';
 import { AccountNotifications } from './account/AccountNotifications';
-import { NotificationSettings } from './notifications/NotificationSettings';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
 import { AboutDialog } from './chats/AboutDialog';
+import { SettingsScreen } from './SettingsScreen';
 import { useTyping } from './chats/useTyping';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
@@ -29,7 +29,6 @@ import {
   setNotifBrowser,
   setUnreadBadge,
 } from './util/notifications';
-import { IconMoon, IconSun } from './util/icons';
 
 // Самое свежее превью из набора кандидатов (по возрастанию message_id). Нужно,
 // чтобы превью в списке не «застревало» на раннем сообщении при гонке нескольких
@@ -79,6 +78,7 @@ export function HomeScreen({
   // (ключей нет в localStorage) и если разрешение ещё не выдано/заблокировано.
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   selectedRef.current = selectedId;
   // Актуальный список для проверок внутри WS-обработчиков (без перезапуска
   // эффекта и без побочных эффектов в setState-апдейтерах).
@@ -586,50 +586,47 @@ export function HomeScreen({
         </div>
       )}
       <div className="sidebar">
-        <header className="home-header">
-          <span data-testid="home-username">{username ?? '...'}</span>
-          <span className="home-header-actions">
-            <NotificationSettings />
-            <button
-              type="button"
-              className="icon-button"
-              data-testid="theme-toggle"
-              aria-label={
-                theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'
-              }
-              title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? <IconSun /> : <IconMoon />}
-            </button>
-            <button type="button" onClick={onLogout}>
-              Выйти
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              data-testid="about-btn"
-              aria-label="О программе"
-              title="О программе"
-              onClick={() => setAboutOpen(true)}
-            >
-              ℹ
-            </button>
-          </span>
-        </header>
-        <ChatList
-          chats={chats}
-          loading={loading}
-          selectedId={selectedId}
-          myId={myId}
-          onlineUsers={onlineUsers}
-          awayUsers={awayUsers}
-          typingByChat={typingByChat}
-          onSelect={onSelect}
-          onCreateDirect={onCreateDirect}
-          onCreateGroup={onCreateGroup}
-          onFocusInput={() => inputRef.current?.focus()}
-        />
+        {settingsOpen ? (
+          <SettingsScreen
+            username={username}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onLogout={onLogout}
+            onAbout={() => { setSettingsOpen(false); setAboutOpen(true); }}
+            onBack={() => setSettingsOpen(false)}
+          />
+        ) : (
+          <>
+            <header className="home-header">
+              <button
+                type="button"
+                className="icon-button home-hamburger"
+                data-testid="settings-btn"
+                aria-label="Настройки"
+                title="Настройки"
+                onClick={() => setSettingsOpen(true)}
+              >
+                ☰
+              </button>
+              <span className="home-header-title" data-testid="home-username">
+                {username ?? '...'}
+              </span>
+            </header>
+            <ChatList
+              chats={chats}
+              loading={loading}
+              selectedId={selectedId}
+              myId={myId}
+              onlineUsers={onlineUsers}
+              awayUsers={awayUsers}
+              typingByChat={typingByChat}
+              onSelect={onSelect}
+              onCreateDirect={onCreateDirect}
+              onCreateGroup={onCreateGroup}
+              onFocusInput={() => inputRef.current?.focus()}
+            />
+          </>
+        )}
       </div>
       <main className="conversation">
         {selectedChat ? (
