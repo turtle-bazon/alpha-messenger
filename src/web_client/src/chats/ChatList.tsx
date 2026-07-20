@@ -74,19 +74,6 @@ export function ChatList({
         if (tag !== 'BUTTON' && tag !== 'INPUT') onFocusInput();
       }}
     >
-      <div className="chat-list-bar">
-        <span className="chat-list-bar-title">Чаты</span>
-        <button
-          type="button"
-          className="chat-list-compose"
-          data-testid="new-chat-button"
-          aria-label="Новый чат"
-          title="Новый чат"
-          onClick={() => setComposing(true)}
-        >
-          +
-        </button>
-      </div>
       <div className="chat-search">
         <span className="chat-search-icon" aria-hidden="true">
           <IconSearch />
@@ -185,6 +172,16 @@ export function ChatList({
           })
         )}
       </div>
+      <button
+        type="button"
+        className="chat-fab"
+        data-testid="new-chat-button"
+        aria-label="Новый чат"
+        title="Новый чат"
+        onClick={() => setComposing(true)}
+      >
+        +
+      </button>
     </aside>
   );
 }

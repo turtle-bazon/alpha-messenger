@@ -1657,40 +1657,53 @@ body {
 
 /* ---- Список чатов ---- */
 .chat-list {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   flex: 1;
 }
 
-.chat-list-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--divider);
-}
-
-.chat-list-bar-title {
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.chat-list-compose {
-  width: 34px;
-  height: 34px;
+/* Floating action button — «новый чат». Появляется при наведении на список
+   чатов (desktop) или всегда виден (мобильные). */
+.chat-fab {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 52px;
+  height: 52px;
   border: none;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1;
   cursor: pointer;
-  transition: background var(--t-fast), transform var(--t-fast);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
 }
 
-.chat-list-compose:active {
-  transform: scale(0.94);
+.chat-list:hover .chat-fab {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.chat-fab:active {
+  transform: scale(0.92) !important;
+}
+
+/* На тач-устройствах — всегда виден */
+@media (hover: none) {
+  .chat-fab {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
 }
 
 /* Поле поиска чатов: округлённая заливка с иконкой-лупой слева. */
@@ -2086,7 +2099,6 @@ body {
 
 .auth-card button[type='submit']:hover:not(:disabled),
 .conv-send:hover:not(:disabled),
-.chat-list-compose:hover,
 .members-add-btn:hover:not(:disabled),
 .new-chat-form button[type='submit']:hover:not(:disabled) {
   background: var(--accent-hover);
@@ -2094,7 +2106,6 @@ body {
 
 .auth-card button[type='submit']:active:not(:disabled),
 .conv-send:active:not(:disabled),
-.chat-list-compose:active,
 .members-add-btn:active:not(:disabled),
 .new-chat-form button[type='submit']:active:not(:disabled) {
   background: var(--accent-active);
