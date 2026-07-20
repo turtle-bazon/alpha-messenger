@@ -9,6 +9,25 @@ import { initPlatform, getPlatform } from './util/platform';
 
 type View = 'login' | 'register';
 
+// Загрузка web-клиента с сервера внутри WebView (Android).
+// WebView остаётся тем же — браузер не открывается.
+// <base href> резолвит относительные пути JS/CSS относительно сервера.
+async function loadFromServer(serverUrl: string): Promise<void> {
+  try {
+    const r = await fetch(`${serverUrl}/index.html`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const html = await r.text();
+    // Вставляем <base href> перед </head>, чтобы относительные пути работали
+    const base = `<base href="${serverUrl}/">`;
+    const patched = html.replace(/<head([^>]*)>/i, `<head$1>${base}`);
+    document.open();
+    document.write(patched);
+    document.close();
+  } catch {
+    // Сервер недоступен — работаем из bundled (ничего не делаем)
+  }
+}
+
 // Простейшая маршрутизация по location: /register?invite=CODE открывает
 // регистрацию, иначе — вход. Полноценный роутер v1 не нужен.
 function initialView(): { view: View; invite: string } {
@@ -31,8 +50,11 @@ export function App(): JSX.Element {
     if (getPlatform() !== 'android') return false;
     const saved = localStorage.getItem('alpha.serverUrl');
     if (saved) {
-      // Редирект на сервер. Следующий рендер не произойдёт — уходим с страницы.
-      window.location.href = saved;
+      // Загружаем index.html с сервера и заменяем текущий документ.
+      // <base href> гарантирует, что все относительные пути (JS/CSS)
+      // резолвятся относительно сервера, а не bundled https://localhost.
+      // WebView остаётся тем же — браузер не открывается.
+      loadFromServer(saved);
       return false;
     }
     return true;
@@ -49,7 +71,7 @@ export function App(): JSX.Element {
       <SetupScreen onConfigured={() => {
         const url = localStorage.getItem('alpha.serverUrl');
         if (url) {
-          window.location.href = url;
+          loadFromServer(url);
         } else {
           setNeedsSetup(false);
           window.location.reload();
