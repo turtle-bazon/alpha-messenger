@@ -24,10 +24,18 @@ export function App(): JSX.Element {
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
 
-  // На Android: нужна настройка сервера если нет сохранённого URL
+  // На Android: если сервер настроен — загружаем web-клиент с сервера
+  // (всегда актуальная версия, как desktop). Bundled www/ служит только
+  // bootstrap'ом. Если сервер недоступен — работаем из bundled.
   const [needsSetup, setNeedsSetup] = useState(() => {
     if (getPlatform() !== 'android') return false;
-    return !localStorage.getItem('alpha.serverUrl');
+    const saved = localStorage.getItem('alpha.serverUrl');
+    if (saved) {
+      // Редирект на сервер. Следующий рендер не произойдёт — уходим с страницы.
+      window.location.href = saved;
+      return false;
+    }
+    return true;
   });
 
   // Инициализация платформы (push, нативные плагины)
@@ -41,9 +49,6 @@ export function App(): JSX.Element {
       <SetupScreen onConfigured={() => {
         const url = localStorage.getItem('alpha.serverUrl');
         if (url) {
-          // Загружаем web-клиент с сервера (всегда актуальная версия,
-          // как в desktop-приложении). Фолбэк на bundled не нужен —
-          // сервер отдаёт тот же SPA.
           window.location.href = url;
         } else {
           setNeedsSetup(false);
