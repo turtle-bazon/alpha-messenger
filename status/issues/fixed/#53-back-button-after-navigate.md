@@ -19,3 +19,12 @@
 
 ## Приоритет
 normal
+
+## Решение
+Реализовано в `Conversation.tsx`:
+- `navStackRef` — стек сохранённых `scrollTop` позиций
+- `pushNavStack()` — сохраняет текущую позицию скролла перед прыжком
+- `goBack()` — восстанавливает предыдущую позицию из стека
+- `showBackBtn` — управляет видимостью кнопки `nav-back`
+- Клик по `.bubble-reply` вызывает `pushNavStack()` + `scrollIntoView` + подсветку
+- CSS: `.nav-back-btn` — круглая кнопка в правом верхнем углу с анимацией fadeInUp
