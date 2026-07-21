@@ -4,14 +4,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 
 public class MainActivity extends BridgeActivity {
 
@@ -34,46 +31,27 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
 
-        WebView webView = getBridge().getWebView();
-
-        // addJavascriptInterface — синхронный мост.
-        // НО: super.onCreate() уже вызвал loadUrl(bundled), страница может начать
-        // загружаться ДО того, как addJavascriptInterface сработает в JS-контексте.
-        String escaped = serverUrl.replace("\\", "\\\\").replace("'", "\\'");
-        webView.addJavascriptInterface(new Object() {
-            @JavascriptInterface
-            public String getServerUrl() {
-                return serverUrl;
-            }
-        }, "AlphaConfig");
-        Log.d(TAG, "Registered AlphaConfig bridge");
-
-        // evaluateJavascript — запасной вариант. Ставит __ALPHA_CONFIG__ напрямую.
-        // Выполняется ПОСЛЕ loadUrl, но модули (type="module") — deferred,
-        // поэтому evaluateJavascript попадёт в очередь раньше module scripts.
-        String jsConfig = "window.__ALPHA_CONFIG__={serverUrl:'" + escaped + "'};"
-            + "window.AlphaConfig={getServerUrl:function(){return'" + escaped + "'}};";
-        webView.evaluateJavascript(jsConfig, value -> {
-            Log.d(TAG, "evaluateJavascript result: " + value);
-        });
-        Log.d(TAG, "Injected config via evaluateJavascript");
-
-        // settings.js для cached клиента (belt-and-suspenders)
-        try {
-            writeSettingsJs(serverUrl);
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to write settings.js", e);
-        }
-
-        // Загружаем кеш или bundled
         WebClientUpdater updater = new WebClientUpdater(this, serverUrl);
         File cacheIndex = new File(updater.getCacheDir(), "index.html");
 
+        // Пытаемся скачать клиент СИНХРОННО, если ещё нет в кеше.
+        // Это гарантирует что settings.js и index.html будут в одной папке.
+        if (!cacheIndex.exists()) {
+            Log.d(TAG, "No cached client, downloading...");
+            boolean ok = updater.checkAndUpdate();
+            Log.d(TAG, "Download result: " + ok);
+        }
+
+        // Пишем settings.js (на случай если checkAndUpdate его не создал)
+        writeSettingsJs(serverUrl, updater.getCacheDir());
+
+        WebView webView = getBridge().getWebView();
+
+        // Загружаем кеш если есть, иначе bundled (super.onCreate уже загрузил)
         if (cacheIndex.exists()) {
             Log.d(TAG, "Loading cached client: " + cacheIndex.getAbsolutePath());
             webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
         }
-        // Если кеша нет — super.onCreate уже загрузил bundled www/
 
         // Фоновая проверка обновлений
         new Thread(() -> {
@@ -85,17 +63,18 @@ public class MainActivity extends BridgeActivity {
         }).start();
     }
 
-    private void writeSettingsJs(String serverUrl) throws IOException {
-        WebClientUpdater updater = new WebClientUpdater(this, null);
-        File dir = updater.getCacheDir();
-        if (!dir.exists()) dir.mkdirs();
-
-        File settingsFile = new File(dir, "settings.js");
-        String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
-        String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
-        try (FileWriter w = new FileWriter(settingsFile)) {
+    private void writeSettingsJs(String serverUrl, File dir) {
+        try {
+            if (!dir.exists()) dir.mkdirs();
+            File settingsFile = new File(dir, "settings.js");
+            String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
+            String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
+            java.io.FileWriter w = new java.io.FileWriter(settingsFile);
             w.write(content);
+            w.close();
+            Log.d(TAG, "Wrote settings.js: " + settingsFile.getAbsolutePath());
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to write settings.js", e);
         }
-        Log.d(TAG, "Wrote settings.js: " + settingsFile.getAbsolutePath());
     }
 }

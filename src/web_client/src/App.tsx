@@ -27,30 +27,24 @@ export function App(): JSX.Element {
   const [authed, setAuthed] = useState(() => !!getToken());
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
-  const [ready, setReady] = useState(() => getPlatform() !== 'android' || !!getServerUrl());
 
   useEffect(() => {
     initPlatform();
   }, []);
 
   // Android: нативный SetupActivity handles URL.
-  // Если URL ещё не доступен в web-контексте (evaluateJavascript ещё не выполнился) —
-  // ждём доступности, poll с интервалом.
-  useEffect(() => {
-    if (getPlatform() !== 'android' || ready) return;
-    const id = setInterval(() => {
-      if (getServerUrl()) {
-        setReady(true);
-      }
-    }, 50);
-    return () => clearInterval(id);
-  }, [ready]);
-
-  if (!ready) {
+  // Java скачивает клиент и пишет settings.js в ту же папку.
+  // <script src="settings.js"> загружается ДО React → __ALPHA_CONFIG__ доступен.
+  // Если settings.js нет (bundled fallback, сервер недоступен) — показываем ошибку.
+  if (getPlatform() === 'android' && !getServerUrl()) {
     return (
       <div className="auth-screen">
         <div className="auth-card" style={{ textAlign: 'center', padding: 32 }}>
-          <p style={{ color: '#aaa' }}>Загрузка...</p>
+          <h1>Ошибка</h1>
+          <p style={{ color: '#aaa', marginTop: 12 }}>
+            Не удалось подключиться к серверу.<br />
+            Проверьте адрес и попробуйте снова.
+          </p>
         </div>
       </div>
     );
@@ -63,7 +57,7 @@ export function App(): JSX.Element {
         onConfigured={(url: string) => {
           localStorage.setItem('alpha.serverUrl', url);
           (window as any).__ALPHA_CONFIG__ = { serverUrl: url };
-          setReady(true);
+          window.location.reload();
         }}
       />
     );
