@@ -229,6 +229,9 @@ export function Conversation({
   const atBottomRef = useRef(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [newCount, setNewCount] = useState(0);
+  // Стек навигации: при прыжке к сообщению сохраняем текущий scrollTop
+  const navStackRef = useRef<number[]>([]);
+  const [showBackBtn, setShowBackBtn] = useState(false);
   const lastTypingSent = useRef(0);
   const typingFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReadSent = useRef(0);
@@ -277,6 +280,8 @@ export function Conversation({
     shownUrlRef.current = null;
     previewReqRef.current++;
     dismissedRef.current.clear();
+    navStackRef.current = [];
+    setShowBackBtn(false);
     // Показываем кеш мгновенно, параллельно тянем свежие данные с сервера.
     getChatMessages(chatId).then((cached) => {
       if (!alive || !cached.length) return;
@@ -613,6 +618,7 @@ export function Conversation({
     if (!el || !target.messageId) return;
     const targetEl = el.querySelector(`[data-message-id="${target.messageId}"]`);
     if (!targetEl) return;
+    pushNavStack();
     const doHighlight = () => {
       setMessages((prev) =>
         prev.map((x) =>
@@ -772,6 +778,24 @@ export function Conversation({
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }
+
+  // Сохраняем текущую позицию скролла в стек перед прыжком к сообщению.
+  function pushNavStack(): void {
+    const el = scrollRef.current;
+    if (!el) return;
+    navStackRef.current.push(el.scrollTop);
+    setShowBackBtn(true);
+  }
+
+  // Возврат к предыдущей позиции (pop из стека).
+  function goBack(): void {
+    const el = scrollRef.current;
+    const stack = navStackRef.current;
+    if (!el || stack.length === 0) return;
+    const prevTop = stack.pop()!;
+    el.scrollTo({ top: prevTop, behavior: 'smooth' });
+    if (stack.length === 0) setShowBackBtn(false);
   }
 
   // Общий путь отправки (текст и/или картинки): оптимистичное сообщение ставится
@@ -1292,6 +1316,7 @@ export function Conversation({
                                 `[data-message-id="${m.replyToMessageId}"]`,
                               );
                               if (!target) return;
+                              pushNavStack();
                               const doHighlight = () => {
                                 setMessages((prev) =>
                                   prev.map((x) =>
@@ -1567,6 +1592,17 @@ export function Conversation({
           </button>
         )}
       </div>
+      {showBackBtn && (
+        <button
+          type="button"
+          className="nav-back-btn"
+          data-testid="nav-back"
+          title="Вернуться назад"
+          onClick={goBack}
+        >
+          ↩
+        </button>
+      )}
       {showScrollBtn && (
         <button
           type="button"

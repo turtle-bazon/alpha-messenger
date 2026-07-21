@@ -3287,3 +3287,30 @@ body {
   justify-content: center;
   padding: 0 4px;
 }
+
+/* ==================== Navigation back button ==================== */
+
+.nav-back-btn {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  animation: fadeInUp 0.2s ease;
+}
+
+.nav-back-btn:hover {
+  background: var(--bg-hover);
+}
