@@ -72,7 +72,10 @@ public class MainActivity extends BridgeActivity {
                     boolean updated = updater.checkAndUpdate();
                     Log.d(TAG, "Background update: " + updated);
                     if (updated) {
-                        new Handler(Looper.getMainLooper()).post(() -> webView.reload());
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            String url = webView.getUrl();
+                            if (url != null) webView.loadUrl(url);
+                        });
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Update failed", e);
@@ -115,7 +118,15 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WebViewClient original = webView.getWebViewClient();
             webView.setWebViewClient(new CachedWebViewClient(original, cacheDir));
-            webView.reload();
+            // reload() может не вызвать shouldInterceptRequest для главного фрейма.
+            // Используем loadUrl() с текущим URL — это гарантированно пройдёт через interceptor.
+            String currentUrl = webView.getUrl();
+            Log.d(TAG, "Installing interceptor, reloading: " + currentUrl);
+            if (currentUrl != null) {
+                webView.loadUrl(currentUrl);
+            } else {
+                webView.loadUrl("https://localhost/");
+            }
         } else {
             // API < 26: getWebViewClient() недоступен — загружаем из file://
             Log.w(TAG, "API " + Build.VERSION.SDK_INT + " < 26, using file:// fallback");

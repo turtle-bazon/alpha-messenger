@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * WebViewClient, который перехватывает запросы и отдаёт файлы из кеша.
@@ -54,6 +55,9 @@ public class CachedWebViewClient extends WebViewClient {
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
         String path = request.getUrl().getPath();
+        boolean isMainPage = request.isForMainFrame();
+        Log.d(TAG, "shouldInterceptRequest: " + request.getUrl() + " mainFrame=" + isMainPage);
+
         if (path == null || path.isEmpty() || path.equals("/")) {
             path = "/index.html";
         }
@@ -69,13 +73,16 @@ public class CachedWebViewClient extends WebViewClient {
             try {
                 String mimeType = getMimeType(path);
                 InputStream stream = new FileInputStream(cachedFile);
-                Log.d(TAG, "Serving from cache: " + path);
-                return new WebResourceResponse(mimeType, "UTF-8", stream);
+                Map<String, String> headers = new LinkedHashMap<>();
+                headers.put("Access-Control-Allow-Origin", "*");
+                Log.d(TAG, "Serving from cache: " + path + " (" + mimeType + ")");
+                return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, stream);
             } catch (IOException e) {
                 Log.e(TAG, "Failed to read cached file: " + path, e);
             }
         }
 
+        Log.d(TAG, "Not in cache, delegating: " + path);
         // Файла нет в кеше — делегируем оригинальному клиенту (Capacitor assets)
         return originalClient.shouldInterceptRequest(view, request);
     }
