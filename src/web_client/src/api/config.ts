@@ -5,6 +5,10 @@ function getApiUrl(): string {
   // Приоритет — localStorage (пользователь вводит адрес; на Android передаётся из нативного кода)
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('alpha.serverUrl');
+    // DEBUG: показываем что читаем из localStorage
+    console.log('[config] localStorage alpha.serverUrl =', JSON.stringify(saved));
+    console.log('[config] window.location.origin =', window.location.origin);
+    console.log('[config] window.location.protocol =', window.location.protocol);
     if (saved) return saved;
   }
 
@@ -23,7 +27,10 @@ function getApiUrl(): string {
 // Все REST-эндпоинты живут под /api/ (см. app.ts). Префикс держим здесь —
 // единый источник, чтобы пути в rest.ts оставались короткими (/auth/..., /chats).
 export function apiUrl(path: string): string {
-  return `${getApiUrl()}/api${path}`;
+  const base = getApiUrl();
+  const url = `${base}/api${path}`;
+  console.log('[config] apiUrl →', url);
+  return url;
 }
 
 // ws:// (или wss://) для потока событий.

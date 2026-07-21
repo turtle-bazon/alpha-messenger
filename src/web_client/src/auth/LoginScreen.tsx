@@ -14,6 +14,12 @@ export function LoginScreen({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // DEBUG: показываем что происходит
+  const debugUrl = apiUrl('/auth/login');
+  const debugLs = localStorage.getItem('alpha.serverUrl') ?? '(пусто)';
+  const debugOrigin = window.location.origin;
+  const debugProto = window.location.protocol;
+
   async function submit(e: FormEvent): Promise<void> {
     e.preventDefault();
     setBusy(true);
@@ -60,6 +66,16 @@ export function LoginScreen({
           {busy ? '...' : 'Войти'}
         </button>
       </form>
+      <div style={{
+        marginTop: 12, padding: 8, fontSize: 11, color: '#888',
+        background: '#1a1a1a', borderRadius: 6, fontFamily: 'monospace',
+        wordBreak: 'break-all',
+      }}>
+        <div>protocol: <b>{debugProto}</b></div>
+        <div>origin: <b>{debugOrigin}</b></div>
+        <div>localStorage: <b>{debugLs}</b></div>
+        <div>API URL: <b>{debugUrl}</b></div>
+      </div>
     </div>
   );
 }
