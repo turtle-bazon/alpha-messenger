@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Theme } from './util/theme';
+import { getPlatform } from './util/platform';
 import {
   getNotifPrefs,
   getPermission,
@@ -45,6 +46,12 @@ export function SettingsScreen({
       setPrefs((p: NotifPrefs) => ({ ...p, browser: false }));
       return;
     }
+    // На Android push идут через нативный UnifiedPush/FCM, разрешение браузера не нужно
+    if (isAndroid) {
+      setNotifBrowser(true);
+      setPrefs((p: NotifPrefs) => ({ ...p, browser: true }));
+      return;
+    }
     let permission = perm;
     if (permission !== 'granted') {
       permission = await requestPermission();
@@ -55,6 +62,8 @@ export function SettingsScreen({
       setPrefs((p: NotifPrefs) => ({ ...p, browser: true }));
     }
   }
+
+  const isAndroid = getPlatform() === 'android';
 
   if (view === 'notifications') {
     return (
@@ -82,26 +91,46 @@ export function SettingsScreen({
               onChange={toggleSound}
             />
           </label>
-          <label className="settings-row">
-            <span className="settings-row-text">Уведомления браузера</span>
-            <input
-              type="checkbox"
-              className="settings-toggle"
-              data-testid="settings-browser"
-              checked={prefs.browser && perm === 'granted' ? true : prefs.browser}
-              disabled={!notificationsSupported() || perm === 'denied'}
-              onChange={() => void toggleBrowser()}
-            />
-          </label>
-          {perm === 'denied' && (
-            <div className="settings-hint" data-testid="settings-denied">
-              Уведомления заблокированы в настройках браузера
-            </div>
-          )}
-          {!notificationsSupported() && (
-            <div className="settings-hint">
-              Браузер не поддерживает уведомления
-            </div>
+          {isAndroid ? (
+            <>
+              <label className="settings-row">
+                <span className="settings-row-text">Push-уведомления</span>
+                <input
+                  type="checkbox"
+                  className="settings-toggle"
+                  data-testid="settings-browser"
+                  checked={prefs.browser}
+                  onChange={() => void toggleBrowser()}
+                />
+              </label>
+              <div className="settings-hint">
+                Через UnifiedPush / FCM
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="settings-row">
+                <span className="settings-row-text">Уведомления браузера</span>
+                <input
+                  type="checkbox"
+                  className="settings-toggle"
+                  data-testid="settings-browser"
+                  checked={prefs.browser && perm === 'granted' ? true : prefs.browser}
+                  disabled={!notificationsSupported() || perm === 'denied'}
+                  onChange={() => void toggleBrowser()}
+                />
+              </label>
+              {perm === 'denied' && (
+                <div className="settings-hint" data-testid="settings-denied">
+                  Уведомления заблокированы в настройках браузера
+                </div>
+              )}
+              {!notificationsSupported() && (
+                <div className="settings-hint">
+                  Браузер не поддерживает уведомления
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
