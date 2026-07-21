@@ -4,11 +4,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import android.webkit.WebView;
 
 public class MainActivity extends BridgeActivity {
 
@@ -23,7 +26,6 @@ public class MainActivity extends BridgeActivity {
         Log.d(TAG, "onCreate serverUrl=" + serverUrl);
 
         if (serverUrl == null) {
-            Log.d(TAG, "No serverUrl → SetupActivity");
             startActivity(new Intent(this, SetupActivity.class));
             finish();
             return;
@@ -32,39 +34,26 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
 
-        // Проверяем, есть ли кешированный веб-клиент
-        WebClientUpdater updater = new WebClientUpdater(this, serverUrl);
-        File cacheIndex = new File(updater.getCacheDir(), "index.html");
-        String targetUrl;
-        if (cacheIndex.exists()) {
-            targetUrl = "file://" + cacheIndex.getAbsolutePath();
-            Log.d(TAG, "Loading cached client: " + targetUrl);
-        } else {
-            targetUrl = null;
-            Log.d(TAG, "No cached client, will reload bundled www/");
+        // Записываем settings.js в кеш-директорию клиентского bundle.
+        // Скаченный index.html загружает <script src="settings.js"> перед основным кодом.
+        // Web client читает window.__ALPHA_CONFIG__.serverUrl — синхронно, без таймингов.
+        try {
+            writeSettingsJs(serverUrl);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to write settings.js", e);
         }
 
+        // Загружаем кеш или bundled
         WebView webView = getBridge().getWebView();
-        String escaped = serverUrl
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r");
+        WebClientUpdater updater = new WebClientUpdater(this, serverUrl);
+        File cacheDir = updater.getCacheDir();
+        File cacheIndex = new File(cacheDir, "index.html");
 
-        String js = "localStorage.setItem('alpha.serverUrl','" + escaped + "');";
-        Log.d(TAG, "evaluateJavascript: " + js);
-        webView.evaluateJavascript(js, value -> {
-            Log.d(TAG, "evaluateJavascript callback, value=" + value);
-            // Проверяем что записалось
-            webView.evaluateJavascript("localStorage.getItem('alpha.serverUrl')", v -> {
-                Log.d(TAG, "localStorage verify=" + v);
-            });
-            if (targetUrl != null) {
-                webView.loadUrl(targetUrl);
-            } else {
-                webView.reload();
-            }
-        });
+        if (cacheIndex.exists()) {
+            Log.d(TAG, "Loading cached client: " + cacheIndex.getAbsolutePath());
+            webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
+        }
+        // Если кеша нет — super.onCreate уже загрузил bundled www/
 
         new Thread(() -> {
             try {
@@ -73,5 +62,24 @@ public class MainActivity extends BridgeActivity {
                 Log.e(TAG, "Background update check failed", e);
             }
         }).start();
+    }
+
+    private void writeSettingsJs(String serverUrl) throws IOException {
+        // Пишем в кеш-директорию (getFilesDir()/web_client/)
+        // WebClientUpdater.getCacheDir() = getFilesDir()/web_client/
+        WebClientUpdater updater = new WebClientUpdater(this, null);
+        File dir = updater.getCacheDir();
+        if (!dir.exists()) dir.mkdirs();
+
+        File settingsFile = new File(dir, "settings.js");
+        String content = "window.__ALPHA_CONFIG__ = " + jsonString("serverUrl", serverUrl) + ";\n";
+        try (FileWriter w = new FileWriter(settingsFile)) {
+            w.write(content);
+        }
+        Log.d(TAG, "Wrote settings.js: " + settingsFile.getAbsolutePath());
+    }
+
+    private static String jsonString(String key, String value) {
+        return "{\"" + key + "\":\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"}";
     }
 }

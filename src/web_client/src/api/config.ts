@@ -1,23 +1,23 @@
-// Базовый адрес сервера. Вычисляется динамически — на Android localStorage
-// заполняется evaluateJavascript после загрузки модуля, поэтому кешировать
-// URL на уровне модуля нельзя.
+// Базовый адрес сервера. Вычисляется динамически.
+// На Android нативное приложение записывает settings.js с window.__ALPHA_CONFIG__,
+// поэтому URL доступен синхронно — без evaluateJavascript и localStorage.
 function getApiUrl(): string {
-  // Приоритет — localStorage (пользователь вводит адрес; на Android передаётся из нативного кода)
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('alpha.serverUrl');
-    // DEBUG: показываем что читаем из localStorage
-    console.log('[config] localStorage alpha.serverUrl =', JSON.stringify(saved));
-    console.log('[config] window.location.origin =', window.location.origin);
-    console.log('[config] window.location.protocol =', window.location.protocol);
-    if (saved) return saved;
-  }
+  if (typeof window === 'undefined') return 'http://localhost:3000';
 
-  // Явно заданный адрес (для dev или нестандартных портов)
+  // 1. Нативный мост (Android settings.js) — приоритет на file:// протоколе
+  const native = (window as any).__ALPHA_CONFIG__?.serverUrl;
+  if (native) return native;
+
+  // 2. localStorage (пользователь вводит адрес)
+  const saved = localStorage.getItem('alpha.serverUrl');
+  if (saved) return saved;
+
+  // 3. Явно заданный адрес (для dev или нестандартных портов)
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
 
-  // По умолчанию — тот же origin (Apache/nginx reverse proxy).
-  // На file:// протоколе (bundled клиент в Capacitor) origin null — фолбэк на localhost.
-  if (typeof window !== 'undefined' && window.location.origin && window.location.origin !== 'null') {
+  // 4. Тот же origin (Apache/nginx reverse proxy).
+  // На file:// протоколе origin = 'null' — фолбэк на localhost.
+  if (window.location.origin && window.location.origin !== 'null') {
     return window.location.origin;
   }
 
@@ -27,10 +27,7 @@ function getApiUrl(): string {
 // Все REST-эндпоинты живут под /api/ (см. app.ts). Префикс держим здесь —
 // единый источник, чтобы пути в rest.ts оставались короткими (/auth/..., /chats).
 export function apiUrl(path: string): string {
-  const base = getApiUrl();
-  const url = `${base}/api${path}`;
-  console.log('[config] apiUrl →', url);
-  return url;
+  return `${getApiUrl()}/api${path}`;
 }
 
 // ws:// (или wss://) для потока событий.

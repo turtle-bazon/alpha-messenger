@@ -7,6 +7,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- settings.js записывается нативным Android-приложением в кеш-директорию.
+         Содержит window.__ALPHA_CONFIG__ = { serverUrl: "..." }.
+         В bundled версии файла нет — молча игнорируется. -->
+    <script src="settings.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -25,18 +25,12 @@ export function App(): JSX.Element {
   const [view, setView] = useState<View>(start.view);
 
   // На Android: нативный SetupActivity показывает экран настройки
-  // и сохраняет URL в SharedPreferences. WebView загружает
-  // web-клиент с сервера напрямую (см. MainActivity.java).
-  // Если сервер не настроен — нативный UI, без WebView.
-  // Когда WebView уже загрузился с сервера — localStorage пустой
-  // (другой origin), но это нормально: API использует window.location.origin.
-  const [needsSetup, setNeedsSetup] = useState(() => {
+  // и сохраняет URL в SharedPreferences. Java записывает settings.js
+  // в кеш-директорию с window.__ALPHA_CONFIG__. Если settings.js
+  // не загрузился — значит URL не настроен, нужен web-setup.
+  const [needsSetup] = useState(() => {
     if (getPlatform() !== 'android') return false;
-    // На Android setup делает нативный SetupActivity.
-    // Проверяем localStorage на случай если web-клиент загружен
-    // из bundled (фолбэк) — тогда нужен web-setup.
-    return !localStorage.getItem('alpha.serverUrl')
-      && window.location.protocol === 'file:';
+    return !(window as any).__ALPHA_CONFIG__?.serverUrl;
   });
 
   // Инициализация платформы (push, нативные плагины)
@@ -44,14 +38,9 @@ export function App(): JSX.Element {
     initPlatform();
   }, []);
 
-  // Setup screen — только на Android (пока нативный SetupActivity не реализован полностью)
+  // Setup screen — только если settings.js не загрузился (URL не настроен в Java)
   if (needsSetup) {
-    return (
-      <SetupScreen onConfigured={() => {
-        setNeedsSetup(false);
-        window.location.reload();
-      }} />
-    );
+    return <SetupScreen onConfigured={() => window.location.reload()} />;
   }
 
   if (authed) {
