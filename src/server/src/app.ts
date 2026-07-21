@@ -13,6 +13,7 @@ import { pushRoutes } from './routes/push';
 import { reactionRoutes } from './routes/reactions';
 import { draftRoutes } from './routes/drafts';
 import { versionRoutes } from './routes/version';
+import { clientRoutes } from './routes/client';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -46,6 +47,8 @@ export function buildApp(): FastifyInstance {
   app.register(wsRoutes);
   // version.json в корне — клиент проверяет авто-обновление.
   app.register(versionRoutes);
+  // Файлы веб-клиента для Android-обновлений (/client/manifest.json, /client/assets/...).
+  app.register(clientRoutes);
 
   return app;
 }

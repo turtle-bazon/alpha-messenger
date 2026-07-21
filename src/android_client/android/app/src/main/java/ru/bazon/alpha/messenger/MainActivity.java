@@ -3,18 +3,28 @@ package ru.bazon.alpha.messenger;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
+import java.io.File;
+
 /**
- * Основная activity. Загружает bundled веб-клиент (www/).
- * URL сервера передаётся в localStorage через evaluateJavascript
- * до инициализации React (getApiUrl() читает alpha.serverUrl).
+ * Основная activity. Загружает веб-клиент:
+ * 1. Если есть кешированная версия в internal storage — загружает её (свежая)
+ * 2. Иначе — bundled www/ (старая, но рабочая)
+ *
+ * В фоне проверяет обновления на сервере и скачивает новый бандл.
+ * При следующем запуске будет загружена свежая версия.
+ *
+ * Capacitor bridge инжектируется автоматически для любого URL,
+ * загружаемого через WebView (включая file://).
  */
 public class MainActivity extends BridgeActivity {
 
+    private static final String TAG = "MainActivity";
     private static final String PREFS_NAME = "alpha";
     private static final String KEY_SERVER_URL = "server_url";
 
@@ -34,47 +44,46 @@ public class MainActivity extends BridgeActivity {
 
         super.onCreate(savedInstanceState);
 
-        // Встраиваем URL сервера в localStorage bundled клиента.
-        // WebViewClient.onPageFinished выполняется ПОСЛЕ загрузки DOM, но
-        // React читает getApiUrl() в useState initializer — к этому моменту
-        // localStorage уже должен быть заполнен.
+        // Инжектируем URL сервера в localStorage ДО загрузки страницы,
+        // чтобы getApiUrl() в config.ts прочитал правильный адрес.
         injectServerUrl(serverUrl);
+
+        // Проверяем, есть ли кешированный веб-клиент
+        WebClientUpdater updater = new WebClientUpdater(this, serverUrl);
+        File cacheIndex = new File(updater.getCacheDir(), "index.html");
+
+        if (cacheIndex.exists()) {
+            // Загружаем кешированную версию (свежую)
+            Log.d(TAG, "Loading cached web client: " + cacheIndex.getAbsolutePath());
+            getBridge().getWebView().loadUrl("file://" + cacheIndex.getAbsolutePath());
+        }
+        // Если кеша нет — super.onCreate уже загрузил bundled www/
+
+        // Фоновая проверка обновлений
+        new Thread(() -> {
+            try {
+                updater.checkAndUpdate();
+            } catch (Exception e) {
+                Log.e(TAG, "Background update check failed", e);
+            }
+        }).start();
     }
 
+    /**
+     * Встраивает alpha.serverUrl в localStorage через evaluateJavascript.
+     * Вызывается до/после загрузки страницы — localStorage персистентен
+     * и будет доступен при инициализации React.
+     */
     private void injectServerUrl(String serverUrl) {
         WebView webView = getBridge().getWebView();
 
-        // Сохраняем оригинальный WebViewClient
-        WebViewClient originalClient = new WebViewClient();
+        String escaped = serverUrl
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r");
 
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-
-                String escaped = serverUrl
-                    .replace("\\", "\\\\")
-                    .replace("'", "\\'")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r");
-
-                String js = "localStorage.setItem('alpha.serverUrl','" + escaped + "');";
-                view.evaluateJavascript(js, value -> {
-                    // Если React уже прочитал неверный URL — перезагружаем
-                    Boolean needsReload = Boolean.parseBoolean(
-                        view.evaluateJavascript(
-                            "JSON.stringify(localStorage.getItem('alpha.serverUrl') !== '" + escaped + "')",
-                            null
-                        )
-                    );
-                    if (Boolean.TRUE.equals(needsReload)) {
-                        view.reload();
-                    }
-                });
-
-                // Восстанавливаем оригинальный клиент
-                view.setWebViewClient(originalClient);
-            }
-        });
+        String js = "localStorage.setItem('alpha.serverUrl','" + escaped + "');";
+        webView.evaluateJavascript(js, null);
     }
 }
