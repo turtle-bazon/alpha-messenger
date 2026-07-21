@@ -5,7 +5,7 @@ import { RegisterScreen } from './auth/RegisterScreen';
 import { SetupScreen } from './auth/SetupScreen';
 import { HomeScreen } from './HomeScreen';
 import { PushWarningBanner } from './notifications/PushWarningBanner';
-import { initPlatform, getPlatform } from './util/platform';
+import { initPlatform } from './util/platform';
 
 type View = 'login' | 'register';
 
@@ -36,24 +36,6 @@ export function App(): JSX.Element {
   useEffect(() => {
     initPlatform();
   }, []);
-
-  // Android: нативный SetupActivity handles URL.
-  // Java скачивает клиент и пишет settings.js в ту же папку.
-  // <script src="settings.js"> загружается ДО React → __ALPHA_CONFIG__ доступен.
-  // Если settings.js нет (bundled fallback, сервер недоступен) — показываем ошибку.
-  if (getPlatform() === 'android' && !getServerUrl()) {
-    return (
-      <div className="auth-screen">
-        <div className="auth-card" style={{ textAlign: 'center', padding: 32 }}>
-          <h1>Ошибка</h1>
-          <p style={{ color: '#aaa', marginTop: 12 }}>
-            Не удалось подключиться к серверу.<br />
-            Проверьте адрес и попробуйте снова.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   // Web/desktop: показываем SetupScreen если URL не настроен
   if (!getServerUrl()) {
