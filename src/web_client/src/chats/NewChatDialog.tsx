@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '../api/rest';
 import type { Participant } from '../api/types';
+import { IconX } from '../util/icons';
 
 // Модалка «новый чат» — точка входа из синей «+» (как кнопка compose в Telegram).
 // Две вкладки: личный чат по username и группа (название + участники).
@@ -143,7 +144,7 @@ export function NewChatDialog({
             aria-label="Закрыть"
             onClick={onClose}
           >
-            ✕
+            <IconX />
           </button>
         </div>
 
@@ -181,7 +182,7 @@ export function NewChatDialog({
                       aria-label={`Убрать ${u}`}
                       onClick={() => toggleMember(u)}
                     >
-                      ✕
+                      <IconX />
                     </button>
                   </span>
                 ))}

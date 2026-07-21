@@ -15,6 +15,16 @@ import {
   Check,
   CheckCheck,
   SmilePlus,
+  Menu,
+  ArrowLeft,
+  ArrowDown,
+  RotateCcw,
+  Info,
+  X,
+  ChevronRight,
+  Link,
+  Plus,
+  AlertCircle,
 } from 'lucide-react';
 
 // Экспортируем Lucide-иконки напрямую.
@@ -33,4 +43,14 @@ export {
   Check as IconCheck,
   CheckCheck as IconChecks,
   SmilePlus as IconSmilePlus,
+  Menu as IconMenu,
+  ArrowLeft as IconArrowLeft,
+  ArrowDown as IconArrowDown,
+  RotateCcw as IconRotateCcw,
+  Info as IconInfo,
+  X as IconX,
+  ChevronRight as IconChevronRight,
+  Link as IconLink,
+  Plus as IconPlus,
+  AlertCircle as IconAlertCircle,
 };

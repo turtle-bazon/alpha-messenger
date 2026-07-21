@@ -36,7 +36,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -1149,7 +1149,7 @@ export function Conversation({
           aria-label="Назад к списку чатов"
           onClick={onBack}
         >
-          ‹
+          <IconArrowLeft />
         </button>
         <button
           type="button"
@@ -1268,7 +1268,7 @@ export function Conversation({
                 {/* Свайп-индикатор: стрелка ответа при свайпе вправо */}
                 {swipeMsgId === m.messageId && swipeX > 20 && (
                   <span className="bubble-swipe-indicator" style={{ opacity: Math.min(1, (swipeX - 20) / 60) }}>
-                    ↩
+                    <IconReply />
                   </span>
                 )}
                 {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
@@ -1462,7 +1462,7 @@ export function Conversation({
                           title="Не отправлено"
                           aria-label="Не отправлено"
                         >
-                          !
+                          <IconAlertCircle />
                         </span>
                       ) : m.pending ? (
                         <span
@@ -1600,7 +1600,7 @@ export function Conversation({
           title="Вернуться назад"
           onClick={goBack}
         >
-          ↩
+          <IconRotateCcw />
         </button>
       )}
       {showScrollBtn && (
@@ -1611,7 +1611,7 @@ export function Conversation({
           title="К последнему сообщению"
           onClick={scrollToBottom}
         >
-          ↓{newCount > 0 && <span className="scroll-to-bottom-badge">{newCount}</span>}
+          <IconArrowDown />{newCount > 0 && <span className="scroll-to-bottom-badge">{newCount}</span>}
         </button>
       )}
       {editing && (
@@ -1647,7 +1647,7 @@ export function Conversation({
             aria-label="Убрать превью"
             onClick={dismissPreview}
           >
-            ×
+            <IconX />
           </button>
         </div>
       )}
@@ -1668,7 +1668,7 @@ export function Conversation({
               onClick={() => setReplyTo(null)}
               aria-label="Отменить ответ"
             >
-              ×
+              <IconX />
             </button>
           </div>
         );

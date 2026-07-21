@@ -1,3 +1,5 @@
+import { IconLink } from '../util/icons';
+
 export interface FormattingToolbarProps {
   visible: boolean;
   onBold: () => void;
@@ -63,7 +65,7 @@ export function FormattingToolbar({
         title="Ссылка (Ctrl+K)"
         onMouseDown={(e) => { e.preventDefault(); onLink(); }}
       >
-        🔗
+        <IconLink />
       </button>
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getDeviceId } from '../api/session';
 import type { ServerEvent } from '../api/types';
 import { WsClient } from '../api/ws';
+import { IconX } from '../util/icons';
 
 // Уведомления уровня аккаунта (безопасность): новый вход / новое устройство.
 // Источник — общий поток событий (auth.attempt, device.added из outbox).
@@ -86,7 +87,7 @@ export function AccountNotifications({ ws }: { ws: WsClient }): JSX.Element {
             aria-label="Закрыть"
             onClick={() => dismiss(n.id)}
           >
-            ×
+            <IconX />
           </button>
         </div>
       ))}

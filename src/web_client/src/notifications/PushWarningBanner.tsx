@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { shouldShowPushWarning } from './push';
+import { IconX } from '../util/icons';
 
 /**
  * Баннер-предупреждение о недоступности push-уведомлений.
@@ -25,7 +26,7 @@ export function PushWarningBanner(): JSX.Element | null {
           onClick={() => setVisible(false)}
           aria-label="Закрыть"
         >
-          ×
+          <IconX />
         </button>
       </div>
       {!expanded && (

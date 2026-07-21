@@ -16,6 +16,7 @@ import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
 import { AboutDialog } from './chats/AboutDialog';
 import { SettingsScreen } from './SettingsScreen';
+import { IconMenu, IconBell } from './util/icons';
 import { useTyping } from './chats/useTyping';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
@@ -570,7 +571,7 @@ export function HomeScreen({
               if (e.key === 'Escape') handleNotifSkip();
             }}
           >
-            <div className="notif-modal-icon">🔔</div>
+            <div className="notif-modal-icon"><IconBell /></div>
             <h3 className="notif-modal-title">Разрешить уведомления?</h3>
             <p className="notif-modal-text">
               Вы будете получать уведомления о новых сообщениях, даже когда
@@ -618,7 +619,7 @@ export function HomeScreen({
                 title="Настройки"
                 onClick={() => setSettingsOpen(true)}
               >
-                ☰
+                <IconMenu />
               </button>
               <span className="home-header-title" data-testid="home-username">
                 {username ?? '...'}

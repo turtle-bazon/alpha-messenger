@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Theme } from './util/theme';
 import { getPlatform } from './util/platform';
+import { IconArrowLeft, IconBell, IconMoon, IconSun, IconInfo, IconChevronRight } from './util/icons';
 import {
   getNotifPrefs,
   getPermission,
@@ -76,7 +77,7 @@ export function SettingsScreen({
             aria-label="Назад"
             onClick={() => setView('main')}
           >
-            ←
+            <IconArrowLeft />
           </button>
           <span className="settings-header-title">Уведомления</span>
         </header>
@@ -147,10 +148,10 @@ export function SettingsScreen({
           data-testid="settings-back"
           aria-label="Назад"
           onClick={onBack}
-        >
-          ←
-        </button>
-        <span className="settings-header-title">Настройки</span>
+          >
+            <IconArrowLeft />
+          </button>
+          <span className="settings-header-title">Настройки</span>
       </header>
       <div className="settings-user">
         <span className="settings-avatar">
@@ -165,16 +166,16 @@ export function SettingsScreen({
           data-testid="settings-notifications"
           onClick={() => setView('notifications')}
         >
-          <span className="settings-row-icon">🔔</span>
+          <span className="settings-row-icon"><IconBell /></span>
           <span className="settings-row-text">Уведомления</span>
           <span className="settings-row-value">
             {prefs.sound || prefs.browser ? 'Вкл' : 'Выкл'}
           </span>
-          <span className="settings-row-arrow">›</span>
+          <span className="settings-row-arrow"><IconChevronRight /></span>
         </button>
         <label className="settings-row">
           <span className="settings-row-icon">
-            {theme === 'dark' ? '🌙' : '☀️'}
+            {theme === 'dark' ? <IconMoon /> : <IconSun />}
           </span>
           <span className="settings-row-text">Тёмная тема</span>
           <input
@@ -191,9 +192,9 @@ export function SettingsScreen({
           data-testid="settings-about"
           onClick={onAbout}
         >
-          <span className="settings-row-icon">ℹ️</span>
+          <span className="settings-row-icon"><IconInfo /></span>
           <span className="settings-row-text">О приложении</span>
-          <span className="settings-row-arrow">›</span>
+          <span className="settings-row-arrow"><IconChevronRight /></span>
         </button>
       </div>
       <div className="settings-debug" data-testid="settings-debug">

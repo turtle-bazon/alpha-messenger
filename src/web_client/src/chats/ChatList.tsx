@@ -3,7 +3,7 @@ import type { Chat, Participant } from '../api/types';
 import { decodeContent, previewText } from '../util/content';
 import { renderMarkdown } from '../util/markdown';
 import { formatListTime } from '../util/time';
-import { IconSearch } from '../util/icons';
+import { IconSearch, IconPlus } from '../util/icons';
 import { chatTitle } from './chatTitle';
 import { colorFor, initialFor } from './avatar';
 import { AvatarBadges } from './AvatarBadges';
@@ -180,7 +180,7 @@ export function ChatList({
         title="Новый чат"
         onClick={() => setComposing(true)}
       >
-        +
+        <IconPlus />
       </button>
     </aside>
   );

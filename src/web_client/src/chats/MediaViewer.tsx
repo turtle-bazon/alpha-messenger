@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { blobObjectUrl } from '../util/blobUrl';
+import { IconX } from '../util/icons';
 
 // Полноэкранный просмотр изображения (lightbox). Тянет полный блоб по blobId через
 // кеш object-URL; до загрузки — индикатор, при ошибке — сообщение. Закрытие по
@@ -48,7 +49,7 @@ export function MediaViewer({
         aria-label="Закрыть"
         onClick={onClose}
       >
-        ✕
+        <IconX />
       </button>
       {error ? (
         <div className="media-viewer-msg">Не удалось загрузить изображение</div>

@@ -3,6 +3,7 @@ import { addMember, ApiError, getMembers, removeMember } from '../api/rest';
 import type { Chat, ChatMember } from '../api/types';
 import { colorFor, initialFor } from './avatar';
 import { formatLastSeen } from '../util/time';
+import { IconX } from '../util/icons';
 
 // Окно со списком участников чата (открывается кликом по заголовку группы).
 // Просмотр — всем участникам; кнопки «удалить» видит только создатель чата.
@@ -136,7 +137,7 @@ export function MembersDialog({
             aria-label="Закрыть"
             onClick={onClose}
           >
-            ✕
+            <IconX />
           </button>
         </div>
 
