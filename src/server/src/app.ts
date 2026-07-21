@@ -21,8 +21,11 @@ export function buildApp(): FastifyInstance {
 
   // Клиент ходит cross-origin: web из dev-origin :5173, а desktop/android-обёртки
   // — со своих origin (file://, capacitor:// и т.п.). Аутентификация на
-  // bearer-токене (не куки), поэтому отражаем любой origin без credentials.
-  app.register(cors, { origin: true });
+  // bearer-токене (не куки), поэтому разрешаем любой origin без credentials.
+  // Явно разрешаем null origin — он приходит с file:// протокола (Android WebView).
+  app.register(cors, {
+    origin: (_origin, cb) => cb(null, true),
+  });
 
   // Все REST-эндпоинты — под общим префиксом /api/ (упрощает обратный прокси:
   // одно правило ProxyPass /api/ вместо правила на каждую группу).

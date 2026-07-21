@@ -2,23 +2,23 @@ package ru.bazon.alpha.messenger;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 
 public class MainActivity extends BridgeActivity {
 
@@ -62,22 +62,24 @@ public class MainActivity extends BridgeActivity {
         Log.d(TAG, "Cache index exists: " + cacheIndex.exists());
 
         if (cacheIndex.exists()) {
-            // Кеш есть — загружаем из file:// (Capacitor bridge работает)
-            Log.d(TAG, "Loading cached client");
-            writeSettingsJs(serverUrl, cacheDir);
-            webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
+            // Кеш есть — ставим перехватчик и перезагружаем
+            Log.d(TAG, "Loading cached client via interceptor");
+            installInterceptor(webView, cacheDir);
             hideLoading();
             // Фоновая проверка обновлений
             new Thread(() -> {
                 try {
-                    boolean ok = updater.checkAndUpdate();
-                    Log.d(TAG, "Background update: " + ok);
+                    boolean updated = updater.checkAndUpdate();
+                    Log.d(TAG, "Background update: " + updated);
+                    if (updated) {
+                        new Handler(Looper.getMainLooper()).post(() -> webView.reload());
+                    }
                 } catch (Exception e) {
                     Log.e(TAG, "Update failed", e);
                 }
             }).start();
         } else {
-            // Кеша нет — скачиваем, потом загружаем из file://
+            // Кеша нет — скачиваем, потом ставим перехватчик
             updateStatus("Скачивание клиента...");
 
             new Thread(() -> {
@@ -88,12 +90,9 @@ public class MainActivity extends BridgeActivity {
 
                     new Handler(Looper.getMainLooper()).post(() -> {
                         if (cacheIndex.exists()) {
-                            // Скачали — загружаем из кеша (bridge работает)
-                            writeSettingsJs(serverUrl, cacheDir);
-                            webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
+                            installInterceptor(webView, cacheDir);
                             hideLoading();
                         } else {
-                            // Не скачали — показываем ошибку
                             updateStatus("Не удалось скачать клиент.\nПроверьте подключение к серверу.");
                             Log.e(TAG, "Download failed and no cache");
                         }
@@ -105,6 +104,22 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
             }).start();
+        }
+    }
+
+    /**
+     * Ставит CachedWebViewClient на WebView и перезагружает страницу.
+     * На API < 26 (Android 7.x и ниже) — фолбэк на file:// (мост Capacitor теряется).
+     */
+    private void installInterceptor(WebView webView, File cacheDir) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WebViewClient original = webView.getWebViewClient();
+            webView.setWebViewClient(new CachedWebViewClient(original, cacheDir));
+            webView.reload();
+        } else {
+            // API < 26: getWebViewClient() недоступен — загружаем из file://
+            Log.w(TAG, "API " + Build.VERSION.SDK_INT + " < 26, using file:// fallback");
+            webView.loadUrl("file://" + new File(cacheDir, "index.html").getAbsolutePath());
         }
     }
 
@@ -143,19 +158,5 @@ public class MainActivity extends BridgeActivity {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (overlay != null) overlay.setVisibility(View.GONE);
         });
-    }
-
-    private void writeSettingsJs(String serverUrl, File dir) {
-        try {
-            if (!dir.exists()) dir.mkdirs();
-            String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
-            String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
-            FileWriter w = new FileWriter(new File(dir, "settings.js"));
-            w.write(content);
-            w.close();
-            Log.d(TAG, "Wrote settings.js");
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to write settings.js", e);
-        }
     }
 }
