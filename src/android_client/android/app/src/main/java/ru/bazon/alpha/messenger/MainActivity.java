@@ -34,10 +34,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
 
-        // addJavascriptInterface — синхронный мост JS↔Java.
-        // Доступен из любого JS на странице через window.AlphaConfig.getServerUrl().
-        // Работает ДО загрузки страницы (до любого <script>), не зависит от протокола.
         WebView webView = getBridge().getWebView();
+
+        // addJavascriptInterface — синхронный мост.
+        // НО: super.onCreate() уже вызвал loadUrl(bundled), страница может начать
+        // загружаться ДО того, как addJavascriptInterface сработает в JS-контексте.
+        String escaped = serverUrl.replace("\\", "\\\\").replace("'", "\\'");
         webView.addJavascriptInterface(new Object() {
             @JavascriptInterface
             public String getServerUrl() {
@@ -46,7 +48,17 @@ public class MainActivity extends BridgeActivity {
         }, "AlphaConfig");
         Log.d(TAG, "Registered AlphaConfig bridge");
 
-        // Также записываем settings.js для cached клиента ( belt-and-suspenders )
+        // evaluateJavascript — запасной вариант. Ставит __ALPHA_CONFIG__ напрямую.
+        // Выполняется ПОСЛЕ loadUrl, но модули (type="module") — deferred,
+        // поэтому evaluateJavascript попадёт в очередь раньше module scripts.
+        String jsConfig = "window.__ALPHA_CONFIG__={serverUrl:'" + escaped + "'};"
+            + "window.AlphaConfig={getServerUrl:function(){return'" + escaped + "'}};";
+        webView.evaluateJavascript(jsConfig, value -> {
+            Log.d(TAG, "evaluateJavascript result: " + value);
+        });
+        Log.d(TAG, "Injected config via evaluateJavascript");
+
+        // settings.js для cached клиента (belt-and-suspenders)
         try {
             writeSettingsJs(serverUrl);
         } catch (IOException e) {

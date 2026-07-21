@@ -17,40 +17,53 @@ function initialView(): { view: View; invite: string } {
   return { view: 'login', invite: '' };
 }
 
-function hasServerUrl(): boolean {
-  if ((window as any).AlphaConfig?.getServerUrl()) return true;
-  if ((window as any).__ALPHA_CONFIG__?.serverUrl) return true;
-  if (localStorage.getItem('alpha.serverUrl')) return true;
-  return false;
+function getServerUrl(): string | null {
+  if ((window as any).AlphaConfig?.getServerUrl()) return (window as any).AlphaConfig.getServerUrl();
+  if ((window as any).__ALPHA_CONFIG__?.serverUrl) return (window as any).__ALPHA_CONFIG__.serverUrl;
+  return localStorage.getItem('alpha.serverUrl');
 }
 
 export function App(): JSX.Element {
   const [authed, setAuthed] = useState(() => !!getToken());
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
-
-  // На Android: нативный SetupActivity показывает экран настройки.
-  // Если URL не задан — нужен web-setup (fallback).
-  // hasServerUrl() проверяет: AlphaConfig (addJavascriptInterface) →
-  // __ALPHA_CONFIG__ (settings.js) → localStorage.
-  const [needsSetup, setNeedsSetup] = useState(() => {
-    if (getPlatform() !== 'android') return false;
-    return !hasServerUrl();
-  });
+  const [ready, setReady] = useState(() => getPlatform() !== 'android' || !!getServerUrl());
 
   useEffect(() => {
     initPlatform();
   }, []);
 
-  if (needsSetup) {
+  // Android: нативный SetupActivity handles URL.
+  // Если URL ещё не доступен в web-контексте (evaluateJavascript ещё не выполнился) —
+  // ждём доступности, poll с интервалом.
+  useEffect(() => {
+    if (getPlatform() !== 'android' || ready) return;
+    const id = setInterval(() => {
+      if (getServerUrl()) {
+        setReady(true);
+      }
+    }, 50);
+    return () => clearInterval(id);
+  }, [ready]);
+
+  if (!ready) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-card" style={{ textAlign: 'center', padding: 32 }}>
+          <p style={{ color: '#aaa' }}>Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Web/desktop: показываем SetupScreen если URL не настроен
+  if (!getServerUrl()) {
     return (
       <SetupScreen
         onConfigured={(url: string) => {
           localStorage.setItem('alpha.serverUrl', url);
-          // Устанавливаем __ALPHA_CONFIG__ чтобы getApiUrl() и hasServerUrl()
-          // работали сразу, без reload. WebView остаётся тот же.
           (window as any).__ALPHA_CONFIG__ = { serverUrl: url };
-          setNeedsSetup(false);
+          setReady(true);
         }}
       />
     );
