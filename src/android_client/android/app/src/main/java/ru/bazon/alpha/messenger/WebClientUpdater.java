@@ -52,6 +52,11 @@ public class WebClientUpdater {
         return new File(context.getFilesDir(), CACHE_DIR);
     }
 
+    /** Временная директория для скачивания (вне cacheDir, чтобы не удалить при замене). */
+    private File getTmpDir() {
+        return new File(context.getCacheDir(), ".web_client_update");
+    }
+
     /** Версия в кеше (git hash) или null. */
     public String getCachedVersion() {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -83,8 +88,8 @@ public class WebClientUpdater {
             JSONArray files = manifest.getJSONArray("files");
             File cacheDir = getCacheDir();
 
-            // Скачиваем все файлы во временную папку, потом перемещаем
-            File tmpDir = new File(cacheDir, ".tmp_update");
+            // Скачиваем все файлы во временную папку (вне cacheDir!), потом перемещаем
+            File tmpDir = getTmpDir();
             if (tmpDir.exists()) deleteRecursive(tmpDir);
             tmpDir.mkdirs();
 
