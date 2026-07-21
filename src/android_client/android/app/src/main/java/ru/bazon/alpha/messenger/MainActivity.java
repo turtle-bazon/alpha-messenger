@@ -3,6 +3,8 @@ package ru.bazon.alpha.messenger;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.widget.LinearLayout;
@@ -42,41 +44,39 @@ public class MainActivity extends BridgeActivity {
         File cacheDir = updater.getCacheDir();
         File cacheIndex = new File(cacheDir, "index.html");
 
-        // Показываем loading-экран пока скачиваем клиент
-        showLoading();
-
-        // Скачиваем клиент синхронно (блокирует main thread, но это
-        // необходимо чтобы кеш был готов ДО загрузки WebView).
-        // Без этого загрузка с сервера ломает Capacitor bridge.
-        if (!cacheIndex.exists()) {
-            Log.d(TAG, "No cached client, downloading...");
-            boolean ok = updater.checkAndUpdate();
-            Log.d(TAG, "Download result: " + ok);
-        }
-
-        // Пишем settings.js в ту же папку что и index.html
-        writeSettingsJs(serverUrl, cacheDir);
-
+        // Кеш есть — загружаем сразу
         if (cacheIndex.exists()) {
             Log.d(TAG, "Loading cached client");
+            writeSettingsJs(serverUrl, cacheDir);
             webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
-        } else {
-            // Fallback: грузим с сервера (bridge не будет работать, но логин доступен)
-            Log.d(TAG, "Cache missing, falling back to server URL");
-            webView.loadUrl(serverUrl);
+            // Фоновая проверка обновлений
+            new Thread(() -> {
+                try { updater.checkAndUpdate(); } catch (Exception e) { Log.e(TAG, "Update failed", e); }
+            }).start();
+            return;
         }
 
-        // Фоновая проверка обновлений
+        // Кеша нет — показываем loading и скачиваем в фоне
+        showLoading();
+
         new Thread(() -> {
-            try {
-                updater.checkAndUpdate();
-            } catch (Exception e) {
-                Log.e(TAG, "Background update failed", e);
-            }
+            Log.d(TAG, "Downloading client in background...");
+            boolean ok = updater.checkAndUpdate();
+            Log.d(TAG, "Download result: " + ok);
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (cacheIndex.exists()) {
+                    writeSettingsJs(serverUrl, cacheDir);
+                    webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
+                } else {
+                    // Fallback: грузим с сервера (bridge не будет работать)
+                    Log.d(TAG, "Download failed, loading from server");
+                    webView.loadUrl(serverUrl);
+                }
+            });
         }).start();
     }
 
-    /** Показывает простой loading-экран поверх WebView пока скачивается клиент. */
     private void showLoading() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
