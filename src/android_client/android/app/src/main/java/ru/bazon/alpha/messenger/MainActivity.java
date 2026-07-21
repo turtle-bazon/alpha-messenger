@@ -36,12 +36,6 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    private void hideLoading() {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            if (overlay != null) overlay.setVisibility(View.GONE);
-        });
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -49,7 +43,6 @@ public class MainActivity extends BridgeActivity {
         Log.d(TAG, "=== onCreate serverUrl=" + serverUrl);
 
         if (serverUrl == null) {
-            Log.d(TAG, "No server URL, launching SetupActivity");
             startActivity(new Intent(this, SetupActivity.class));
             finish();
             return;
@@ -58,7 +51,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
 
-        // Показываем overlay поверх WebView (WebView создаётся super.onCreate)
         showLoadingOverlay();
 
         WebView webView = getBridge().getWebView();
@@ -70,7 +62,7 @@ public class MainActivity extends BridgeActivity {
         Log.d(TAG, "Cache index exists: " + cacheIndex.exists());
 
         if (cacheIndex.exists()) {
-            // Кеш есть — загружаем сразу
+            // Кеш есть — загружаем из file:// (Capacitor bridge работает)
             Log.d(TAG, "Loading cached client");
             writeSettingsJs(serverUrl, cacheDir);
             webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
@@ -85,43 +77,37 @@ public class MainActivity extends BridgeActivity {
                 }
             }).start();
         } else {
-            // Кеша нет — скачиваем в фоне
+            // Кеша нет — скачиваем, потом загружаем из file://
             updateStatus("Скачивание клиента...");
 
             new Thread(() -> {
                 try {
-                    updateStatus("Получение манифеста...");
+                    updateStatus("Получение манифеста с " + serverUrl + "...");
                     boolean ok = updater.checkAndUpdate();
                     Log.d(TAG, "Download result: " + ok);
-                    updateStatus("Результат: " + ok);
 
                     new Handler(Looper.getMainLooper()).post(() -> {
                         if (cacheIndex.exists()) {
-                            updateStatus("Загрузка клиента...");
+                            // Скачали — загружаем из кеша (bridge работает)
                             writeSettingsJs(serverUrl, cacheDir);
                             webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
                             hideLoading();
                         } else {
-                            // Fallback: грузим с сервера
-                            updateStatus("Загрузка с сервера...");
-                            Log.d(TAG, "Fallback: loading from server URL");
-                            webView.loadUrl(serverUrl);
-                            hideLoading();
+                            // Не скачали — показываем ошибку
+                            updateStatus("Не удалось скачать клиент.\nПроверьте подключение к серверу.");
+                            Log.e(TAG, "Download failed and no cache");
                         }
                     });
                 } catch (Exception e) {
                     Log.e(TAG, "Download exception", e);
-                    updateStatus("Ошибка: " + e.getMessage());
                     new Handler(Looper.getMainLooper()).post(() -> {
-                        webView.loadUrl(serverUrl);
-                        hideLoading();
+                        updateStatus("Ошибка: " + e.getMessage());
                     });
                 }
             }).start();
         }
     }
 
-    /** Overlay поверх WebView — не заменяет ContentView. */
     private void showLoadingOverlay() {
         overlay = new FrameLayout(this);
         overlay.setBackgroundColor(0xFF1A1A2E);
@@ -147,11 +133,16 @@ public class MainActivity extends BridgeActivity {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
-        // Добавляем overlay в корневой FrameLayout поверх WebView
         FrameLayout root = (FrameLayout) getWindow().getDecorView().findViewById(android.R.id.content);
         root.addView(overlay, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
+    }
+
+    private void hideLoading() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (overlay != null) overlay.setVisibility(View.GONE);
+        });
     }
 
     private void writeSettingsJs(String serverUrl, File dir) {
