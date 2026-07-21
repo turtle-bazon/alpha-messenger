@@ -37,8 +37,8 @@ jobs:
     - name: Build and push server image
       uses: docker/build-push-action@v6
       with:
-        context: src
-        file: server/Dockerfile
+        context: .
+        file: src/server/Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
         build-args: |
           GIT_HASH=${{ github.sha }}
