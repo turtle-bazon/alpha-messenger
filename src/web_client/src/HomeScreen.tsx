@@ -150,7 +150,8 @@ export function HomeScreen({
   // На Android/ desktop bundled-клиенте проверяем version.json на сервере напрямую.
   useEffect(() => {
     let currentVersion: string | null = null;
-    const nativeServerUrl = (window as any).__ALPHA_CONFIG__?.serverUrl as string | undefined;
+    const nativeServerUrl = ((window as any).AlphaConfig?.getServerUrl?.()
+      || (window as any).__ALPHA_CONFIG__?.serverUrl) as string | undefined;
     const isBundled = window.location.protocol === 'file:' || !!nativeServerUrl;
     const serverUrl = isBundled ? (nativeServerUrl || null) : null;
     const versionUrl = serverUrl ? `${serverUrl}/version.json` : '/version.json';

@@ -1,21 +1,26 @@
 // Базовый адрес сервера. Вычисляется динамически.
-// На Android нативное приложение записывает settings.js с window.__ALPHA_CONFIG__,
-// поэтому URL доступен синхронно — без evaluateJavascript и localStorage.
+// На Android используется addJavascriptInterface (window.AlphaConfig.getServerUrl()) —
+// синхронный мост, доступен ДО загрузки任何 скриптов.
+// Дополнительно settings.js ставит window.__ALPHA_CONFIG__ для cached клиента.
 function getApiUrl(): string {
   if (typeof window === 'undefined') return 'http://localhost:3000';
 
-  // 1. Нативный мост (Android settings.js) — приоритет на file:// протоколе
-  const native = (window as any).__ALPHA_CONFIG__?.serverUrl;
+  // 1. addJavascriptInterface (Android native bridge) — самый надёжный, работает всегда
+  const native = (window as any).AlphaConfig?.getServerUrl();
   if (native) return native;
 
-  // 2. localStorage (пользователь вводит адрес)
+  // 2. settings.js (Android cached client — файл в той же директории)
+  const cached = (window as any).__ALPHA_CONFIG__?.serverUrl;
+  if (cached) return cached;
+
+  // 3. localStorage (desktop, web-setup fallback)
   const saved = localStorage.getItem('alpha.serverUrl');
   if (saved) return saved;
 
-  // 3. Явно заданный адрес (для dev или нестандартных портов)
+  // 4. Явно заданный адрес (для dev или нестандартных портов)
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
 
-  // 4. Тот же origin (Apache/nginx reverse proxy).
+  // 5. Тот же origin (Apache/nginx reverse proxy).
   // На file:// протоколе origin = 'null' — фолбэк на localhost.
   if (window.location.origin && window.location.origin !== 'null') {
     return window.location.origin;

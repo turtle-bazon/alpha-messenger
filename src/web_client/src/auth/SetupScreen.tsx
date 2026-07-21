@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 interface SetupScreenProps {
-  onConfigured: () => void;
+  onConfigured: (url: string) => void;
 }
 
 export function SetupScreen({ onConfigured }: SetupScreenProps): JSX.Element {
@@ -23,17 +23,9 @@ export function SetupScreen({ onConfigured }: SetupScreenProps): JSX.Element {
     setError('');
     setConnecting(true);
 
-    // Проверяем доступность сервера
     fetch(trimmed, { method: 'HEAD', mode: 'no-cors' })
-      .then(() => {
-        localStorage.setItem('alpha.serverUrl', trimmed);
-        onConfigured();
-      })
-      .catch(() => {
-        // no-cors всегда succeeds, но на всякий случай
-        localStorage.setItem('alpha.serverUrl', trimmed);
-        onConfigured();
-      });
+      .then(() => onConfigured(trimmed))
+      .catch(() => onConfigured(trimmed));
   }
 
   return (

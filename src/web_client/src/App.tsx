@@ -9,8 +9,6 @@ import { initPlatform, getPlatform } from './util/platform';
 
 type View = 'login' | 'register';
 
-// Простейшая маршрутизация по location: /register?invite=CODE открывает
-// регистрацию, иначе — вход. Полноценный роутер v1 не нужен.
 function initialView(): { view: View; invite: string } {
   const url = new URL(window.location.href);
   if (url.pathname === '/register') {
@@ -19,28 +17,43 @@ function initialView(): { view: View; invite: string } {
   return { view: 'login', invite: '' };
 }
 
+function hasServerUrl(): boolean {
+  if ((window as any).AlphaConfig?.getServerUrl()) return true;
+  if ((window as any).__ALPHA_CONFIG__?.serverUrl) return true;
+  if (localStorage.getItem('alpha.serverUrl')) return true;
+  return false;
+}
+
 export function App(): JSX.Element {
   const [authed, setAuthed] = useState(() => !!getToken());
   const [start] = useState(initialView);
   const [view, setView] = useState<View>(start.view);
 
-  // На Android: нативный SetupActivity показывает экран настройки
-  // и сохраняет URL в SharedPreferences. Java записывает settings.js
-  // в кеш-директорию с window.__ALPHA_CONFIG__. Если settings.js
-  // не загрузился — значит URL не настроен, нужен web-setup.
-  const [needsSetup] = useState(() => {
+  // На Android: нативный SetupActivity показывает экран настройки.
+  // Если URL не задан — нужен web-setup (fallback).
+  // hasServerUrl() проверяет: AlphaConfig (addJavascriptInterface) →
+  // __ALPHA_CONFIG__ (settings.js) → localStorage.
+  const [needsSetup, setNeedsSetup] = useState(() => {
     if (getPlatform() !== 'android') return false;
-    return !(window as any).__ALPHA_CONFIG__?.serverUrl;
+    return !hasServerUrl();
   });
 
-  // Инициализация платформы (push, нативные плагины)
   useEffect(() => {
     initPlatform();
   }, []);
 
-  // Setup screen — только если settings.js не загрузился (URL не настроен в Java)
   if (needsSetup) {
-    return <SetupScreen onConfigured={() => window.location.reload()} />;
+    return (
+      <SetupScreen
+        onConfigured={(url: string) => {
+          localStorage.setItem('alpha.serverUrl', url);
+          // Устанавливаем __ALPHA_CONFIG__ чтобы getApiUrl() и hasServerUrl()
+          // работали сразу, без reload. WebView остаётся тот же.
+          (window as any).__ALPHA_CONFIG__ = { serverUrl: url };
+          setNeedsSetup(false);
+        }}
+      />
+    );
   }
 
   if (authed) {
