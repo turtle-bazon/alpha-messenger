@@ -9,6 +9,8 @@ import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class MainActivity extends BridgeActivity {
 
@@ -31,34 +33,35 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
 
-        WebClientUpdater updater = new WebClientUpdater(this, serverUrl);
-        File cacheIndex = new File(updater.getCacheDir(), "index.html");
-
-        // Пытаемся скачать клиент СИНХРОННО, если ещё нет в кеше.
-        // Это гарантирует что settings.js и index.html будут в одной папке.
-        if (!cacheIndex.exists()) {
-            Log.d(TAG, "No cached client, downloading...");
-            boolean ok = updater.checkAndUpdate();
-            Log.d(TAG, "Download result: " + ok);
-        }
-
-        // Пишем settings.js (на случай если checkAndUpdate его не создал)
-        writeSettingsJs(serverUrl, updater.getCacheDir());
-
         WebView webView = getBridge().getWebView();
+        WebClientUpdater updater = new WebClientUpdater(this, serverUrl);
 
-        // Загружаем кеш если есть, иначе bundled (super.onCreate уже загрузил)
+        // Приоритет загрузки web-клиента:
+        // 1. Кеш (getFilesDir/web_client/) — быстрый, settings.js рядом с index.html
+        // 2. Сервер (serverUrl) — если кеша нет, грузим напрямую (как на десктопе)
+        // 3. Bundled (assets/www/) — только если и кеш, и сервер недоступны
+
+        File cacheDir = updater.getCacheDir();
+        File cacheIndex = new File(cacheDir, "index.html");
+
         if (cacheIndex.exists()) {
+            // Кеш есть — загружаем из него
             Log.d(TAG, "Loading cached client: " + cacheIndex.getAbsolutePath());
+            writeSettingsJs(serverUrl, cacheDir);
             webView.loadUrl("file://" + cacheIndex.getAbsolutePath());
+        } else {
+            // Кеша нет — грузим с сервера (settings.js не нужен, origin = serverUrl)
+            Log.d(TAG, "No cache, loading from server: " + serverUrl);
+            webView.loadUrl(serverUrl);
         }
 
-        // Фоновая проверка обновлений
+        // Фоновая скачка/обновление клиента для следующего запуска
         new Thread(() -> {
             try {
-                updater.checkAndUpdate();
+                boolean ok = updater.checkAndUpdate();
+                Log.d(TAG, "Background update: " + ok);
             } catch (Exception e) {
-                Log.e(TAG, "Background update check failed", e);
+                Log.e(TAG, "Background update failed", e);
             }
         }).start();
     }
@@ -66,14 +69,13 @@ public class MainActivity extends BridgeActivity {
     private void writeSettingsJs(String serverUrl, File dir) {
         try {
             if (!dir.exists()) dir.mkdirs();
-            File settingsFile = new File(dir, "settings.js");
             String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
             String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
-            java.io.FileWriter w = new java.io.FileWriter(settingsFile);
+            FileWriter w = new FileWriter(new File(dir, "settings.js"));
             w.write(content);
             w.close();
-            Log.d(TAG, "Wrote settings.js: " + settingsFile.getAbsolutePath());
-        } catch (Exception e) {
+            Log.d(TAG, "Wrote settings.js");
+        } catch (IOException e) {
             Log.e(TAG, "Failed to write settings.js", e);
         }
     }

@@ -20,7 +20,12 @@ function initialView(): { view: View; invite: string } {
 function getServerUrl(): string | null {
   if ((window as any).AlphaConfig?.getServerUrl()) return (window as any).AlphaConfig.getServerUrl();
   if ((window as any).__ALPHA_CONFIG__?.serverUrl) return (window as any).__ALPHA_CONFIG__.serverUrl;
-  return localStorage.getItem('alpha.serverUrl');
+  const ls = localStorage.getItem('alpha.serverUrl');
+  if (ls) return ls;
+  // Если грузим с сервера напрямую — URL уже в window.location.origin
+  const origin = window.location.origin;
+  if (origin && origin !== 'null' && !origin.startsWith('file:')) return origin;
+  return null;
 }
 
 export function App(): JSX.Element {
