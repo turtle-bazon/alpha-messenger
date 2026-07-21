@@ -19,6 +19,8 @@ import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class MainActivity extends BridgeActivity {
 
@@ -62,8 +64,9 @@ public class MainActivity extends BridgeActivity {
         Log.d(TAG, "Cache index exists: " + cacheIndex.exists());
 
         if (cacheIndex.exists()) {
-            // Кеш есть — ставим перехватчик и перезагружаем
+            // Кеш есть — пишем settings.js и загружаем
             Log.d(TAG, "Loading cached client via interceptor");
+            writeSettingsJs(serverUrl, cacheDir);
             installInterceptor(webView, cacheDir);
             hideLoading();
             // Фоновая проверка обновлений
@@ -99,6 +102,7 @@ public class MainActivity extends BridgeActivity {
 
                     new Handler(Looper.getMainLooper()).post(() -> {
                         if (cacheIndex.exists()) {
+                            writeSettingsJs(serverUrl, cacheDir);
                             installInterceptor(webView, cacheDir);
                             hideLoading();
                         } else {
@@ -202,5 +206,25 @@ public class MainActivity extends BridgeActivity {
             }
         }
         return null;
+    }
+
+    /**
+     * Записывает settings.js в кеш-директорию.
+     * HTML содержит <script src="settings.js"> — интерцептор отдаст его из кеша.
+     * settings.js ставит window.__ALPHA_CONFIG__ = { serverUrl: "..." },
+     * который getApiUrl() в config.ts читает как приоритетный источник.
+     */
+    private void writeSettingsJs(String serverUrl, File dir) {
+        try {
+            if (!dir.exists()) dir.mkdirs();
+            String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
+            String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
+            FileWriter w = new FileWriter(new File(dir, "settings.js"));
+            w.write(content);
+            w.close();
+            Log.d(TAG, "Wrote settings.js for " + serverUrl);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to write settings.js", e);
+        }
     }
 }
