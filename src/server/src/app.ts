@@ -50,7 +50,7 @@ export function buildApp(): FastifyInstance {
   app.register(wsRoutes);
   // version.json в корне — клиент проверяет авто-обновление.
   app.register(versionRoutes);
-  // Файлы веб-клиента для Android-обновлений (/client/manifest.json, /client/assets/...).
+  // Файлы веб-клиента для Android-обновлений (/mobile-client/manifest.json, /mobile-client/assets/...).
   app.register(clientRoutes);
 
   return app;

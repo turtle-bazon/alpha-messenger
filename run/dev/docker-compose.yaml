@@ -22,7 +22,8 @@ services:
 
   server:
     build:
-      context: ../../src/server
+      context: ../../src
+      dockerfile: server/Dockerfile
     environment:
       PORT: 3000
       HOST: 0.0.0.0
@@ -37,9 +38,6 @@ services:
       - "3000:3000"
     volumes:
       - alpha-blobs:/data/blobs
-      # Файлы веб-клиента для Android-обновлений (/client/manifest.json, /client/assets/...).
-      # Клиент монтируется как ro — сервер только отдаёт файлы, не меняет.
-      - ../../src/web_client/dist:/app/web_client:ro
 
 volumes:
   alpha-db:

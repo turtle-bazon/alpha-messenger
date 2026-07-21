@@ -22,7 +22,7 @@ import java.util.List;
  * Проверяет наличие обновлений веб-клиента на сервере и скачивает их.
  *
  * Поток обновления:
- * 1. GET /client/manifest.json — получаем версию и список файлов
+ * 1. GET /mobile-client/manifest.json — получаем версию и список файлов
  * 2. Сравниваем с кешированной версией (SharedPreferences)
  * 3. Если версия отличается — скачиваем все файлы из манифеста
  * 4. Сохраняем в getFilesDir()/web_client/
@@ -119,7 +119,7 @@ public class WebClientUpdater {
     private JSONObject fetchManifest() {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(serverUrl + "/client/manifest.json");
+            URL url = new URL(serverUrl + "/mobile-client/manifest.json");
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(CONNECT_TIMEOUT);
@@ -143,7 +143,7 @@ public class WebClientUpdater {
     private boolean downloadFile(String path, File dest) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(serverUrl + "/client/" + path);
+            URL url = new URL(serverUrl + "/mobile-client/" + path);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(CONNECT_TIMEOUT);

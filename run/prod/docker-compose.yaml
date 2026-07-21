@@ -34,7 +34,8 @@ services:
 
   server:
     build:
-      context: ../../src/server
+      context: ../../src
+      dockerfile: server/Dockerfile
     environment:
       PORT: 3000
       HOST: 0.0.0.0
@@ -52,9 +53,6 @@ services:
         condition: service_started
     ports:
       - "3100:3000"
-    volumes:
-      # Файлы веб-клиента для Android-обновлений.
-      - ../../src/web_client/dist:/app/web_client:ro
 
   client:
     build:
