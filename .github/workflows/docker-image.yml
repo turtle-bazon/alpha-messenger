@@ -38,7 +38,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: src
-        dockerfile: server/Dockerfile
+        file: server/Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
         build-args: |
           GIT_HASH=${{ github.sha }}
