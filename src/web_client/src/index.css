@@ -3233,6 +3233,23 @@ body {
   background: rgba(229, 57, 53, 0.08);
 }
 
+/* ==================== Settings debug info ==================== */
+
+.settings-debug {
+  padding: 12px 16px;
+  border-top: 1px solid var(--divider);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.settings-debug-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
 /* ==================== Scroll-to-bottom button ==================== */
 
 .scroll-to-bottom {

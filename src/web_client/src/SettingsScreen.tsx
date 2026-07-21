@@ -196,6 +196,13 @@ export function SettingsScreen({
           <span className="settings-row-arrow">›</span>
         </button>
       </div>
+      <div className="settings-debug" data-testid="settings-debug">
+        <div className="settings-debug-title">Системная информация</div>
+        <div>Платформа: <b>{getPlatform()}</b></div>
+        <div>Capacitor: <b>{String(!!(window as any).Capacitor)}</b></div>
+        <div>isNativePlatform: <b>{String((window as any).Capacitor?.isNativePlatform?.() ?? 'N/A')}</b></div>
+        <div>userAgent: <b style={{ wordBreak: 'break-all' }}>{navigator.userAgent}</b></div>
+      </div>
       <div className="settings-footer">
         <button
           type="button"
