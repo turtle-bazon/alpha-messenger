@@ -22,11 +22,20 @@ export function registerPlatformInit(cb: () => Promise<void>): void {
 export function getPlatform(): Platform {
   if (cachedPlatform) return cachedPlatform;
 
-  // Capacitor (Android/iOS)
-  if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()) {
-    const p = (window as any).Capacitor.getPlatform();
-    cachedPlatform = p === 'android' ? 'android' : 'ios';
-    return cachedPlatform;
+  // Capacitor (Android/iOS) — проверяем и Capacitor API, и userAgent на случай
+  // если мост ещё не инициализирован к моменту первого рендера.
+  if (typeof window !== 'undefined') {
+    if ((window as any).Capacitor?.isNativePlatform()) {
+      const p = (window as any).Capacitor.getPlatform();
+      cachedPlatform = p === 'android' ? 'android' : 'ios';
+      return cachedPlatform;
+    }
+    // Фолбэк: userAgent содержит "Capacitor" при запуске в нативном WebView
+    const ua = navigator.userAgent;
+    if (ua.includes('Capacitor')) {
+      cachedPlatform = ua.includes('Android') ? 'android' : 'ios';
+      return cachedPlatform;
+    }
   }
 
   // Electron
