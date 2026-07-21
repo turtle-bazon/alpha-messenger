@@ -52,6 +52,9 @@ services:
         condition: service_started
     ports:
       - "3100:3000"
+    volumes:
+      # Файлы веб-клиента для Android-обновлений.
+      - ../../src/web_client/dist:/app/web_client:ro
 
   client:
     build:
