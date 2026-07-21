@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { ApiError, login } from '../api/rest';
+import { apiUrl } from '../api/config';
 import { getDeviceId, setSession } from '../api/session';
 import { PasswordInput } from './PasswordInput';
 
@@ -26,10 +27,12 @@ export function LoginScreen({
       setSession(res.accessToken, res.userId);
       onAuthed();
     } catch (err) {
+      const url = apiUrl('/auth/login');
       if (err instanceof ApiError) {
-        setError('Неверное имя пользователя или пароль');
+        setError(`HTTP ${err.status} — ${url}`);
       } else {
-        setError('Сервер недоступен');
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`${msg} — ${url}`);
       }
     } finally {
       setBusy(false);
