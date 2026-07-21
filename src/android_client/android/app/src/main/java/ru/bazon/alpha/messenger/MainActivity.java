@@ -73,8 +73,14 @@ public class MainActivity extends BridgeActivity {
                     Log.d(TAG, "Background update: " + updated);
                     if (updated) {
                         new Handler(Looper.getMainLooper()).post(() -> {
-                            String url = webView.getUrl();
-                            if (url != null) webView.loadUrl(url);
+                            // Перечитываем HTML из кеша и перезагружаем
+                            CachedWebViewClient client = getCachedClient(webView);
+                            if (client != null) {
+                                String html = client.readCachedIndexHtml();
+                                if (html != null) {
+                                    webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null);
+                                }
+                            }
                         });
                     }
                 } catch (Exception e) {
@@ -111,21 +117,37 @@ public class MainActivity extends BridgeActivity {
     }
 
     /**
-     * Ставит CachedWebViewClient на WebView и перезагружает страницу.
-     * На API < 26 (Android 7.x и ниже) — фолбэк на file:// (мост Capacitor теряется).
+     * Ставит CachedWebViewClient (для под-ресурсов) и загружает cached HTML
+     * через loadDataWithBaseURL (для главного фрейма).
+     *
+     * shouldInterceptRequest не работает для main frame — WebView показывает
+     * HTML как текст. Вместо этого загружаем HTML напрямую, а под-ресурсы
+     * (JS, CSS) перехватываются и отдаются из кеша.
      */
     private void installInterceptor(WebView webView, File cacheDir) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WebViewClient original = webView.getWebViewClient();
-            webView.setWebViewClient(new CachedWebViewClient(original, cacheDir));
-            // reload() может не вызвать shouldInterceptRequest для главного фрейма.
-            // Используем loadUrl() с текущим URL — это гарантированно пройдёт через interceptor.
-            String currentUrl = webView.getUrl();
-            Log.d(TAG, "Installing interceptor, reloading: " + currentUrl);
-            if (currentUrl != null) {
-                webView.loadUrl(currentUrl);
+            CachedWebViewClient cachedClient = new CachedWebViewClient(original, cacheDir);
+            webView.setWebViewClient(cachedClient);
+
+            // Загружаем cached HTML через loadDataWithBaseURL.
+            // Base URL = https://localhost/ — совпадает с origin Capacitor,
+            // поэтому бридж пересоздаётся в onPageStarted.
+            // Под-ресурсы (./assets/...) резолвятся на https://localhost/assets/...
+            // и перехватываются CachedWebViewClient → отдаются из кеша.
+            String html = cachedClient.readCachedIndexHtml();
+            if (html != null) {
+                Log.d(TAG, "Loading cached HTML via loadDataWithBaseURL");
+                webView.loadDataWithBaseURL(
+                    "https://localhost/",
+                    html,
+                    "text/html",
+                    "UTF-8",
+                    null
+                );
             } else {
-                webView.loadUrl("https://localhost/");
+                Log.e(TAG, "Cached index.html not found, falling back to reload");
+                webView.reload();
             }
         } else {
             // API < 26: getWebViewClient() недоступен — загружаем из file://
@@ -169,5 +191,16 @@ public class MainActivity extends BridgeActivity {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (overlay != null) overlay.setVisibility(View.GONE);
         });
+    }
+
+    /** Проверяет, является ли текущий WebViewClient экземпляром CachedWebViewClient. */
+    private CachedWebViewClient getCachedClient(WebView webView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WebViewClient client = webView.getWebViewClient();
+            if (client instanceof CachedWebViewClient) {
+                return (CachedWebViewClient) client;
+            }
+        }
+        return null;
     }
 }

@@ -13,13 +13,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * WebViewClient, который перехватывает запросы и отдаёт файлы из кеша.
- * Оригинальный Capacitor WebViewClient делегируется для сохранения бриджа.
+ * WebViewClient, который перехватывает запросы на под-ресурсы (JS, CSS, картинки)
+ * и отдаёт их из кеша. Главный фрейм НЕ перехватывается — HTML загружается
+ * через loadDataWithBaseURL в MainActivity.
  */
 public class CachedWebViewClient extends WebViewClient {
 
@@ -54,13 +56,13 @@ public class CachedWebViewClient extends WebViewClient {
     @Nullable
     @Override
     public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-        String path = request.getUrl().getPath();
-        boolean isMainPage = request.isForMainFrame();
-        Log.d(TAG, "shouldInterceptRequest: " + request.getUrl() + " mainFrame=" + isMainPage);
-
-        if (path == null || path.isEmpty() || path.equals("/")) {
-            path = "/index.html";
+        // НЕ перехватываем main frame — HTML загружается через loadDataWithBaseURL
+        if (request.isForMainFrame()) {
+            return null;
         }
+
+        String path = request.getUrl().getPath();
+        if (path == null || path.isEmpty()) return null;
 
         // Убираем ведущий слеш
         if (path.startsWith("/")) {
@@ -82,8 +84,7 @@ public class CachedWebViewClient extends WebViewClient {
             }
         }
 
-        Log.d(TAG, "Not in cache, delegating: " + path);
-        // Файла нет в кеше — делегируем оригинальному клиенту (Capacitor assets)
+        // Файла нет в кеше — делегируем оригинальному клиенту
         return originalClient.shouldInterceptRequest(view, request);
     }
 
@@ -108,6 +109,24 @@ public class CachedWebViewClient extends WebViewClient {
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         return originalClient.shouldOverrideUrlLoading(view, request);
+    }
+
+    /**
+     * Читает cached index.html и возвращает как строку.
+     */
+    public String readCachedIndexHtml() {
+        File index = new File(cacheDir, "index.html");
+        if (!index.exists()) return null;
+        try {
+            byte[] bytes = new byte[(int) index.length()];
+            FileInputStream fis = new FileInputStream(index);
+            fis.read(bytes);
+            fis.close();
+            return new String(bytes, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to read index.html", e);
+            return null;
+        }
     }
 
     private String getMimeType(String path) {
