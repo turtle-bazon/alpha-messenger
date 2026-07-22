@@ -35,6 +35,17 @@ public class MainActivity extends BridgeActivity {
     private FrameLayout overlay;
     private TextView loadingText;
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (Build.VERSION.SDK_INT >= 33
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1001);
+        }
+    }
+
     private void updateStatus(String msg) {
         Log.d(TAG, msg);
         if (loadingText != null) {
@@ -56,14 +67,6 @@ public class MainActivity extends BridgeActivity {
 
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
-
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1001);
-            }
-        }
 
         showLoadingOverlay();
 
