@@ -1345,14 +1345,13 @@ export function Conversation({
                               } else {
                                 // Ручной расчёт позиции вместо scrollIntoView —
                                 // scrollIntoView на Android WebView может скроллить
-                                // не тот контейнер и scrollend не фирит.
+                                // не тот контейнер.
                                 const targetTop = (target as HTMLElement).offsetTop
                                   - el.offsetTop
                                   - el.clientHeight / 2
                                   + (target as HTMLElement).clientHeight / 2;
                                 el.scrollTo({ top: targetTop, behavior: 'smooth' });
-                                // fallback для scrollend, который не работает в Android WebView
-                                setTimeout(doHighlight, 350);
+                                el.addEventListener('scrollend', () => doHighlight(), { once: true });
                               }
                             }}
                           >

@@ -3310,7 +3310,7 @@ body {
 
 .nav-back-btn {
   position: absolute;
-  top: 12px;
+  bottom: 60px;
   right: 16px;
   z-index: 10;
   width: 40px;
