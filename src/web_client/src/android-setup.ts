@@ -125,17 +125,30 @@ async function tryUnifiedPush(): Promise<PushRegistration | null> {
 async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | null> {
   try {
     // Получаем список дистрибьюторов.
-    // Capacitor может вернуть JSObject {0:"a",1:"b"} вместо ["a","b"].
-    // JSON-сериализация garantирует нативный Array.
+    // Capacitor может вернуть: JSObject, строку, или массив — обрабатываем все случаи.
     const raw = await upPlugin.getDistributors();
+    console.log('Alpha: raw getDistributors:', JSON.stringify(raw));
+
+    let distributors: string[] = [];
     const list = raw?.distributors ?? raw;
-    const distributors: string[] = JSON.parse(JSON.stringify(list));
-    if (!Array.isArray(distributors) || distributors.length === 0) {
+
+    if (Array.isArray(list)) {
+      distributors = list.map(String);
+    } else if (typeof list === 'string') {
+      // Capacitor иногда сериализует List<String> как строку "[a, b]"
+      const cleaned = list.replace(/^\[|\]$/g, '');
+      distributors = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (list && typeof list === 'object') {
+      // JSObject {0: "a", 1: "b"} — конвертируем через Object.values
+      distributors = Object.values(list).map(String);
+    }
+
+    if (distributors.length === 0) {
       console.log('Alpha: No UP distributors found');
       return null;
     }
 
-    console.log('Alpha: UP distributors found:', JSON.stringify(distributors));
+    console.log('Alpha: UP distributors ready:', JSON.stringify(distributors));
 
     // Если один — используем его, если несколько — показываем выбор
     let selectedDistributor: string | null;
