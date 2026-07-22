@@ -1317,6 +1317,8 @@ export function Conversation({
                               );
                               if (!target) return;
                               pushNavStack();
+                              // Сбрасываем atBottom, чтобы auto-scroll не тянул обратно вниз
+                              atBottomRef.current = false;
                               const doHighlight = () => {
                                 setMessages((prev) =>
                                   prev.map((x) =>
@@ -1341,8 +1343,16 @@ export function Conversation({
                               if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
                                 doHighlight();
                               } else {
-                                el.addEventListener('scrollend', () => doHighlight(), { once: true });
-                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                // Ручной расчёт позиции вместо scrollIntoView —
+                                // scrollIntoView на Android WebView может скроллить
+                                // не тот контейнер и scrollend не фирит.
+                                const targetTop = (target as HTMLElement).offsetTop
+                                  - el.offsetTop
+                                  - el.clientHeight / 2
+                                  + (target as HTMLElement).clientHeight / 2;
+                                el.scrollTo({ top: targetTop, behavior: 'smooth' });
+                                // fallback для scrollend, который не работает в Android WebView
+                                setTimeout(doHighlight, 350);
                               }
                             }}
                           >
