@@ -30,9 +30,11 @@ public class UnifiedPushPlugin extends Plugin {
 
     @PluginMethod
     public void getDistributors(PluginCall call) {
+        Log.d(TAG, "getDistributors called");
         executor.execute(() -> {
             try {
                 List<String> distributors = UnifiedPush.getDistributors(getActivity());
+                Log.d(TAG, "getDistributors result: " + distributors);
                 JSObject result = new JSObject();
                 result.put("distributors", distributors);
                 call.resolve(result);
@@ -63,6 +65,7 @@ public class UnifiedPushPlugin extends Plugin {
 
     @PluginMethod
     public void register(PluginCall call) {
+        Log.d(TAG, "register called");
         executor.execute(() -> {
             try {
                 getActivity().getSharedPreferences("unifiedpush", Context.MODE_PRIVATE)
@@ -88,6 +91,7 @@ public class UnifiedPushPlugin extends Plugin {
     @PluginMethod
     public void waitForEndpoint(PluginCall call) {
         int timeoutMs = call.getInt("timeout", 15000);
+        Log.d(TAG, "waitForEndpoint called, timeout=" + timeoutMs);
 
         executor.execute(() -> {
             SharedPreferences prefs = getActivity()

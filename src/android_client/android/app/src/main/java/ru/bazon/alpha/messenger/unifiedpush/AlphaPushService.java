@@ -19,7 +19,7 @@ public class AlphaPushService extends PushService {
 
     @Override
     public void onNewEndpoint(PushEndpoint endpoint, String instance) {
-        Log.d(TAG, "New endpoint: " + endpoint.getUrl() + " (instance=" + instance + ")");
+        Log.d(TAG, "onNewEndpoint: " + endpoint.getUrl() + " instance=" + instance);
 
         SharedPreferences prefs = getApplicationContext()
                 .getSharedPreferences("unifiedpush", Context.MODE_PRIVATE);
@@ -27,6 +27,7 @@ public class AlphaPushService extends PushService {
                 .putString("endpoint", endpoint.getUrl())
                 .putString("instance", instance)
                 .apply();
+        Log.d(TAG, "Endpoint saved to SharedPreferences");
     }
 
     @Override
@@ -40,11 +41,11 @@ public class AlphaPushService extends PushService {
 
     @Override
     public void onRegistrationFailed(FailedReason reason, String instance) {
-        Log.e(TAG, "Registration failed: reason=" + reason + " instance=" + instance);
+        Log.e(TAG, "onRegistrationFailed: reason=" + reason + " instance=" + instance);
     }
 
     @Override
     public void onMessage(PushMessage message, String instance) {
-        Log.d(TAG, "Message received: instance=" + instance);
+        Log.d(TAG, "onMessage: instance=" + instance + " messageId=" + message.getMessageId());
     }
 }

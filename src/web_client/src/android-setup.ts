@@ -19,6 +19,11 @@ const DEVICE_ID_KEY = 'alpha.device_id';
  */
 export function setupAndroid(): void {
   registerPlatformInit(initAndroid);
+  // Если пользователь уже залогинен — запускаем initAndroid немедленно,
+  // не дожидаясь следующего вызова initPlatform() (race condition с async import).
+  if (getToken()) {
+    initAndroid();
+  }
 }
 
 let appStateListenerAdded = false;
