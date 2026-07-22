@@ -111,9 +111,7 @@ async function getFCMAccessToken(): Promise<string | null> {
 
 async function sendUnifiedPush(endpoint: string): Promise<boolean> {
   try {
-    // endpoint — полный URL топика клиента (например, https://ntfy.sh/alpha-abc123)
-    // Клиент сам генерирует топик и подписывается на него в ntfy-приложении.
-    // Мы просто шлём POST на этот URL.
+    console.log(`UP: sending to ${endpoint}`);
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -124,16 +122,17 @@ async function sendUnifiedPush(endpoint: string): Promise<boolean> {
       }),
     });
 
+    console.log(`UP: response ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`UP error: ${res.status} ${body}`);
+    }
+
     if (res.status === 404 || res.status === 410) {
       return false;
     }
 
-    if (!res.ok) {
-      console.error(`UP error: ${res.status} ${await res.text()}`);
-      return false;
-    }
-
-    return true;
+    return res.ok;
   } catch (err) {
     console.error('UP send failed:', err);
     return false;
@@ -150,6 +149,11 @@ export async function sendWakeUp(userId: string): Promise<number> {
       WHERE d.user_id = $1`,
     [userId],
   );
+
+  console.log(`Push: sendWakeUp for ${userId}, ${rows.length} subscriptions`);
+  for (const r of rows) {
+    console.log(`Push: ${r.provider} endpoint=${r.endpoint}`);
+  }
 
   let sent = 0;
   const failedSubscriptions: string[] = [];
