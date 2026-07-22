@@ -42,7 +42,7 @@
 
         <service
             android:name=".unifiedpush.AlphaPushService"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="org.unifiedpush.android.connector.PUSH_EVENT"/>
             </intent-filter>
