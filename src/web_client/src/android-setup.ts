@@ -3,15 +3,13 @@
 // Никаких import из @capacitor/* — работаем через window.Capacitor.
 
 import { registerPlatformInit } from './util/platform';
-import { getToken } from './api/session';
+import { getToken, getDeviceId } from './api/session';
 import { subscribePush } from './api/rest';
 
 type PushPlatform = 'fcm' | 'unifiedpush' | 'none';
 
 // Capacitor API доступен через window в WebView
 const Capacitor = (window as any).Capacitor;
-
-const DEVICE_ID_KEY = 'alpha.device_id';
 
 /**
  * Регистрирует android-init в platform.ts.
@@ -62,17 +60,6 @@ async function initAndroid(): Promise<void> {
     });
     appStateListenerAdded = true;
   }
-}
-
-// --- Device ID ---
-
-function getDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
 }
 
 // --- Push Detection ---
