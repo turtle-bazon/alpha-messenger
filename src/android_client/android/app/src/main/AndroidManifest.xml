@@ -49,14 +49,10 @@
             </intent-filter>
         </service>
 
-        <receiver
-            android:name=".unifiedpush.PushDiagnosticReceiver"
-            android:exported="true"
-            android:enabled="true">
-            <intent-filter android:priority="-400">
-                <action android:name="org.unifiedpush.android.connector.MESSAGE"/>
-            </intent-filter>
-        </receiver>
+        <service
+            android:name=".KeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
     <!-- Permissions -->
