@@ -1,4 +1,5 @@
 import { wsUrl } from './config';
+import { getDeviceId } from './session';
 import type { ServerEvent } from './types';
 
 type Handler = (ev: ServerEvent) => void;
@@ -55,6 +56,7 @@ export class WsClient {
           type: 'hello',
           token: this.token,
           lastSeq: this.lastSeq,
+          deviceId: getDeviceId(),
         }),
       );
     };

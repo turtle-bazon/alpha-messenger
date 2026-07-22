@@ -9,6 +9,7 @@ import { sendWakeUp } from './push';
 
 interface Conn {
   userId: string;
+  deviceId: string;
   send: (data: string) => void;
   lastSeq: string;
   draining: boolean;
@@ -112,11 +113,18 @@ function notify(userId: string): void {
   const set = byUser.get(userId);
   if (set && set.size > 0) {
     for (const conn of set) void drain(conn);
-    return;
   }
-  // Нет живого WS у получателя — будим устройство пушем (без содержимого).
-  // Клиент по wake-up переоткроет WS и досинхронизируется через hello/lastSeq.
-  void sendWakeUp(userId).catch((err) => console.error('wake-up failed', err));
+  // Пушим только оффлайн-устройствам (тем, у кого нет живого WS).
+  // Устройства с WS уже получат сообщение через drain.
+  const onlineDeviceIds = new Set<string>();
+  if (set) {
+    for (const conn of set) {
+      if (conn.deviceId) onlineDeviceIds.add(conn.deviceId);
+    }
+  }
+  void sendWakeUp(userId, onlineDeviceIds).catch((err) =>
+    console.error('wake-up failed', err),
+  );
 }
 
 // Транзиентная отправка (typing, draft) — мимо outbox, только подключённым сейчас.
@@ -148,6 +156,7 @@ interface ClientMessage {
   chatId?: string;
   upToMessageId?: unknown;
   draft?: string;
+  deviceId?: string;
 }
 
 export async function wsRoutes(app: FastifyInstance): Promise<void> {
@@ -191,6 +200,7 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
               : '0';
           conn = {
             userId: session.userId,
+            deviceId: msg.deviceId ?? '',
             send: (d) => sock.send(d),
             lastSeq,
             draining: false,

@@ -141,24 +141,27 @@ async function sendUnifiedPush(endpoint: string): Promise<boolean> {
 
 // --- Основная функция ---
 
-export async function sendWakeUp(userId: string): Promise<number> {
+export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>): Promise<number> {
   const { rows } = await pool.query(
-    `SELECT ps.subscription_id, ps.provider, ps.endpoint
+    `SELECT ps.subscription_id, ps.provider, ps.endpoint, ps.device_id
        FROM push_subscriptions ps
        JOIN devices d ON d.device_id = ps.device_id
       WHERE d.user_id = $1`,
     [userId],
   );
 
-  console.log(`Push: sendWakeUp for ${userId}, ${rows.length} subscriptions`);
-  for (const r of rows) {
-    console.log(`Push: ${r.provider} endpoint=${r.endpoint}`);
-  }
+  // Фильтруем: пушим только тем устройствам, которых нет среди онлайн.
+  const toNotify = onlineDeviceIds
+    ? rows.filter((r) => !onlineDeviceIds.has(r.device_id))
+    : rows;
+
+  console.log(`Push: sendWakeUp for ${userId}, ${toNotify.length}/${rows.length} offline subscriptions`);
 
   let sent = 0;
   const failedSubscriptions: string[] = [];
 
-  for (const r of rows) {
+  for (const r of toNotify) {
+    console.log(`Push: ${r.provider} endpoint=${r.endpoint} device=${r.device_id}`);
     let ok = false;
 
     if (r.provider === 'fcm') {
@@ -170,12 +173,10 @@ export async function sendWakeUp(userId: string): Promise<number> {
     if (ok) {
       sent++;
     } else {
-      // Запоминаем неудачные подписки для удаления
       failedSubscriptions.push(r.subscription_id);
     }
   }
 
-  // Удаляем недействительные подписки (410 Gone и т.п.)
   if (failedSubscriptions.length > 0) {
     await pool.query(
       `DELETE FROM push_subscriptions WHERE subscription_id = ANY($1)`,
