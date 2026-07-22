@@ -124,17 +124,18 @@ async function tryUnifiedPush(): Promise<PushRegistration | null> {
  */
 async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | null> {
   try {
-    // Получаем список дистрибьюторов
-    // Capacitor возвращает JSObject {0: "a", 1: "b"} вместо ["a", "b"] —
-    // нужен Array.from() для конвертации.
-    const result = await upPlugin.getDistributors();
-    const distributors: string[] = Array.from(result.distributors ?? []);
-    if (distributors.length === 0) {
+    // Получаем список дистрибьюторов.
+    // Capacitor может вернуть JSObject {0:"a",1:"b"} вместо ["a","b"].
+    // JSON-сериализация garantирует нативный Array.
+    const raw = await upPlugin.getDistributors();
+    const list = raw?.distributors ?? raw;
+    const distributors: string[] = JSON.parse(JSON.stringify(list));
+    if (!Array.isArray(distributors) || distributors.length === 0) {
       console.log('Alpha: No UP distributors found');
       return null;
     }
 
-    console.log('Alpha: UP distributors found:', distributors);
+    console.log('Alpha: UP distributors found:', JSON.stringify(distributors));
 
     // Если один — используем его, если несколько — показываем выбор
     let selectedDistributor: string | null;
