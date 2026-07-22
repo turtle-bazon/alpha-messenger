@@ -36,7 +36,7 @@ public class MainActivity extends BridgeActivity {
     private TextView loadingText;
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         if (Build.VERSION.SDK_INT >= 33
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
