@@ -25,6 +25,28 @@ public class AlphaPushService extends PushService {
     private static final String CHANNEL_ID = "alpha_messages";
     private static int notificationId = 0;
 
+    static {
+        Log.d(TAG, "=== AlphaPushService class loaded ===");
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d(TAG, "=== AlphaPushService onCreate ===");
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d(TAG, "=== AlphaPushService onDestroy ===");
+        super.onDestroy();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "=== AlphaPushService onStartCommand intent=" + intent + " flags=" + flags + " startId=" + startId);
+        return super.onStartCommand(intent, flags, startId);
+    }
+
     @Override
     public void onNewEndpoint(PushEndpoint endpoint, String instance) {
         Log.d(TAG, "onNewEndpoint: " + endpoint.getUrl() + " instance=" + instance);
@@ -54,7 +76,8 @@ public class AlphaPushService extends PushService {
 
     @Override
     public void onMessage(PushMessage message, String instance) {
-        Log.d(TAG, "onMessage: instance=" + instance);
+        Log.d(TAG, "=== onMessage called === instance=" + instance);
+        Log.d(TAG, "Message body: " + message.getBody());
 
         showNotification();
     }
