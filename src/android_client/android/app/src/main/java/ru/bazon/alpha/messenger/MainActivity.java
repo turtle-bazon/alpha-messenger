@@ -68,6 +68,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         super.onCreate(savedInstanceState);
 
+        KeepAliveService.start(this);
+
         showLoadingOverlay();
 
         WebView webView = getBridge().getWebView();
