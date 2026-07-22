@@ -12,6 +12,10 @@ export function PushWarningBanner(): JSX.Element | null {
 
   useEffect(() => {
     setVisible(shouldShowPushWarning());
+    // Слушаем событие от android-setup: initAndroid() ставит флаг позже первого рендера
+    const handler = () => setVisible(shouldShowPushWarning());
+    window.addEventListener('push-warning-changed', handler);
+    return () => window.removeEventListener('push-warning-changed', handler);
   }, []);
 
   if (!visible) return null;

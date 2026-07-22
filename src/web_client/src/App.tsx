@@ -37,6 +37,12 @@ export function App(): JSX.Element {
     initPlatform();
   }, []);
 
+  // На Android: повторный запуск push-регистрации после логина
+  // (initPlatform при первом рендере мог пропустить —用户 ещё не был залогинен).
+  useEffect(() => {
+    if (authed) initPlatform();
+  }, [authed]);
+
   // Web/desktop: показываем SetupScreen если URL не настроен
   if (!getServerUrl()) {
     return (

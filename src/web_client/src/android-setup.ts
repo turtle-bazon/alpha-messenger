@@ -21,6 +21,8 @@ export function setupAndroid(): void {
   registerPlatformInit(initAndroid);
 }
 
+let appStateListenerAdded = false;
+
 async function initAndroid(): Promise<void> {
   console.log('Alpha: Android client initializing...');
 
@@ -38,17 +40,23 @@ async function initAndroid(): Promise<void> {
     localStorage.setItem('alpha.push_platform', registration.platform);
     localStorage.setItem('alpha.push_token', registration.token);
     localStorage.removeItem('alpha.push_warning');
+    window.dispatchEvent(new Event('push-warning-changed'));
 
     await sendTokenToServer(registration);
   } else {
     console.log('Alpha: Push not available');
     localStorage.setItem('alpha.push_platform', 'none');
     localStorage.setItem('alpha.push_warning', 'true');
+    // Уведомляем PushWarningBanner (он мог отрендериться до нашей инициализации)
+    window.dispatchEvent(new Event('push-warning-changed'));
   }
 
-  App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
-    console.log(`Alpha: App ${isActive ? 'foregrounded' : 'backgrounded'}`);
-  });
+  if (!appStateListenerAdded) {
+    App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+      console.log(`Alpha: App ${isActive ? 'foregrounded' : 'backgrounded'}`);
+    });
+    appStateListenerAdded = true;
+  }
 }
 
 // --- Device ID ---
