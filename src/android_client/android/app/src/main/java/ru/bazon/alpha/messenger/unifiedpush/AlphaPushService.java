@@ -77,7 +77,7 @@ public class AlphaPushService extends PushService {
     @Override
     public void onMessage(PushMessage message, String instance) {
         Log.d(TAG, "=== onMessage called === instance=" + instance);
-        Log.d(TAG, "Message body: " + message.getBody());
+        Log.d(TAG, "Message content: " + new String(message.getContent()));
 
         showNotification();
     }
