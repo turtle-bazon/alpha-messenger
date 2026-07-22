@@ -157,6 +157,12 @@ function showBrowserNotification(
     window.electronAPI.showNotification(title, body);
     return;
   }
+  // В Capacitor (Android) — нативные уведомления через плагин
+  const cap = (window as any).Capacitor;
+  if (cap?.isNativePlatform?.() && cap?.Plugins?.AlphaNotification) {
+    cap.Plugins.AlphaNotification.showNotification({ title, body });
+    return;
+  }
   // В браузере — Web Notifications
   try {
     const n = new Notification(title, { body, tag: 'alpha-message' });

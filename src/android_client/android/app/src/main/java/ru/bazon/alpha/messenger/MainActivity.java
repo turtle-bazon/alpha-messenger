@@ -23,6 +23,7 @@ import com.getcapacitor.BridgeActivity;
 import ru.bazon.alpha.messenger.unifiedpush.UnifiedPushPlugin;
 
 import java.io.File;
+
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -66,6 +67,7 @@ public class MainActivity extends BridgeActivity {
         }
 
         registerPlugin(UnifiedPushPlugin.class);
+        registerPlugin(NotificationPlugin.class);
         super.onCreate(savedInstanceState);
 
         KeepAliveService.start(this);

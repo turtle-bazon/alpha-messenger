@@ -2,3 +2,5 @@ node_modules/
 dist/
 www/
 .env
+android/capacitor.settings.gradle
+android/app/capacitor.build.gradle
