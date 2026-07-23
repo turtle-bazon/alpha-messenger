@@ -70,8 +70,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(NotificationPlugin.class);
         super.onCreate(savedInstanceState);
 
-        KeepAliveService.start(this);
-
         showLoadingOverlay();
 
         WebView webView = getBridge().getWebView();
