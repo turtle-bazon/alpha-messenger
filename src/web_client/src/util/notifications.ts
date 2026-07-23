@@ -209,10 +209,11 @@ export function notifyIncoming(opts: {
   const sameOpenChat = inForeground() && opts.currentChatId === opts.chatId;
   if (sameOpenChat) return;
   const prefs = getNotifPrefs();
-  if (prefs.sound) playSound();
-  // В Electron и Capacitor нативные уведомления не требуют разрешения браузера
   const isElectron = !!window.electronAPI;
   const isNative = isElectron || !!(window as any).Capacitor?.isNativePlatform?.();
+  // На Capacitor звук воспроизводит нативное уведомление (notification_sound.wav)
+  if (prefs.sound && !isNative) playSound();
+  // В Electron и Capacitor нативные уведомления не требуют разрешения браузера
   if (prefs.browser && (isNative || getPermission() === 'granted')) {
     const body = opts.isReply
       ? `Ответил(а) на ваше сообщение: ${previewText(decodeContent(opts.ciphertext))}`
@@ -238,9 +239,10 @@ export function notifyReaction(opts: {
 }): void {
   if (inForeground()) return;
   const prefs = getNotifPrefs();
-  if (prefs.sound) playSound();
   const isElectron = !!window.electronAPI;
-  const isNative = isElectron || !!(window as any).Capacitor?.isNativePlatform?.();
+  const isNativeCap = !!(window as any).Capacitor?.isNativePlatform?.();
+  if (prefs.sound && !isNativeCap) playSound();
+  const isNative = isElectron || isNativeCap;
   if (prefs.browser && (isNative || getPermission() === 'granted')) {
     const body = `${opts.reactor} поставил(а) ${opts.emoji}`;
     if (isElectron && !electronClickRegistered) {
