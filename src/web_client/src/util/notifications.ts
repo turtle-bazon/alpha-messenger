@@ -193,12 +193,15 @@ let electronClickRegistered = false;
 export function notifyIncoming(opts: {
   title: string;
   ciphertext: string;
+  chatId: string;
+  currentChatId: string | null;
   isReply?: boolean;
   onOpen: () => void;
 }): void {
-  // Пользователь смотрит на приложение — лишний шум не нужен (badge и список
-  // и так обновятся). Сигналим только когда вкладка не активна.
-  if (inForeground()) return;
+  // В Telegram: если фореграунд и открыт тот же чат — без уведомления.
+  // Если другой чат или фон — уведомление + звук.
+  const sameOpenChat = inForeground() && opts.currentChatId === opts.chatId;
+  if (sameOpenChat) return;
   const prefs = getNotifPrefs();
   if (prefs.sound) playSound();
   // В Electron и Capacitor нативные уведомления не требуют разрешения браузера

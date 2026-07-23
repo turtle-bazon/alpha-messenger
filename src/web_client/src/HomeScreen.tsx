@@ -277,6 +277,8 @@ export function HomeScreen({
         notifyIncoming({
           title: chat ? chatTitle(chat, myId) : 'Новое сообщение',
           ciphertext: p.ciphertext,
+          chatId,
+          currentChatId: selectedRef.current,
           isReply: p.isReply,
           onOpen: () => setSelectedId(chatId),
         });
