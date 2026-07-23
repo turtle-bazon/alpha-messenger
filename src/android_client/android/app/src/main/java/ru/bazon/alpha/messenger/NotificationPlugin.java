@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
-import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
@@ -35,8 +34,6 @@ import com.getcapacitor.annotation.PermissionCallback;
 public class NotificationPlugin extends Plugin {
 
     private static final String CHANNEL_ID = "alpha_messages";
-    private static final Uri SOUND_URI =
-            Uri.parse("android.resource://" + "ru.bazon.alpha.messenger" + "/" + R.raw.notification_sound);
 
     @PluginMethod
     public void requestPermission(PluginCall call) {
@@ -109,11 +106,6 @@ public class NotificationPlugin extends Plugin {
             if (ch == null) {
                 ch = new NotificationChannel(CHANNEL_ID, "Сообщения", NotificationManager.IMPORTANCE_HIGH);
                 ch.setDescription("Уведомления о новых сообщениях");
-                AudioAttributes attrs = new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build();
-                ch.setSound(SOUND_URI, attrs);
                 nm.createNotificationChannel(ch);
             }
         }
@@ -127,8 +119,7 @@ public class NotificationPlugin extends Plugin {
                 .setContentText(body)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
                 .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setSound(SOUND_URI);
+                .setPriority(NotificationCompat.PRIORITY_HIGH);
 
         android.content.Intent intent = ctx.getPackageManager()
                 .getLaunchIntentForPackage(ctx.getPackageName());
