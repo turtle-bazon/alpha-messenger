@@ -118,7 +118,8 @@ public class NotificationPlugin extends Plugin {
                 .setContentText(body)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
                 .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH);
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setSilent(true);
 
         android.content.Intent intent = ctx.getPackageManager()
                 .getLaunchIntentForPackage(ctx.getPackageName());
