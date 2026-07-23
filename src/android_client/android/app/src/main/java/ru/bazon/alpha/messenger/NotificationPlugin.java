@@ -4,15 +4,16 @@ import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
-import com.getcapacitor.PermissionCallback;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -32,25 +33,37 @@ import com.getcapacitor.annotation.PermissionCallback;
 public class NotificationPlugin extends Plugin {
 
     private static final String CHANNEL_ID = "alpha_messages";
-    private PluginCall savedCall;
 
     @PluginMethod
     public void requestPermission(PluginCall call) {
-        if (Build.VERSION.SDK_INT < 33) {
-            JSObject res = new JSObject();
-            res.put("granted", true);
-            call.resolve(res);
+        NotificationManager nm = (NotificationManager) getContext()
+                .getSystemService(Context.NOTIFICATION_SERVICE);
+
+        // Android 13+ — runtime permission POST_NOTIFICATIONS
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS)
+                    == PackageManager.PERMISSION_GRANTED) {
+                resolveGranted(call);
+                return;
+            }
+            requestPermissionForAlias("notifications", call, "handlePermissionResult");
             return;
         }
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS)
-                == PackageManager.PERMISSION_GRANTED) {
+
+        // Android 12 и ниже — проверяем, включены ли уведомления для приложения
+        if (nm.areNotificationsEnabled()) {
+            resolveGranted(call);
+        } else {
+            // Открываем настройки уведомлений приложения
+            Intent intent = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
             JSObject res = new JSObject();
-            res.put("granted", true);
+            res.put("granted", false);
+            res.put("settingsOpened", true);
             call.resolve(res);
-            return;
         }
-        savedCall = call;
-        requestPermissionForAlias("notifications", call, "handlePermissionResult");
     }
 
     @PermissionCallback
@@ -65,11 +78,13 @@ public class NotificationPlugin extends Plugin {
     @PluginMethod
     public void checkPermission(PluginCall call) {
         boolean granted;
-        if (Build.VERSION.SDK_INT < 33) {
-            granted = true;
-        } else {
+        if (Build.VERSION.SDK_INT >= 33) {
             granted = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS)
                     == PackageManager.PERMISSION_GRANTED;
+        } else {
+            NotificationManager nm = (NotificationManager) getContext()
+                    .getSystemService(Context.NOTIFICATION_SERVICE);
+            granted = nm.areNotificationsEnabled();
         }
         JSObject res = new JSObject();
         res.put("granted", granted);
@@ -81,16 +96,10 @@ public class NotificationPlugin extends Plugin {
         String title = call.getString("title", "Alpha Messenger");
         String body = call.getString("body", "");
 
-        if (Build.VERSION.SDK_INT >= 33
-                && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS)
-                        != PackageManager.PERMISSION_GRANTED) {
-            call.reject("Notifications permission not granted");
-            return;
-        }
-
         Context ctx = getContext();
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
 
+        // Создаём канал
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = nm.getNotificationChannel(CHANNEL_ID);
             if (ch == null) {
@@ -124,6 +133,12 @@ public class NotificationPlugin extends Plugin {
 
         JSObject res = new JSObject();
         res.put("id", id);
+        call.resolve(res);
+    }
+
+    private void resolveGranted(PluginCall call) {
+        JSObject res = new JSObject();
+        res.put("granted", true);
         call.resolve(res);
     }
 }
