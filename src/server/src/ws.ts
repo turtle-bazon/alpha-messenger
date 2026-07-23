@@ -109,7 +109,7 @@ async function drain(conn: Conn): Promise<void> {
   }
 }
 
-function notify(userId: string): void {
+function notify(userId: string, chatId?: string): void {
   const set = byUser.get(userId);
   if (set && set.size > 0) {
     for (const conn of set) void drain(conn);
@@ -122,7 +122,7 @@ function notify(userId: string): void {
       if (conn.deviceId) onlineDeviceIds.add(conn.deviceId);
     }
   }
-  void sendWakeUp(userId, onlineDeviceIds).catch((err) =>
+  void sendWakeUp(userId, onlineDeviceIds, chatId).catch((err) =>
     console.error('wake-up failed', err),
   );
 }
@@ -139,7 +139,15 @@ export function sendTransient(userId: string, obj: unknown): void {
 export function startEventListener(): Client {
   const client = new Client({ connectionString: config.databaseUrl });
   client.on('notification', (msg) => {
-    if (msg.payload) notify(msg.payload);
+    if (msg.payload) {
+      try {
+        const data = JSON.parse(msg.payload);
+        notify(data.userId, data.chatId);
+      } catch {
+        // Backward compat: plain userId string
+        notify(msg.payload);
+      }
+    }
   });
   client.on('error', (err) => console.error('event listener error', err));
   client

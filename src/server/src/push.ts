@@ -21,7 +21,7 @@ interface FCMMessage {
   };
 }
 
-async function sendFCM(token: string): Promise<boolean> {
+async function sendFCM(token: string, chatId?: string): Promise<boolean> {
   if (!FCM_PROJECT_ID || !FCM_SERVICE_ACCOUNT_KEY) {
     console.log('FCM not configured, skipping');
     return false;
@@ -35,7 +35,7 @@ async function sendFCM(token: string): Promise<boolean> {
     const body: FCMMessage = {
       message: {
         token,
-        data: { type: 'wake-up' },
+        data: { type: 'wake-up', ...(chatId ? { chatId } : {}) },
         android: { priority: 'high' },
       },
     };
@@ -109,7 +109,7 @@ async function getFCMAccessToken(): Promise<string | null> {
 
 // --- UnifiedPush (ntfy) ---
 
-async function sendUnifiedPush(endpoint: string): Promise<boolean> {
+async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boolean> {
   try {
     console.log(`UP: sending to ${endpoint}`);
     const res = await fetch(endpoint, {
@@ -119,6 +119,7 @@ async function sendUnifiedPush(endpoint: string): Promise<boolean> {
         topic: 'wake-up',
         message: 'wake-up',
         priority: 'high',
+        ...(chatId ? { chatId } : {}),
       }),
     });
 
@@ -141,7 +142,7 @@ async function sendUnifiedPush(endpoint: string): Promise<boolean> {
 
 // --- Основная функция ---
 
-export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>): Promise<number> {
+export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, chatId?: string): Promise<number> {
   const { rows } = await pool.query(
     `SELECT ps.subscription_id, ps.provider, ps.endpoint, ps.device_id
        FROM push_subscriptions ps
@@ -165,9 +166,9 @@ export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>):
     let ok = false;
 
     if (r.provider === 'fcm') {
-      ok = await sendFCM(r.endpoint);
+      ok = await sendFCM(r.endpoint, chatId);
     } else if (r.provider === 'unifiedpush') {
-      ok = await sendUnifiedPush(r.endpoint);
+      ok = await sendUnifiedPush(r.endpoint, chatId);
     }
 
     if (ok) {

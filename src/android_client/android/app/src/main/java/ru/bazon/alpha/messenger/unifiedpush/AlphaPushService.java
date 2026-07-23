@@ -1,12 +1,10 @@
 package ru.bazon.alpha.messenger.unifiedpush;
 
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -22,7 +20,7 @@ import ru.bazon.alpha.messenger.R;
 public class AlphaPushService extends PushService {
 
     private static final String TAG = "AlphaPushService";
-    private static final String CHANNEL_ID = "alpha_messages";
+    static final String CHANNEL_ID = "alpha_messages";
     private static int notificationId = 0;
 
     static {
@@ -77,16 +75,32 @@ public class AlphaPushService extends PushService {
     @Override
     public void onMessage(PushMessage message, String instance) {
         Log.d(TAG, "=== onMessage called === instance=" + instance);
-        Log.d(TAG, "Message content: " + new String(message.getContent()));
+        String content = new String(message.getContent());
+        Log.d(TAG, "Message content: " + content);
 
-        showNotification();
+        String chatId = null;
+        try {
+            org.json.JSONObject json = new org.json.JSONObject(content);
+            chatId = json.optString("chatId", null);
+        } catch (Exception e) {
+            Log.d(TAG, "No chatId in message, using default channel");
+        }
+
+        showNotification(chatId);
     }
 
-    private void showNotification() {
+    private void showNotification(String chatId) {
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
-        createChannel(nm);
+        NotificationSettingsHelper settings = new NotificationSettingsHelper(this);
+
+        if (chatId != null && !settings.isEnabled(chatId)) {
+            Log.d(TAG, "Notifications disabled for chat " + chatId + ", skipping");
+            return;
+        }
+
+        String channelId = settings.getChannelForChat(nm, chatId);
 
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -94,7 +108,7 @@ public class AlphaPushService extends PushService {
                 this, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Alpha Messenger")
                 .setContentText("Новое сообщение")
@@ -103,19 +117,7 @@ public class AlphaPushService extends PushService {
                 .setContentIntent(pi);
 
         nm.notify(notificationId++, builder.build());
-        Log.d(TAG, "Notification shown");
+        Log.d(TAG, "Notification shown on channel=" + channelId);
     }
 
-    private void createChannel(NotificationManager nm) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (nm.getNotificationChannel(CHANNEL_ID) == null) {
-                NotificationChannel channel = new NotificationChannel(
-                        CHANNEL_ID,
-                        "Сообщения",
-                        NotificationManager.IMPORTANCE_HIGH);
-                channel.setDescription("Уведомления о новых сообщениях");
-                nm.createNotificationChannel(channel);
-            }
-        }
-    }
 }

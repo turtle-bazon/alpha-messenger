@@ -14,5 +14,8 @@ export async function emitEvent(
     [userId, type, chatId, JSON.stringify(payload)],
   );
   // будит WS-доставку для получателя; в транзакции доставится на commit
-  await db.query("SELECT pg_notify('alpha_events', $1)", [userId]);
+  // payload: { userId, chatId? } — chatId нужен для per-chat уведомлений на клиенте
+  await db.query("SELECT pg_notify('alpha_events', $1)", [
+    JSON.stringify({ userId, ...(chatId ? { chatId } : {}) }),
+  ]);
 }
