@@ -201,9 +201,10 @@ export function notifyIncoming(opts: {
   if (inForeground()) return;
   const prefs = getNotifPrefs();
   if (prefs.sound) playSound();
-  // В Electron нативные уведомления не требуют разрешения браузера
+  // В Electron и Capacitor нативные уведомления не требуют разрешения браузера
   const isElectron = !!window.electronAPI;
-  if (prefs.browser && (isElectron || getPermission() === 'granted')) {
+  const isNative = isElectron || !!(window as any).Capacitor?.isNativePlatform?.();
+  if (prefs.browser && (isNative || getPermission() === 'granted')) {
     const body = opts.isReply
       ? `Ответил(а) на ваше сообщение: ${previewText(decodeContent(opts.ciphertext))}`
       : previewText(decodeContent(opts.ciphertext));
@@ -230,7 +231,8 @@ export function notifyReaction(opts: {
   const prefs = getNotifPrefs();
   if (prefs.sound) playSound();
   const isElectron = !!window.electronAPI;
-  if (prefs.browser && (isElectron || getPermission() === 'granted')) {
+  const isNative = isElectron || !!(window as any).Capacitor?.isNativePlatform?.();
+  if (prefs.browser && (isNative || getPermission() === 'granted')) {
     const body = `${opts.reactor} поставил(а) ${opts.emoji}`;
     if (isElectron && !electronClickRegistered) {
       electronClickRegistered = true;
