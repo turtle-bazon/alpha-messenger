@@ -74,14 +74,18 @@ public class KeepAliveService extends Service {
 
     private void createChannel(NotificationManager nm) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (nm.getNotificationChannel(CHANNEL_ID) == null) {
-                NotificationChannel channel = new NotificationChannel(
-                        CHANNEL_ID,
-                        "Keep Alive",
-                        NotificationManager.IMPORTANCE_LOW);
-                channel.setDescription("Держит приложение активным для получения уведомлений");
-                nm.createNotificationChannel(channel);
+            // Удаляем старый канал (IMPORTANCE_LOW) если есть — каналы immutable после создания
+            NotificationChannel old = nm.getNotificationChannel(CHANNEL_ID);
+            if (old != null) {
+                nm.deleteNotificationChannel(CHANNEL_ID);
             }
+            // Создаём с IMPORTANCE_NONE — уведомление не показывается, но foreground service работает
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Keep Alive",
+                    NotificationManager.IMPORTANCE_NONE);
+            channel.setDescription("Держит приложение активным для получения уведомлений");
+            nm.createNotificationChannel(channel);
         }
     }
 }
