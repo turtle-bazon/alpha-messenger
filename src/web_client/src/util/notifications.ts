@@ -83,6 +83,12 @@ export async function requestPermission(): Promise<NotificationPermission> {
 // системное разрешение — чтобы попапы заработали «из коробки», без захода в
 // настройки. Если разрешение уже дано/запрещено — ничего не делаем.
 export async function ensureBrowserPermission(): Promise<void> {
+  // В Capacitor запрашиваем нативное разрешение POST_NOTIFICATIONS
+  const cap = (window as any).Capacitor;
+  if (cap?.isNativePlatform?.() && cap?.Plugins?.AlphaNotification) {
+    await cap.Plugins.AlphaNotification.requestPermission();
+    return;
+  }
   if (!notificationsSupported()) return;
   if (!getNotifPrefs().browser) return;
   if (Notification.permission !== 'default') return;

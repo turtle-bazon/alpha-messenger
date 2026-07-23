@@ -21,6 +21,7 @@ import { useTyping } from './chats/useTyping';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
+  ensureBrowserPermission,
   getNotifPrefs,
   getPermission,
   initNotifDefaults,
@@ -101,6 +102,8 @@ export function HomeScreen({
     // Явно фиксируем дефолты уведомлений в localStorage (известная проблема
     // №29) — чтобы хранилище и UI не расходились.
     initNotifDefaults();
+    // На Android запрашиваем POST_NOTIFICATIONS permission
+    void ensureBrowserPermission();
     // Если настройка браузерных уведомлений включена (дефолт '1' или пользователь
     // включил), но системное разрешение ещё не запрошено (permission = 'default') —
     // показываем баннер. Запрос произойдёт при клике (user gesture), иначе
