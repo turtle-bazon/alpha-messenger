@@ -87,6 +87,8 @@ export async function ensureBrowserPermission(): Promise<void> {
   const cap = (window as any).Capacitor;
   if (cap?.isNativePlatform?.() && cap?.Plugins?.AlphaNotification) {
     await cap.Plugins.AlphaNotification.requestPermission();
+    // Запрашиваем освобождение от оптимизации батареи (Griffin/Doze)
+    await cap.Plugins.AlphaNotification.requestIgnoreBatteryOptimizations();
     return;
   }
   if (!notificationsSupported()) return;

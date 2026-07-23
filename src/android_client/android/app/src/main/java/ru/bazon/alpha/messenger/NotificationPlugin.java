@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -148,6 +149,34 @@ public class NotificationPlugin extends Plugin {
     private void resolveGranted(PluginCall call) {
         JSObject res = new JSObject();
         res.put("granted", true);
+        call.resolve(res);
+    }
+
+    @PluginMethod
+    public void requestIgnoreBatteryOptimizations(PluginCall call) {
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        if (pm.isIgnoringBatteryOptimizations(getContext().getPackageName())) {
+            JSObject res = new JSObject();
+            res.put("granted", true);
+            call.resolve(res);
+            return;
+        }
+        Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(intent);
+        JSObject res = new JSObject();
+        res.put("granted", false);
+        res.put("dialogShown", true);
+        call.resolve(res);
+    }
+
+    @PluginMethod
+    public void checkIgnoreBatteryOptimizations(PluginCall call) {
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        boolean granted = pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
+        JSObject res = new JSObject();
+        res.put("granted", granted);
         call.resolve(res);
     }
 }
