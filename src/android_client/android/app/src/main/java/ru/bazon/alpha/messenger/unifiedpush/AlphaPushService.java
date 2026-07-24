@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -78,24 +79,38 @@ public class AlphaPushService extends PushService {
         byte[] contentBytes = message.getContent();
         Log.d(TAG, "Message content bytes length: " + (contentBytes != null ? contentBytes.length : "null"));
 
-        String content = contentBytes != null ? new String(contentBytes) : "";
-        Log.d(TAG, "Message content: " + content);
+        String raw = contentBytes != null ? new String(contentBytes) : "";
+        Log.d(TAG, "Raw message content: " + raw);
+
+        // Декодируем URL-encoded тело (title=...&message=...)
+        String content = Uri.decode(raw);
+        Log.d(TAG, "Decoded content: " + content);
 
         String title = "Alpha Messenger";
         String text = "Новое сообщение";
         String chatId = null;
 
-        // Пробуем распарсить как JSON ({chatId: "..."})
+        // Пробуем распарсить как JSON
         try {
             org.json.JSONObject json = new org.json.JSONObject(content);
             chatId = json.optString("chatId", null);
+            text = json.optString("message", text);
         } catch (Exception e) {
-            // Пробуем распарсить как form-urlencoded (title=...&message=...)
+            // Парсим form-urlencoded (title=...&message=...)
             for (String part : content.split("&")) {
                 String[] kv = part.split("=", 2);
                 if (kv.length == 2) {
                     if ("title".equals(kv[0])) title = kv[1];
-                    else if ("message".equals(kv[0])) text = kv[1];
+                    else if ("message".equals(kv[0])) {
+                        // message может быть JSON
+                        try {
+                            org.json.JSONObject json = new org.json.JSONObject(kv[1]);
+                            chatId = json.optString("chatId", null);
+                            text = json.optString("message", text);
+                        } catch (Exception e2) {
+                            text = kv[1];
+                        }
+                    }
                 }
             }
         }
