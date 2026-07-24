@@ -112,13 +112,13 @@ async function getFCMAccessToken(): Promise<string | null> {
 async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boolean> {
   try {
     console.log(`UP: sending to ${endpoint}`);
-    const message = chatId ? JSON.stringify({ chatId }) : 'wake-up';
+    const message = chatId
+      ? `title=Alpha&message=${encodeURIComponent(JSON.stringify({ chatId }))}`
+      : 'title=Alpha&message=wake-up';
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': 'text/plain',
-        'X-UnifiedPush': '1',
-        'Priority': 'high',
+        'Content-encoding': 'aes128gcm',
       },
       body: message,
     });
