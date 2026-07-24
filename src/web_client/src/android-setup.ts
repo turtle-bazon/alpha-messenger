@@ -106,6 +106,41 @@ async function tryUnifiedPush(): Promise<PushRegistration | null> {
 }
 
 /**
+ * Проверяет, что дистрибьютор всё ещё установлен и доступен.
+ * Если нет — перерегистрируется через tryUseCurrentOrDefaultDistributor.
+ * Рекомендация документации: вызывать при каждом запуске приложения.
+ */
+async function ensureUPRegistration(upPlugin: any): Promise<PushRegistration | null> {
+  try {
+    // Проверяем, что дистрибьютор доступен
+    const { distributor } = await upPlugin.getAckDistributor();
+    if (distributor) {
+      console.log('Alpha: UP distributor still available:', distributor);
+      // Дистрибьютор на месте — просто перерегистрируемся
+      await upPlugin.register();
+      const { endpoint } = await upPlugin.waitForEndpoint({ timeout: 15000 });
+      if (endpoint) {
+        return { platform: 'unifiedpush', token: endpoint };
+      }
+    }
+
+    // Дистрибьютор недоступен — пробуем текущий или дефолтный
+    console.log('Alpha: UP distributor not available, trying current or default');
+    const useResult = await upPlugin.tryUseCurrentOrDefaultDistributor();
+    if (useResult?.success) {
+      await upPlugin.register();
+      const { endpoint } = await upPlugin.waitForEndpoint({ timeout: 15000 });
+      if (endpoint) {
+        return { platform: 'unifiedpush', token: endpoint };
+      }
+    }
+  } catch (err) {
+    console.log('Alpha: UP re-registration failed', err);
+  }
+  return null;
+}
+
+/**
  * Регистрация через нативный Capacitor UnifiedPush плагин.
  * Показывает UI выбора дистрибьютора если их несколько.
  */
@@ -237,15 +272,8 @@ async function refreshRegistration(platform: PushPlatform): Promise<PushRegistra
   if (platform === 'unifiedpush') {
     const upPlugin = Capacitor?.Plugins?.UnifiedPush;
     if (upPlugin) {
-      try {
-        // Проверяем сохранённый endpoint
-        const { endpoint } = await upPlugin.getEndpoint();
-        if (endpoint) {
-          return { platform: 'unifiedpush', token: endpoint };
-        }
-      } catch {
-        // ignore
-      }
+      // Проверяем, что дистрибьютор всё ещё установлен и перерегистрируемся
+      return ensureUPRegistration(upPlugin);
     }
     return tryUnifiedPush();
   }

@@ -165,4 +165,21 @@ public class UnifiedPushPlugin extends Plugin {
             call.reject("Failed to get distributor: " + e.getMessage());
         }
     }
+
+    @PluginMethod
+    public void tryUseCurrentOrDefaultDistributor(PluginCall call) {
+        Log.d(TAG, "tryUseCurrentOrDefaultDistributor called");
+        executor.execute(() -> {
+            try {
+                UnifiedPush.tryUseCurrentOrDefaultDistributor(getActivity(), success -> {
+                    JSObject result = new JSObject();
+                    result.put("success", success);
+                    call.resolve(result);
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "tryUseCurrentOrDefaultDistributor failed", e);
+                call.reject("Failed: " + e.getMessage());
+            }
+        });
+    }
 }
