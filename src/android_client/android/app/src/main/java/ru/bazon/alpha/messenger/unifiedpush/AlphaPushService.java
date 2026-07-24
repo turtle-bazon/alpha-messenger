@@ -75,23 +75,41 @@ public class AlphaPushService extends PushService {
     @Override
     public void onMessage(PushMessage message, String instance) {
         Log.d(TAG, "=== onMessage called === instance=" + instance);
-        String content = new String(message.getContent());
+        byte[] contentBytes = message.getContent();
+        Log.d(TAG, "Message content bytes length: " + (contentBytes != null ? contentBytes.length : "null"));
+
+        String content = contentBytes != null ? new String(contentBytes) : "";
         Log.d(TAG, "Message content: " + content);
 
+        String title = "Alpha Messenger";
+        String text = "Новое сообщение";
         String chatId = null;
+
+        // Пробуем распарсить как JSON ({chatId: "..."})
         try {
             org.json.JSONObject json = new org.json.JSONObject(content);
             chatId = json.optString("chatId", null);
         } catch (Exception e) {
-            Log.d(TAG, "No chatId in message, using default channel");
+            // Пробуем распарсить как form-urlencoded (title=...&message=...)
+            for (String part : content.split("&")) {
+                String[] kv = part.split("=", 2);
+                if (kv.length == 2) {
+                    if ("title".equals(kv[0])) title = kv[1];
+                    else if ("message".equals(kv[0])) text = kv[1];
+                }
+            }
         }
 
-        showNotification(chatId);
+        Log.d(TAG, "Parsed: title=" + title + " text=" + text + " chatId=" + chatId);
+        showNotification(title, text, chatId);
     }
 
-    private void showNotification(String chatId) {
+    private void showNotification(String title, String text, String chatId) {
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm == null) return;
+        if (nm == null) {
+            Log.e(TAG, "NotificationManager is null");
+            return;
+        }
 
         NotificationSettingsHelper settings = new NotificationSettingsHelper(this);
 
@@ -110,8 +128,8 @@ public class AlphaPushService extends PushService {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Alpha Messenger")
-                .setContentText("Новое сообщение")
+                .setContentTitle(title)
+                .setContentText(text)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(pi);
