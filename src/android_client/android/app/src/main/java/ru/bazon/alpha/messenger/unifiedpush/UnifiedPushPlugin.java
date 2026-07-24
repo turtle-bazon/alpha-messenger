@@ -175,6 +175,7 @@ public class UnifiedPushPlugin extends Plugin {
                     JSObject result = new JSObject();
                     result.put("success", success);
                     call.resolve(result);
+                    return null;
                 });
             } catch (Exception e) {
                 Log.e(TAG, "tryUseCurrentOrDefaultDistributor failed", e);
