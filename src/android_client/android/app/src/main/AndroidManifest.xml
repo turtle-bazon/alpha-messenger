@@ -49,10 +49,6 @@
             </intent-filter>
         </service>
 
-        <service
-            android:name=".KeepAliveService"
-            android:exported="false" />
-
     </application>
 
     <!-- Permissions -->
