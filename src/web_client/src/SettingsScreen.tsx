@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Theme } from './util/theme';
 import { getPlatform } from './util/platform';
-import { IconArrowLeft, IconBell, IconMoon, IconSun, IconInfo, IconChevronRight } from './util/icons';
+import { IconArrowLeft, IconBell, IconMoon, IconSun, IconInfo, IconChevronRight, IconMonitor } from './util/icons';
 import {
   getNotifPrefs,
   getPermission,
@@ -11,8 +11,9 @@ import {
   setNotifSound,
   type NotifPrefs,
 } from './util/notifications';
+import { DevicesScreen } from './DevicesScreen';
 
-type SettingsView = 'main' | 'notifications';
+type SettingsView = 'main' | 'notifications' | 'devices';
 
 interface SettingsScreenProps {
   username: string | null;
@@ -138,6 +139,10 @@ export function SettingsScreen({
     );
   }
 
+  if (view === 'devices') {
+    return <DevicesScreen onBack={() => setView('main')} />;
+  }
+
   // Main settings view
   return (
     <div className="settings-screen" data-testid="settings-screen">
@@ -171,6 +176,16 @@ export function SettingsScreen({
           <span className="settings-row-value">
             {prefs.sound || prefs.browser ? 'Вкл' : 'Выкл'}
           </span>
+          <span className="settings-row-arrow"><IconChevronRight /></span>
+        </button>
+        <button
+          type="button"
+          className="settings-row settings-row--button"
+          data-testid="settings-devices"
+          onClick={() => setView('devices')}
+        >
+          <span className="settings-row-icon"><IconMonitor /></span>
+          <span className="settings-row-text">Устройства</span>
           <span className="settings-row-arrow"><IconChevronRight /></span>
         </button>
         <label className="settings-row">

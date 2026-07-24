@@ -25,6 +25,9 @@ import {
   Link,
   Plus,
   AlertCircle,
+  Monitor,
+  Smartphone,
+  Tablet,
 } from 'lucide-react';
 
 // Экспортируем Lucide-иконки напрямую.
@@ -53,4 +56,7 @@ export {
   Link as IconLink,
   Plus as IconPlus,
   AlertCircle as IconAlertCircle,
+  Monitor as IconMonitor,
+  Smartphone as IconSmartphone,
+  Tablet as IconTablet,
 };

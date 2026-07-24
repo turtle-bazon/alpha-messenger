@@ -284,3 +284,23 @@ export function subscribePush(input: {
 export function unsubscribePush(subscriptionId: string): Promise<{ ok: boolean }> {
   return rest.del<{ ok: boolean }>(`/push/subscriptions/${subscriptionId}`);
 }
+
+// ---- Управление устройствами (#77) ----
+
+export interface DeviceInfo {
+  deviceId: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+}
+
+export function getDevices(): Promise<{ devices: DeviceInfo[] }> {
+  return rest.get<{ devices: DeviceInfo[] }>('/me');
+}
+
+export function deleteDevice(deviceId: string): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>(`/devices/${deviceId}`);
+}
+
+export function deleteAllDevices(): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>('/devices');
+}
