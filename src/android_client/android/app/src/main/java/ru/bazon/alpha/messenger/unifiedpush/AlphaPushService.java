@@ -5,8 +5,9 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.util.Log;
+
+import java.net.URLDecoder;
 
 import androidx.core.app.NotificationCompat;
 
@@ -83,7 +84,12 @@ public class AlphaPushService extends PushService {
         Log.d(TAG, "Raw message content: " + raw);
 
         // Декодируем URL-encoded тело (title=...&message=...)
-        String content = Uri.decode(raw);
+        String content;
+        try {
+            content = URLDecoder.decode(raw, "UTF-8");
+        } catch (Exception e) {
+            content = raw;
+        }
         Log.d(TAG, "Decoded content: " + content);
 
         String title = "Alpha Messenger";
