@@ -74,16 +74,20 @@ interface PushRegistration {
 }
 
 async function detectAndRegisterPush(): Promise<PushRegistration | null> {
+  // 1. Если уже注册ированы — используем сохранённый токен (без перерегистрации).
+  //    Endpoint стабилен пока дистрибьютор и приложение те же.
   const saved = localStorage.getItem('alpha.push_platform');
-  if (saved === 'fcm' || saved === 'unifiedpush') {
-    const refreshed = await refreshRegistration(saved);
-    if (refreshed) return refreshed;
-    localStorage.removeItem('alpha.push_platform');
+  const savedToken = localStorage.getItem('alpha.push_token');
+  if (savedToken && (saved === 'fcm' || saved === 'unifiedpush')) {
+    console.log(`Alpha: Using saved push registration (${saved})`);
+    return { platform: saved, token: savedToken };
   }
 
+  // 2. Первая регистрация — пробуем UnifiedPush
   const upResult = await tryUnifiedPush();
   if (upResult) return upResult;
 
+  // 3. Пробуем FCM
   const fcmResult = await tryFCM();
   if (fcmResult) return fcmResult;
 
