@@ -112,13 +112,18 @@ async function getFCMAccessToken(): Promise<string | null> {
 async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boolean> {
   try {
     console.log(`UP: sending to ${endpoint}`);
+    
+    // Формат сообщения для ntfy: JSON или простой текст
+    // Используем JSON для передачи chatId
     const message = chatId
-      ? `title=Alpha&message=${encodeURIComponent(JSON.stringify({ chatId }))}`
-      : 'title=Alpha&message=wake-up';
+      ? JSON.stringify({ type: 'wake-up', chatId })
+      : 'wake-up';
+    
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Content-encoding': 'aes128gcm',
+        'Content-Type': 'application/json',
+        'X-UnifiedPush': '1',  // Отключаем Firebase для UnifiedPush
       },
       body: message,
     });

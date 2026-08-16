@@ -7,8 +7,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import java.net.URLDecoder;
-
 import androidx.core.app.NotificationCompat;
 
 import org.unifiedpush.android.connector.FailedReason;
@@ -83,46 +81,51 @@ public class AlphaPushService extends PushService {
         String raw = contentBytes != null ? new String(contentBytes) : "";
         Log.d(TAG, "Raw message content: " + raw);
 
-        // Декодируем URL-encoded тело (title=...&message=...)
-        String content;
-        try {
-            content = URLDecoder.decode(raw, "UTF-8");
-        } catch (Exception e) {
-            content = raw;
-        }
-        Log.d(TAG, "Decoded content: " + content);
-
         String title = "Alpha Messenger";
         String text = "Новое сообщение";
         String chatId = null;
 
-        // Пробуем распарсить как JSON
+        // Сервер шлёт JSON: {"type":"wake-up","chatId":"..."} или просто строку
         try {
-            org.json.JSONObject json = new org.json.JSONObject(content);
+            org.json.JSONObject json = new org.json.JSONObject(raw);
             chatId = json.optString("chatId", null);
             text = json.optString("message", text);
+            String type = json.optString("type", "");
+            if ("wake-up".equals(type)) {
+                text = "Новое сообщение";
+            }
         } catch (Exception e) {
-            // Парсим form-urlencoded (title=...&message=...)
-            for (String part : content.split("&")) {
-                String[] kv = part.split("=", 2);
-                if (kv.length == 2) {
-                    if ("title".equals(kv[0])) title = kv[1];
-                    else if ("message".equals(kv[0])) {
-                        // message может быть JSON
-                        try {
-                            org.json.JSONObject json = new org.json.JSONObject(kv[1]);
-                            chatId = json.optString("chatId", null);
-                            text = json.optString("message", text);
-                        } catch (Exception e2) {
-                            text = kv[1];
+            // Legacy: form-urlencoded (title=...&message=...) или простой текст
+            if (raw.contains("=")) {
+                for (String part : raw.split("&")) {
+                    String[] kv = part.split("=", 2);
+                    if (kv.length == 2) {
+                        if ("title".equals(kv[0])) title = KVDecode(kv[1]);
+                        else if ("message".equals(kv[0])) {
+                            String msgVal = KVDecode(kv[1]);
+                            try {
+                                org.json.JSONObject json = new org.json.JSONObject(msgVal);
+                                chatId = json.optString("chatId", null);
+                            } catch (Exception ignored) {}
+                            text = msgVal;
                         }
                     }
                 }
+            } else if (!raw.isEmpty()) {
+                text = raw;
             }
         }
 
         Log.d(TAG, "Parsed: title=" + title + " text=" + text + " chatId=" + chatId);
         showNotification(title, text, chatId);
+    }
+
+    private static String KVDecode(String s) {
+        try {
+            return java.net.URLDecoder.decode(s, "UTF-8");
+        } catch (Exception e) {
+            return s;
+        }
     }
 
     private void showNotification(String title, String text, String chatId) {

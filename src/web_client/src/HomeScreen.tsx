@@ -501,6 +501,14 @@ export function HomeScreen({
         .catch(() => undefined);
     });
 
+    // На Android: при возврате из фона переподключаем WS и синхронизируемся
+    const onForeground = (): void => {
+      console.log('Alpha: foreground — reconnecting WS');
+      ws.reconnect();
+    };
+    window.addEventListener('app-foreground', onForeground);
+    const offForeground = () => window.removeEventListener('app-foreground', onForeground);
+
     return () => {
       alive = false;
       offCreated();
@@ -513,6 +521,7 @@ export function HomeScreen({
       offPresence();
       offAdded();
       offRemoved();
+      offForeground();
       ws.close();
     };
   }, [ws]);

@@ -57,6 +57,10 @@ async function initAndroid(): Promise<void> {
   if (!appStateListenerAdded) {
     App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
       console.log(`Alpha: App ${isActive ? 'foregrounded' : 'backgrounded'}`);
+      // При возврате из фона — сигналим WS-клиенту переподключиться
+      if (isActive) {
+        window.dispatchEvent(new Event('app-foreground'));
+      }
     });
     appStateListenerAdded = true;
   }
@@ -206,6 +210,7 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
 
 /**
  * Пробуем ntfy HTTP API (если ntfy запущен локально).
+ * UnifiedPush топики в ntfy начинаются с "up" префикса.
  */
 async function tryNtfyHttp(): Promise<PushRegistration | null> {
   try {
@@ -217,7 +222,8 @@ async function tryNtfyHttp(): Promise<PushRegistration | null> {
 
     console.log('Alpha: ntfy HTTP API available');
 
-    const topic = `alpha-${crypto.randomUUID()}`;
+    // UnifiedPush топики в ntfy должны начинаться с "up" префикса
+    const topic = `up${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
     const endpoint = `http://localhost:80/${topic}`;
 
     return { platform: 'unifiedpush', token: endpoint };

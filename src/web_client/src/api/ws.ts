@@ -173,4 +173,14 @@ export class WsClient {
     this.closedByUser = true;
     this.ws?.close();
   }
+
+  /** Переподключение извне (например, после возврата из фона на Android). */
+  reconnect(): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      // Уже подключены — ничего не делаем
+      return;
+    }
+    this.closedByUser = false;
+    this.connect();
+  }
 }
