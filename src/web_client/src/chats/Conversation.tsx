@@ -1176,19 +1176,21 @@ export function Conversation({
               </span>
             ) : null;
           })()}
-          <span className="conv-title">{chatTitle(chat, myId)}</span>
-          {subtitle && (
-            <span
-              className={
-                'conv-subtitle' +
-                (subtitle === 'в сети' ? ' conv-subtitle--online' :
-                 subtitle.startsWith('отошёл') ? ' conv-subtitle--away' : '')
-              }
-              data-testid="conv-subtitle"
-            >
-              {subtitle}
-            </span>
-          )}
+          <span className="conv-headline-text">
+            <span className="conv-title">{chatTitle(chat, myId)}</span>
+            {subtitle && (
+              <span
+                className={
+                  'conv-subtitle' +
+                  (subtitle === 'в сети' ? ' conv-subtitle--online' :
+                   subtitle.startsWith('отошёл') ? ' conv-subtitle--away' : '')
+                }
+                data-testid="conv-subtitle"
+              >
+                {subtitle}
+              </span>
+            )}
+          </span>
         </button>
         {typingUsers.size > 0 && (
           <span className="conv-typing" data-testid="typing-indicator">
