@@ -1301,6 +1301,7 @@ export function Conversation({
                     className="bubble-avatar"
                     aria-hidden="true"
                     style={{ background: colorFor(nameOf(m.senderId)) }}
+                    onClick={() => onShowProfile(m.senderId)}
                   >
                     {initialFor(nameOf(m.senderId))}
                   </span>

@@ -752,6 +752,7 @@ body {
   font-size: 13px;
   font-weight: 600;
   user-select: none;
+  cursor: pointer;
 }
 
 /* Имя автора над первым пузырём серии; цвет — по автору (как в Telegram). */
