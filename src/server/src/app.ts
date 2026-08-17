@@ -12,6 +12,7 @@ import { presenceRoutes } from './routes/presence';
 import { pushRoutes } from './routes/push';
 import { reactionRoutes } from './routes/reactions';
 import { draftRoutes } from './routes/drafts';
+import { userRoutes } from './routes/users';
 import { versionRoutes } from './routes/version';
 import { clientRoutes } from './routes/client';
 import { wsRoutes } from './ws';
@@ -43,6 +44,7 @@ export function buildApp(): FastifyInstance {
       api.register(pushRoutes);
       api.register(reactionRoutes);
       api.register(draftRoutes);
+      api.register(userRoutes);
     },
     { prefix: '/api' },
   );

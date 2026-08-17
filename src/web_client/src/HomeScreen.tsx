@@ -15,6 +15,7 @@ import { AccountNotifications } from './account/AccountNotifications';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
 import { AboutDialog } from './chats/AboutDialog';
+import { UserProfileDialog } from './chats/UserProfileDialog';
 import { SettingsScreen } from './SettingsScreen';
 import { IconMenu, IconBell } from './util/icons';
 import { useTyping } from './chats/useTyping';
@@ -81,6 +82,7 @@ export function HomeScreen({
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   selectedRef.current = selectedId;
   // Актуальный список для проверок внутри WS-обработчиков (без перезапуска
   // эффекта и без побочных эффектов в setState-апдейтерах).
@@ -550,6 +552,10 @@ export function HomeScreen({
 
   const selectedChat = chats.find((c) => c.chatId === selectedId) ?? null;
 
+  function onShowProfile(userId: string): void {
+    setProfileUserId(userId);
+  }
+
   async function handleNotifAllow(): Promise<void> {
     const result = await requestPermission();
     setNotifBrowser(result === 'granted');
@@ -651,6 +657,7 @@ export function HomeScreen({
               onCreateDirect={onCreateDirect}
               onCreateGroup={onCreateGroup}
               onFocusInput={() => inputRef.current?.focus()}
+              onShowProfile={onShowProfile}
             />
           </>
         )}
@@ -667,12 +674,22 @@ export function HomeScreen({
             typingUsers={typingByChat.get(selectedChat.chatId) ?? EMPTY_TYPING}
             inputRef={inputRef}
             onBack={() => setSelectedId(null)}
+            onShowProfile={onShowProfile}
           />
         ) : (
           <div className="conversation-empty">Выберите чат</div>
         )}
       </main>
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {profileUserId && (
+        <UserProfileDialog
+          userId={profileUserId}
+          myId={myId}
+          onlineUsers={onlineUsers}
+          awayUsers={awayUsers}
+          onClose={() => setProfileUserId(null)}
+        />
+      )}
     </div>
   );
 }

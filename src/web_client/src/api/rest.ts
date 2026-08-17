@@ -1,6 +1,9 @@
 import { apiUrl } from './config';
 import { getToken } from './session';
-import type { AuthResult, Chat, ChatMembers, Me, Message, ReactionGroup } from './types';
+import type {
+  AuthResult, Chat, ChatMembers, Me, Message, ReactionGroup,
+  UserProfile, UserNote,
+} from './types';
 
 // Ошибка с HTTP-статусом и распарсенным телом — экраны различают 400/404/409 и т.п.
 export class ApiError extends Error {
@@ -303,4 +306,22 @@ export function deleteDevice(deviceId: string): Promise<{ ok: boolean }> {
 
 export function deleteAllDevices(): Promise<{ ok: boolean }> {
   return rest.del<{ ok: boolean }>('/devices');
+}
+
+// ---- Профили и заметки (#22) ----
+
+export function getUserProfile(userId: string): Promise<UserProfile> {
+  return rest.get<UserProfile>(`/users/${userId}`);
+}
+
+export function searchUsers(query: string): Promise<{ users: UserProfile[] }> {
+  return rest.get<{ users: UserProfile[] }>(`/users?search=${encodeURIComponent(query)}`);
+}
+
+export function getNote(targetId: string): Promise<{ note: UserNote | null }> {
+  return rest.get<{ note: UserNote | null }>(`/me/notes/${targetId}`);
+}
+
+export function saveNote(targetId: string, text: string): Promise<{ note: UserNote | null }> {
+  return rest.put<{ note: UserNote | null }>(`/me/notes/${targetId}`, { text });
 }

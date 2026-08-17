@@ -157,6 +157,7 @@ export function Conversation({
   typingUsers,
   inputRef,
   onBack,
+  onShowProfile,
 }: {
   chat: Chat;
   ws: WsClient;
@@ -166,6 +167,7 @@ export function Conversation({
   typingUsers: Map<string, string>;
   inputRef: React.RefObject<HTMLDivElement>;
   onBack: () => void;
+  onShowProfile: (userId: string) => void;
 }): JSX.Element {
   const chatId = chat.chatId;
   const [membersOpen, setMembersOpen] = useState(false);
@@ -1156,8 +1158,25 @@ export function Conversation({
           className={'conv-headline' + (isGroup ? ' conv-headline--clickable' : '')}
           data-testid="conv-header-info"
           disabled={!isGroup}
-          onClick={() => isGroup && setMembersOpen(true)}
+          onClick={() => {
+            if (isGroup) setMembersOpen(true);
+            else {
+              const other = chat.participants.find((p) => p.userId !== myId);
+              if (other) onShowProfile(other.userId);
+            }
+          }}
         >
+          {!isGroup && (() => {
+            const other = chat.participants.find((p) => p.userId !== myId);
+            return other ? (
+              <span
+                className="conv-header-avatar"
+                style={{ backgroundColor: colorFor(other.username) }}
+              >
+                {initialFor(other.username)}
+              </span>
+            ) : null;
+          })()}
           <span className="conv-title">{chatTitle(chat, myId)}</span>
           {subtitle && (
             <span
@@ -1287,6 +1306,7 @@ export function Conversation({
                     className="bubble-sender"
                     data-testid="bubble-sender"
                     style={{ color: colorFor(nameOf(m.senderId)) }}
+                    onClick={() => onShowProfile(m.senderId)}
                   >
                     {nameOf(m.senderId)}
                   </span>
@@ -1796,6 +1816,7 @@ export function Conversation({
           awayUsers={awayUsers}
           typingUsers={typingUsers}
           onClose={() => setMembersOpen(false)}
+          onShowProfile={onShowProfile}
         />
       )}
       {ctxMenu && (

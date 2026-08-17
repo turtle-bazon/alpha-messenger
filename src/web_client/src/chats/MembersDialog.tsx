@@ -16,6 +16,7 @@ export function MembersDialog({
   awayUsers,
   typingUsers,
   onClose,
+  onShowProfile,
 }: {
   chat: Chat;
   myId: string | null;
@@ -24,6 +25,7 @@ export function MembersDialog({
   // Печатающие сейчас в этом чате участники — их аватар обводим окантовкой (#27).
   typingUsers: Map<string, string>;
   onClose: () => void;
+  onShowProfile: (userId: string) => void;
 }): JSX.Element {
   const [members, setMembers] = useState<ChatMember[]>([]);
   const [createdBy, setCreatedBy] = useState<string | null>(chat.createdBy);
@@ -159,6 +161,7 @@ export function MembersDialog({
                   <span
                     className="member-avatar"
                     style={{ backgroundColor: colorFor(m.username) }}
+                    onClick={() => onShowProfile(m.userId)}
                   >
                     {initialFor(m.username)}
                     {typingUsers.has(m.userId) && (
@@ -177,7 +180,10 @@ export function MembersDialog({
                     )}
                   </span>
                   <span className="member-info">
-                    <span className="member-name">
+                    <span
+                      className="member-name"
+                      onClick={() => onShowProfile(m.userId)}
+                    >
                       {m.username}
                       {m.userId === myId && ' (вы)'}
                     </span>

@@ -24,6 +24,7 @@ export function ChatList({
   onCreateDirect,
   onCreateGroup,
   onFocusInput,
+  onShowProfile,
 }: {
   chats: Chat[];
   loading: boolean;
@@ -36,6 +37,7 @@ export function ChatList({
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;
   onFocusInput: () => void;
+  onShowProfile: (userId: string) => void;
 }): JSX.Element {
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState('');
@@ -131,6 +133,12 @@ export function ChatList({
                   className="chat-avatar"
                   style={{ background: colorFor(title) }}
                   aria-hidden="true"
+                  onClick={(e) => {
+                    if (other) {
+                      e.stopPropagation();
+                      onShowProfile(other.userId);
+                    }
+                  }}
                 >
                   {initialFor(title)}
                   <AvatarBadges online={online} away={away} typing={typing} />

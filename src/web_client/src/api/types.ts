@@ -87,3 +87,18 @@ export interface ServerEvent {
   ts: string;
   payload: Record<string, unknown>;
 }
+
+// ---- Профили пользователей (#22) ----
+
+export interface UserProfile {
+  userId: string;
+  username: string;
+  createdAt: string;
+  lastActiveAt: string | null;
+}
+
+export interface UserNote {
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}

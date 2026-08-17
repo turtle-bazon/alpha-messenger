@@ -568,19 +568,32 @@ body {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   border: none;
   background: none;
   padding: 0;
   font: inherit;
   text-align: left;
-  cursor: default;
+  cursor: pointer;
 }
 
 .conv-headline--clickable {
   cursor: pointer;
+}
+
+.conv-header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .conv-title {
@@ -591,6 +604,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
 }
 
 .conv-subtitle {
@@ -739,6 +757,7 @@ body {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.1;
+  cursor: pointer;
 }
 
 .bubble-pending {
@@ -2228,6 +2247,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .member-online-dot {
@@ -2258,6 +2278,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .member-status {
@@ -2322,6 +2343,119 @@ body {
   color: #e0533d;
   font-size: 13px;
   margin: 0;
+}
+
+/* ---- Диалог профиля пользователя (#22) ---- */
+.profile-dialog {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px;
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.profile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-avatar {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 600;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-username {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profile-meta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.profile-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.profile-meta-label {
+  color: var(--text-muted);
+}
+
+.profile-meta-value {
+  color: var(--text);
+}
+
+.profile-note-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.profile-note-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.profile-note-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 60px;
+}
+
+.profile-note-input::placeholder {
+  color: var(--text-muted);
+}
+
+.profile-note-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.profile-note-hint {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 /* Кнопка эмодзи в композере (#56). */
