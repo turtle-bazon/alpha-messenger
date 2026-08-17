@@ -36,6 +36,18 @@ export async function pushRoutes(app: FastifyInstance): Promise<void> {
       if (dev.rowCount === 0) {
         return reply.code(404).send({ error: 'device not found' });
       }
+      // Чистим старые подписки этого же provider для данного пользователя.
+      // При переустановке приложения device_id и endpoint меняются,
+      // но ntfy на телефоне может всё ещё слушать старые топики.
+      await pool.query(
+        `DELETE FROM push_subscriptions ps
+          USING devices d
+         WHERE ps.device_id = d.device_id
+           AND d.user_id = $1
+           AND ps.provider = $2
+           AND ps.endpoint != $3`,
+        [userId, provider, endpoint],
+      );
       const { rows } = await pool.query(
         `INSERT INTO push_subscriptions(device_id, provider, endpoint)
          VALUES ($1, $2, $3)

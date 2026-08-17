@@ -149,10 +149,11 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boole
 
 export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, chatId?: string): Promise<number> {
   const { rows } = await pool.query(
-    `SELECT ps.subscription_id, ps.provider, ps.endpoint, ps.device_id
+    `SELECT DISTINCT ON (ps.provider) ps.subscription_id, ps.provider, ps.endpoint, ps.device_id
        FROM push_subscriptions ps
        JOIN devices d ON d.device_id = ps.device_id
-      WHERE d.user_id = $1`,
+      WHERE d.user_id = $1
+      ORDER BY ps.provider, ps.subscription_id DESC`,
     [userId],
   );
 
