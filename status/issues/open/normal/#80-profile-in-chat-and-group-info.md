@@ -15,7 +15,9 @@
 ### Сервер
 
 - Новое поле `description` в таблице `chats` (миграция)
-- `PATCH /api/chats/:chatId` — обновление title/description (только владелец)
+- `PATCH /api/chats/:chatId` — обновление title/description
+  - **Обязательная проверка**: только владелец группы может редактировать (server-side, не только UI)
+  - Если не владелец → 403
 - Расширить `GET /chats/:chatId` — возвращать `description`
 
 ### Клиент
