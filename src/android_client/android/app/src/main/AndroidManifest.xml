@@ -49,6 +49,19 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name="org.unifiedpush.android.connector.internal.RaiseToForegroundService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="UnifiedPush message delivery"/>
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.RAISE_TO_FOREGROUND"/>
+            </intent-filter>
+        </service>
+
     </application>
 
     <!-- Permissions -->
