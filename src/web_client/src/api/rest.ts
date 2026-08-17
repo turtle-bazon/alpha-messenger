@@ -100,6 +100,13 @@ export function getChat(chatId: string): Promise<Chat> {
   return rest.get<Chat>(`/chats/${chatId}`);
 }
 
+export function updateChat(
+  chatId: string,
+  data: { title?: string; description?: string },
+): Promise<Chat> {
+  return rest.patch<Chat>(`/chats/${chatId}`, data);
+}
+
 // Список участников чата с признаком онлайн и указанием создателя.
 export function getMembers(chatId: string): Promise<ChatMembers> {
   return rest.get<ChatMembers>(`/chats/${chatId}/members`);

@@ -2461,6 +2461,55 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- Диалог информации о группе (#80) ---- */
+.group-info-title-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  text-align: center;
+}
+
+.group-info-title-input::placeholder {
+  color: var(--text-muted);
+}
+
+.group-info-title-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.group-info-description-view {
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.group-info-members-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.group-info-members-btn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+}
+
 /* Кнопка эмодзи в композере (#56). */
 .conv-emoji-btn {
   border: none;

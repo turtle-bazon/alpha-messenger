@@ -50,6 +50,7 @@ export interface Chat {
   chatId: string;
   type: 'direct' | 'group';
   title: string | null;
+  description: string;
   createdBy: string | null;
   participants: Participant[];
   lastMessage: MessagePreview | null;

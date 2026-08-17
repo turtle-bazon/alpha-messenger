@@ -675,6 +675,11 @@ export function HomeScreen({
             inputRef={inputRef}
             onBack={() => setSelectedId(null)}
             onShowProfile={onShowProfile}
+            onChatUpdated={(updated) => {
+              setChats((prev) =>
+                prev.map((c) => (c.chatId === updated.chatId ? updated : c)),
+              );
+            }}
           />
         ) : (
           <div className="conversation-empty">Выберите чат</div>

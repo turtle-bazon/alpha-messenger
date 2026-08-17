@@ -46,6 +46,7 @@ import { MentionPopup, getFilteredParticipants } from './MentionPopup';
 import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
+import { GroupInfoDialog } from './GroupInfoDialog';
 import { FormattingToolbar } from './FormattingToolbar';
 import { WysiwygComposer, WysiwygComposerHandle } from './WysiwygComposer';
 import {
@@ -158,6 +159,7 @@ export function Conversation({
   inputRef,
   onBack,
   onShowProfile,
+  onChatUpdated,
 }: {
   chat: Chat;
   ws: WsClient;
@@ -168,9 +170,11 @@ export function Conversation({
   inputRef: React.RefObject<HTMLDivElement>;
   onBack: () => void;
   onShowProfile: (userId: string) => void;
+  onChatUpdated: (chat: Chat) => void;
 }): JSX.Element {
   const chatId = chat.chatId;
   const [membersOpen, setMembersOpen] = useState(false);
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false);
   const [messages, setMessages] = useState<MsgVM[]>([]);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -1158,7 +1162,7 @@ export function Conversation({
           className="conv-headline conv-headline--clickable"
           data-testid="conv-header-info"
           onClick={() => {
-            if (isGroup) setMembersOpen(true);
+            if (isGroup) setGroupInfoOpen(true);
             else {
               const other = chat.participants.find((p) => p.userId !== myId);
               if (other) onShowProfile(other.userId);
@@ -1807,6 +1811,15 @@ export function Conversation({
           blobId={viewer.blobId}
           caption={viewer.caption}
           onClose={() => setViewer(null)}
+        />
+      )}
+      {groupInfoOpen && (
+        <GroupInfoDialog
+          chat={chat}
+          myId={myId}
+          onOpenMembers={() => { setGroupInfoOpen(false); setMembersOpen(true); }}
+          onClose={() => setGroupInfoOpen(false)}
+          onUpdated={(updated) => { onChatUpdated(updated); }}
         />
       )}
       {membersOpen && (

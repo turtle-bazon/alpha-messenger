@@ -355,6 +355,50 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  // PATCH /chats/:chatId — обновление title/description (только владелец).
+  app.patch('/chats/:chatId', { preHandler: authenticate }, async (req, reply) => {
+    const callerId = req.user!.userId;
+    const { chatId } = req.params as { chatId: string };
+    const { title, description } = (req.body ?? {}) as {
+      title?: string;
+      description?: string;
+    };
+    const chat = await pool.query(
+      'SELECT type, created_by FROM chats WHERE chat_id = $1',
+      [chatId],
+    );
+    if (chat.rowCount === 0) {
+      return reply.code(404).send({ error: 'not found' });
+    }
+    const { type, created_by: createdBy } = chat.rows[0];
+    if (type !== 'group') {
+      return reply.code(400).send({ error: 'not a group' });
+    }
+    if (createdBy !== callerId) {
+      return reply.code(403).send({ error: 'not chat owner' });
+    }
+    const sets: string[] = [];
+    const vals: unknown[] = [];
+    let idx = 1;
+    if (title !== undefined) {
+      sets.push(`title = $${idx++}`);
+      vals.push(title);
+    }
+    if (description !== undefined) {
+      sets.push(`description = $${idx++}`);
+      vals.push(description);
+    }
+    if (sets.length === 0) {
+      return reply.code(400).send({ error: 'nothing to update' });
+    }
+    vals.push(chatId);
+    await pool.query(
+      `UPDATE chats SET ${sets.join(', ')}, updated_at = now() WHERE chat_id = $${idx}`,
+      vals,
+    );
+    return loadChat(pool, chatId, callerId);
+  });
+
   app.post('/chats', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const body = (req.body ?? {}) as CreateChatBody;
