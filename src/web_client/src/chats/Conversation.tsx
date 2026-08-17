@@ -1155,9 +1155,8 @@ export function Conversation({
         </button>
         <button
           type="button"
-          className={'conv-headline' + (isGroup ? ' conv-headline--clickable' : '')}
+          className="conv-headline conv-headline--clickable"
           data-testid="conv-header-info"
-          disabled={!isGroup}
           onClick={() => {
             if (isGroup) setMembersOpen(true);
             else {
