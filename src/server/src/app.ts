@@ -17,6 +17,7 @@ import { versionRoutes } from './routes/version';
 import { clientRoutes } from './routes/client';
 import { stickerRoutes } from './routes/stickers';
 import { gifRoutes } from './routes/gifs';
+import { channelWebRoutes } from './routes/channel-web';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -58,6 +59,8 @@ export function buildApp(): FastifyInstance {
   app.register(versionRoutes);
   // Файлы веб-клиента для Android-обновлений (/mobile-client/manifest.json, /mobile-client/assets/...).
   app.register(clientRoutes);
+  // Public channel pages: /channel/:username/
+  app.register(channelWebRoutes);
 
   return app;
 }

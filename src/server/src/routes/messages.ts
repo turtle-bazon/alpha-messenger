@@ -58,7 +58,16 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(404).send({ error: 'not found' });
       }
 
-      // Валидация replyToMessageId: должно быть числовым ID сообщения в этом чате.
+      // Channel subscribers cannot post.
+      const roleCheck = await pool.query(
+        'SELECT role FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+        [chatId, userId],
+      );
+      if (roleCheck.rows[0]?.role === 'subscriber') {
+        return reply.code(403).send({ error: 'channel subscribers cannot post' });
+      }
+
+      // Validate replyToMessageId: should be numeric message ID in this chat.
       let replyToId: string | null = null;
       if (replyToMessageId !== undefined) {
         if (!/^\d+$/.test(replyToMessageId)) {
@@ -160,7 +169,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       const res = await pool.query(
         `SELECT m.message_id, m.sender_id, m.ciphertext, m.created_at,
-                m.edited_at, m.deleted, m.reply_to_message_id,
+                m.edited_at, m.deleted, m.reply_to_message_id, m.view_count,
                 COALESCE(
                   array_agg(mb.blob_id) FILTER (WHERE mb.blob_id IS NOT NULL),
                   '{}'
@@ -185,6 +194,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         editedAt: r.edited_at ? r.edited_at.toISOString() : null,
         deleted: r.deleted,
         replyToMessageId: r.reply_to_message_id,
+        viewCount: r.view_count as number,
         reactions: [] as ReactionGroup[],
       }));
 
@@ -333,6 +343,31 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(404).send({ error: 'not found' });
       }
       await markRead(userId, chatId, upToMessageId);
+      return reply.send({ ok: true });
+    },
+  );
+
+  // Record views for channel messages (batch).
+  app.post(
+    '/chats/:chatId/view',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      const { messageIds } = (req.body ?? {}) as { messageIds?: string[] };
+
+      if (!Array.isArray(messageIds) || messageIds.length === 0) {
+        return reply.code(400).send({ error: 'missing messageIds' });
+      }
+      if (!(await isMember(chatId, userId))) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+
+      await pool.query(
+        `UPDATE messages SET view_count = view_count + 1
+         WHERE chat_id = $1 AND message_id = ANY($2::bigint[])`,
+        [chatId, messageIds],
+      );
       return reply.send({ ok: true });
     },
   );

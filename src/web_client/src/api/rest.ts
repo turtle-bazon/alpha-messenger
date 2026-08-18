@@ -398,3 +398,47 @@ export function searchGifs(
   if (opts.pos) params.set('pos', opts.pos);
   return rest.get<{ gifs: GifResult[]; next: string | null }>(`/gifs/search?${params}`);
 }
+
+// ---- Channels ----
+
+export interface ChannelSearchResult {
+  chatId: string;
+  title: string;
+  username: string;
+  description: string;
+  subscriberCount: number;
+}
+
+export function searchChannels(query: string): Promise<{ chats: ChannelSearchResult[] }> {
+  return rest.get<{ chats: ChannelSearchResult[] }>(
+    `/chats/search?q=${encodeURIComponent(query)}`,
+  );
+}
+
+export function createChannel(
+  title: string,
+  channelUsername: string,
+  members: string[] = [],
+): Promise<Chat> {
+  return rest.post<Chat>('/chats', {
+    type: 'group',
+    title,
+    channelUsername,
+    members,
+  });
+}
+
+export function subscribeChannel(chatId: string): Promise<{ ok: boolean; already?: boolean }> {
+  return rest.post<{ ok: boolean; already?: boolean }>(`/chats/${chatId}/subscribe`);
+}
+
+export function unsubscribeChannel(chatId: string): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>(`/chats/${chatId}/subscribe`);
+}
+
+export function recordViews(
+  chatId: string,
+  messageIds: string[],
+): Promise<{ ok: boolean }> {
+  return rest.post<{ ok: boolean }>(`/chats/${chatId}/view`, { messageIds });
+}

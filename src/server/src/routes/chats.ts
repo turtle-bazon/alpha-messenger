@@ -11,6 +11,7 @@ interface CreateChatBody {
   username?: string;
   title?: string;
   members?: unknown;
+  channelUsername?: string;
 }
 
 async function createDirect(
@@ -84,6 +85,7 @@ async function createGroup(
   userId: string,
   title: string | undefined,
   members: unknown,
+  channelUsername?: string,
 ): Promise<FastifyReply> {
   if (!Array.isArray(members)) {
     return reply.code(400).send({ error: 'members must be an array' });
@@ -105,18 +107,34 @@ async function createGroup(
   }
   const allIds = [...new Set([userId, ...memberIds])];
 
+  // Validate channel username if provided.
+  if (channelUsername !== undefined) {
+    if (!/^[a-zA-Z0-9_]{5,32}$/.test(channelUsername)) {
+      return reply.code(400).send({ error: 'invalid channel username: 5-32 chars, a-z, 0-9, _' });
+    }
+    const exists = await pool.query(
+      'SELECT 1 FROM chats WHERE username = $1',
+      [channelUsername],
+    );
+    if (exists.rowCount! > 0) {
+      return reply.code(409).send({ error: 'channel username taken' });
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const c = await client.query(
-      "INSERT INTO chats(type, title, created_by) VALUES ('group', $1, $2) RETURNING chat_id",
-      [title ?? null, userId],
+      `INSERT INTO chats(type, title, created_by, username)
+       VALUES ('group', $1, $2, $3) RETURNING chat_id`,
+      [title ?? null, userId, channelUsername ?? null],
     );
     const chatId: string = c.rows[0].chat_id;
     for (const id of allIds) {
+      const role = id === userId ? 'owner' : (channelUsername ? 'subscriber' : 'member');
       await client.query(
-        'INSERT INTO chat_members(chat_id, user_id) VALUES ($1, $2)',
-        [chatId, id],
+        'INSERT INTO chat_members(chat_id, user_id, role) VALUES ($1, $2, $3)',
+        [chatId, id, role],
       );
       await emitEvent(client, id, 'chat.created', { chatId }, chatId);
     }
@@ -406,8 +424,103 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       return createDirect(reply, userId, body.username);
     }
     if (body.type === 'group') {
-      return createGroup(reply, userId, body.title, body.members);
+      return createGroup(reply, userId, body.title, body.members, body.channelUsername);
     }
     return reply.code(400).send({ error: 'invalid type' });
+  });
+
+  // Search public channels by username or title.
+  app.get('/chats/search', { preHandler: authenticate }, async (req) => {
+    const { q } = req.query as { q?: string };
+    if (!q || q.trim().length === 0) {
+      return { chats: [] };
+    }
+    const res = await pool.query(
+      `SELECT c.chat_id, c.title, c.username, c.description,
+              (SELECT count(*)::int FROM chat_members WHERE chat_id = c.chat_id) AS subscriber_count
+       FROM chats c
+       WHERE c.username IS NOT NULL
+         AND (c.username ILIKE '%' || $1 || '%' OR c.title ILIKE '%' || $1 || '%')
+       ORDER BY subscriber_count DESC
+       LIMIT 20`,
+      [q.trim()],
+    );
+    return {
+      chats: res.rows.map((r) => ({
+        chatId: r.chat_id,
+        title: r.title,
+        username: r.username,
+        description: r.description ?? '',
+        subscriberCount: r.subscriber_count,
+      })),
+    };
+  });
+
+  // Subscribe to a channel (by chatId or channelUsername).
+  app.post('/chats/:chatId/subscribe', { preHandler: authenticate }, async (req, reply) => {
+    const userId = req.user!.userId;
+    const { chatId } = req.params as { chatId: string };
+
+    const chat = await pool.query(
+      'SELECT type, username FROM chats WHERE chat_id = $1',
+      [chatId],
+    );
+    if (chat.rowCount === 0) {
+      return reply.code(404).send({ error: 'not found' });
+    }
+    if (chat.rows[0].type !== 'group' || !chat.rows[0].username) {
+      return reply.code(400).send({ error: 'not a channel' });
+    }
+
+    const existing = await pool.query(
+      'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId],
+    );
+    if (existing.rowCount! > 0) {
+      return reply.code(200).send({ ok: true, already: true });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'INSERT INTO chat_members(chat_id, user_id, role) VALUES ($1, $2, $3)',
+        [chatId, userId, 'subscriber'],
+      );
+      await emitEvent(client, userId, 'chat.created', { chatId }, chatId);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
+    return reply.code(201).send({ ok: true });
+  });
+
+  // Unsubscribe from a channel.
+  app.delete('/chats/:chatId/subscribe', { preHandler: authenticate }, async (req, reply) => {
+    const userId = req.user!.userId;
+    const { chatId } = req.params as { chatId: string };
+
+    const chat = await pool.query(
+      'SELECT type, username, created_by FROM chats WHERE chat_id = $1',
+      [chatId],
+    );
+    if (chat.rowCount === 0) {
+      return reply.code(404).send({ error: 'not found' });
+    }
+    if (!chat.rows[0].username) {
+      return reply.code(400).send({ error: 'not a channel' });
+    }
+    if (chat.rows[0].created_by === userId) {
+      return reply.code(400).send({ error: 'owner cannot unsubscribe' });
+    }
+
+    await pool.query(
+      'DELETE FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+      [chatId, userId],
+    );
+    return reply.send({ ok: true });
   });
 }

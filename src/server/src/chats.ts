@@ -8,6 +8,9 @@ export interface ChatView {
   title: string | null;
   description: string;
   createdBy: string | null;
+  username: string | null;
+  role: string;
+  subscriberCount: number;
   participants: { userId: string; username: string; lastActiveAt?: string }[];
   lastMessage: {
     messageId: string;
@@ -16,10 +19,7 @@ export interface ChatView {
     ts: string;
   } | null;
   unreadCount: number;
-  // Количество непрочитанных ответов на мои сообщения.
   unreadMentions: number;
-  // До какого message_id нас прочитали другие участники — сид статуса ✓✓
-  // при открытии чата (дальше актуализируется live-событиями message.read).
   peerReadUpTo: string;
   updatedAt: string;
 }
@@ -32,16 +32,29 @@ export async function loadChat(
   userId: string,
 ): Promise<ChatView | null> {
   const chat = await db.query(
-    'SELECT chat_id, type, title, description, created_by, updated_at FROM chats WHERE chat_id = $1',
+    'SELECT chat_id, type, title, description, created_by, username, updated_at FROM chats WHERE chat_id = $1',
     [chatId],
   );
   if (chat.rowCount === 0) return null;
   const row = chat.rows[0];
 
   const members = await db.query(
-    `SELECT a.user_id, a.username, a.last_active_at FROM chat_members m
+    `SELECT a.user_id, a.username, a.last_active_at, m.role FROM chat_members m
      JOIN accounts a ON a.user_id = m.user_id
      WHERE m.chat_id = $1 ORDER BY a.username`,
+    [chatId],
+  );
+
+  // Роль текущего пользователя в чате.
+  const myRole = await db.query(
+    'SELECT role FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+    [chatId, userId],
+  );
+  const role: string = myRole.rows[0]?.role ?? 'member';
+
+  // Количество подписчиков/участников.
+  const subCount = await db.query(
+    'SELECT count(*)::int AS c FROM chat_members WHERE chat_id = $1',
     [chatId],
   );
 
@@ -95,9 +108,13 @@ export async function loadChat(
     title: row.title,
     description: row.description ?? '',
     createdBy: row.created_by,
+    username: row.username ?? null,
+    role,
+    subscriberCount: subCount.rows[0].c,
     participants: members.rows.map((m) => ({
       userId: m.user_id,
       username: m.username,
+      role: m.role,
       ...(m.last_active_at ? { lastActiveAt: m.last_active_at.toISOString() } : {}),
     })),
     lastMessage: lm

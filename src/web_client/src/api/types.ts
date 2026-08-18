@@ -22,6 +22,7 @@ export interface Me {
 export interface Participant {
   userId: string;
   username: string;
+  role?: string;
   lastActiveAt?: string;
 }
 
@@ -52,12 +53,13 @@ export interface Chat {
   title: string | null;
   description: string;
   createdBy: string | null;
+  username: string | null;
+  role: string;
+  subscriberCount: number;
   participants: Participant[];
   lastMessage: MessagePreview | null;
   unreadCount: number;
   unreadMentions: number;
-  // До какого message_id нас прочитали другие участники — сид статуса ✓✓
-  // при открытии чата (дальше актуализируется live-событиями message.read).
   peerReadUpTo: string;
   updatedAt: string;
 }
@@ -70,6 +72,7 @@ export interface Message {
   editedAt: string | null;
   deleted: boolean;
   replyToMessageId: string | null;
+  viewCount: number;
   reactions?: ReactionGroup[];
 }
 

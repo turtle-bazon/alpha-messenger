@@ -110,6 +110,7 @@ interface MsgVM {
   replyToMessageId: string | null;
   highlighted: boolean;
   reactions: ReactionGroup[];
+  viewCount: number;
 }
 
 function fromHistory(m: Message): MsgVM {
@@ -125,6 +126,7 @@ function fromHistory(m: Message): MsgVM {
     replyToMessageId: m.replyToMessageId ?? null,
     highlighted: false,
     reactions: m.reactions ?? [],
+    viewCount: m.viewCount ?? 0,
   };
 }
 
@@ -346,6 +348,7 @@ export function Conversation({
           editedAt: null,
           deleted: false,
           replyToMessageId: p.replyToMessageId ?? null,
+          viewCount: 0,
         }]).catch(() => undefined);
       }),
       ws.on('message.edited', (ev: ServerEvent) => {
@@ -834,6 +837,7 @@ export function Conversation({
       replyToMessageId: replyToMessageId ?? null,
       highlighted: false,
       reactions: [],
+      viewCount: 0,
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
@@ -1216,7 +1220,10 @@ export function Conversation({
       >
         {loadingMore && <div className="conv-loading">Загрузка…</div>}
         <div className="conv-messages" data-testid="messages">
-          {messages.map((m, i) => {
+          {(chat.username
+            ? messages.filter((m) => !m.replyToMessageId)
+            : messages
+          ).map((m, i) => {
             const own = m.senderId === myId;
             const read =
               own && m.messageId ? Number(m.messageId) <= readUpTo : false;
@@ -1491,6 +1498,9 @@ export function Conversation({
                     <span className="bubble-meta">
                     {m.edited && <IconEdit size={14} className="bubble-edited-icon" />}
                     <span className="bubble-time">{formatTime(m.ts)}</span>
+                    {chat.username && m.viewCount > 0 && (
+                      <span className="bubble-views">👁 {m.viewCount}</span>
+                    )}
                     {/* Статус доставки своих сообщений (#24/#26): отправка —
                         спиннер, ошибка — «!», отправлено — одна галочка,
                         прочитано — двойная синяя. */}
@@ -1723,6 +1733,8 @@ export function Conversation({
           onCode={onCode}
           onLink={onLink}
         />
+        {/* Hide input for channel subscribers — they can only read. */}
+        {!(chat.username && chat.role === 'subscriber') && (
         <form className="conv-input" onSubmit={onSubmit}>
           <input
             ref={fileInputRef}
@@ -1825,6 +1837,7 @@ export function Conversation({
           />
         )}
       </form>
+      )}
       </div>
       {pendingImage && (
         <ImageEditor
