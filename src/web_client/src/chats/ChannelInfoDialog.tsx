@@ -216,7 +216,7 @@ export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialog
         <div className="dialog-body">
           <input
             className="search-input"
-            placeholder="@username или название…"
+            placeholder="@хэндл или название…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -284,11 +284,11 @@ export function CreateChannelDialog({ onClose, onCreated }: CreateChannelDialogP
       return;
     }
     if (!username.trim()) {
-      setError('Введите @username');
+      setError('Введите хэндл канала');
       return;
     }
     if (!/^[a-zA-Z0-9_]{5,32}$/.test(username)) {
-      setError('Username: 5-32 символов, только a-z, 0-9, _');
+      setError('Хэндл: 5-32 символов, только a-z, 0-9, _');
       return;
     }
     setCreating(true);
@@ -299,7 +299,7 @@ export function CreateChannelDialog({ onClose, onCreated }: CreateChannelDialogP
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('409')) setError('Этот @username уже занят');
+      if (msg.includes('409')) setError('Этот хэндл уже занят');
       else setError('Ошибка создания канала');
     } finally {
       setCreating(false);
@@ -326,10 +326,10 @@ export function CreateChannelDialog({ onClose, onCreated }: CreateChannelDialogP
           />
           <input
             className="channel-info-input"
-            placeholder="@username (латиница, 5-32 символов)"
+            placeholder="@хэндл (латиница, 5-32 символов)"
             value={username}
             onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-            data-testid="channel-create-username"
+            data-testid="channel-create-handle"
           />
           {error && <div className="channel-info-error">{error}</div>}
           <div className="channel-info-actions">

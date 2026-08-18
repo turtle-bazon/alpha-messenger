@@ -3023,7 +3023,7 @@ body {
 .channel-info-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
 
 /* New channel form. */
-.new-channel-username-row {
+.new-channel-handle-row {
   display: flex;
   align-items: center;
   gap: 0;
@@ -3033,12 +3033,12 @@ body {
   background: var(--bg-input);
   margin-top: 8px;
 }
-.new-channel-at {
+.new-channel-handle-row .new-channel-at {
   padding: 8px 0 8px 10px;
   color: var(--text-muted);
   font-size: 14px;
 }
-.new-channel-username-row input {
+.new-channel-handle-row input {
   flex: 1;
   border: none;
   background: transparent;
@@ -3046,8 +3046,31 @@ body {
   font-size: 14px;
   outline: none;
 }
-.new-channel-username-row:focus-within {
+.new-channel-handle-row:focus-within {
   border-color: var(--accent);
+}
+
+/* Channel type toggle. */
+.new-channel-type {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.new-channel-type button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.new-channel-type button.active {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* View count in bubbles. */
