@@ -2637,6 +2637,206 @@ body {
   padding: 20px 0;
 }
 
+/* Панель стикеров (#63). */
+.sticker-panel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 320px;
+  max-height: 360px;
+  background: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  margin-bottom: 8px;
+  overflow: hidden;
+  animation: popup-in 0.15s ease-out;
+}
+
+.sticker-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.sticker-tab {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sticker-tab.active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+.sticker-panel-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sticker-panel-search input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sticker-panel-search input:focus {
+  border-color: var(--accent);
+}
+
+.sticker-packs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.sticker-pack-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.sticker-pack-item:hover {
+  background: var(--bg-hover);
+}
+
+.sticker-pack-placeholder {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.sticker-pack-title {
+  font-size: 11px;
+  color: var(--text);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.sticker-pack-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.sticker-items-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sticker-items-header {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.sticker-back-btn,
+.sticker-add-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sticker-back-btn:hover,
+.sticker-add-btn:hover {
+  background: var(--bg-hover);
+}
+
+.sticker-items-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.sticker-item-btn {
+  border: none;
+  background: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.sticker-item-btn:hover {
+  background: var(--bg-hover);
+}
+
+.sticker-thumb,
+.sticker-thumb-loading {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.sticker-thumb-loading {
+  background: var(--bg-input);
+  border-radius: 4px;
+}
+
+.sticker-loading {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+/* Стикер в сообщении */
+.bubble-sticker {
+  display: inline-block;
+  max-width: 160px;
+  max-height: 160px;
+}
+
+.sticker-img {
+  max-width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+}
+
+.sticker-loading {
+  display: inline-block;
+  width: 80px;
+  height: 80px;
+  background: var(--bg-input);
+  border-radius: 8px;
+}
+
 /* Контекстное меню (#54). */
 .context-menu {
   position: fixed;

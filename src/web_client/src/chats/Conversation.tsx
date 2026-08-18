@@ -20,6 +20,7 @@ import {
   getDraft,
   saveDraft,
   deleteDraft,
+  fetchBlob,
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
 import type { Chat, Message, ReactionGroup, ServerEvent } from '../api/types';
@@ -42,6 +43,7 @@ import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
 import { EmojiPicker } from './EmojiPicker';
+import { StickerPanel } from './StickerPanel';
 import { MentionPopup, getFilteredParticipants } from './MentionPopup';
 import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
@@ -182,6 +184,7 @@ export function Conversation({
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [stickerOpen, setStickerOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
   // Пикер реакций: messageId для которого открыт, или null
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
@@ -1429,6 +1432,10 @@ export function Conversation({
                               <span className="bubble-caption">{a.caption}</span>
                             )}
                           </span>
+                        ) : a.kind === 'sticker' ? (
+                          <span className="bubble-sticker" key={ai}>
+                            <StickerImage blobId={a.blobId} />
+                          </span>
                         ) : (
                           <a
                             className="bubble-link"
@@ -1742,9 +1749,18 @@ export function Conversation({
             className="conv-emoji-btn"
             data-testid="emoji-btn"
             aria-label="Эмодзи"
-            onClick={() => setEmojiOpen(!emojiOpen)}
+            onClick={() => { setEmojiOpen(!emojiOpen); setStickerOpen(false); }}
           >
             😊
+          </button>
+          <button
+            type="button"
+            className="conv-emoji-btn"
+            data-testid="sticker-btn"
+            aria-label="Стикеры"
+            onClick={() => { setStickerOpen(!stickerOpen); setEmojiOpen(false); }}
+          >
+            🎯
           </button>
           <WysiwygComposer
             ref={composerRef}
@@ -1781,6 +1797,37 @@ export function Conversation({
               }
             }}
             onClose={() => setEmojiOpen(false)}
+            textareaRef={inputRef}
+          />
+        )}
+        {stickerOpen && (
+          <StickerPanel
+            onSelectSticker={async (blobId) => {
+              const clientMessageId = crypto.randomUUID();
+              const content = { text: '', attachments: [{ kind: 'sticker' as const, blobId }] };
+              try {
+                const res = await sendMessage(
+                  chatId,
+                  clientMessageId,
+                  encodeContent(content),
+                  [blobId],
+                );
+                setMessages((prev) =>
+                  upsert(prev, {
+                    clientMessageId,
+                    senderId: myIdRef.current ?? '',
+                    messageId: res.messageId,
+                    ts: res.ts,
+                    content,
+                    pending: false,
+                    failed: false,
+                  }),
+                );
+              } catch {
+                // ошибка отправки
+              }
+            }}
+            onClose={() => setStickerOpen(false)}
             textareaRef={inputRef}
           />
         )}
@@ -2010,4 +2057,20 @@ function PositionedEmojiPicker({
       <EmojiPicker onSelect={onSelect} onClose={onClose} />
     </div>
   );
+}
+
+// Компонент для отображения стикера по blobId
+function StickerImage({ blobId }: { blobId: string }): JSX.Element {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchBlob(blobId).then((blob) => {
+      if (!cancelled) setUrl(URL.createObjectURL(blob));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [blobId]);
+
+  if (!url) return <span className="sticker-loading" />;
+  return <img src={url} className="sticker-img" alt="стикер" />;
 }

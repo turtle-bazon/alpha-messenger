@@ -103,3 +103,21 @@ export interface UserNote {
   createdAt: string;
   updatedAt: string;
 }
+
+// ---- Стикеры (#63) ----
+
+export interface StickerPack {
+  packId: string;
+  title: string;
+  itemCount: number;
+  coverBlobId: string | null;
+  author?: string;
+  createdAt: string;
+}
+
+export interface StickerItem {
+  itemId: string;
+  blobId: string;
+  position: number;
+  emoji: string | null;
+}

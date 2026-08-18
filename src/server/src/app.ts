@@ -15,6 +15,7 @@ import { draftRoutes } from './routes/drafts';
 import { userRoutes } from './routes/users';
 import { versionRoutes } from './routes/version';
 import { clientRoutes } from './routes/client';
+import { stickerRoutes } from './routes/stickers';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -45,6 +46,7 @@ export function buildApp(): FastifyInstance {
       api.register(reactionRoutes);
       api.register(draftRoutes);
       api.register(userRoutes);
+      api.register(stickerRoutes);
     },
     { prefix: '/api' },
   );

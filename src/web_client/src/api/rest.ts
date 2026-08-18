@@ -2,7 +2,7 @@ import { apiUrl } from './config';
 import { getToken } from './session';
 import type {
   AuthResult, Chat, ChatMembers, Me, Message, ReactionGroup,
-  UserProfile, UserNote,
+  UserProfile, UserNote, StickerPack, StickerItem,
 } from './types';
 
 // Ошибка с HTTP-статусом и распарсенным телом — экраны различают 400/404/409 и т.п.
@@ -331,4 +331,49 @@ export function getNote(targetId: string): Promise<{ note: UserNote | null }> {
 
 export function saveNote(targetId: string, text: string): Promise<{ note: UserNote | null }> {
   return rest.put<{ note: UserNote | null }>(`/me/notes/${targetId}`, { text });
+}
+
+// ---- Стикеры (#63) ----
+
+export function createStickerPack(title: string): Promise<StickerPack> {
+  return rest.post<StickerPack>('/sticker-packs', { title });
+}
+
+export function getMyStickerPacks(): Promise<{ packs: StickerPack[] }> {
+  return rest.get<{ packs: StickerPack[] }>('/sticker-packs');
+}
+
+export function installStickerPack(packId: string): Promise<{ ok: boolean }> {
+  return rest.post<{ ok: boolean }>(`/sticker-packs/${packId}/install`);
+}
+
+export function uninstallStickerPack(packId: string): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>(`/sticker-packs/${packId}/install`);
+}
+
+export function deleteStickerPack(packId: string): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>(`/sticker-packs/${packId}`);
+}
+
+export function getStickerPackItems(packId: string): Promise<{ items: StickerItem[] }> {
+  return rest.get<{ items: StickerItem[] }>(`/sticker-packs/${packId}/items`);
+}
+
+export function addStickerItem(
+  packId: string,
+  blobId: string,
+  emoji?: string,
+): Promise<{ itemId: string; position: number }> {
+  return rest.post<{ itemId: string; position: number }>(
+    `/sticker-packs/${packId}/items`,
+    { blobId, emoji },
+  );
+}
+
+export function deleteStickerItem(packId: string, itemId: string): Promise<{ ok: boolean }> {
+  return rest.del<{ ok: boolean }>(`/sticker-packs/${packId}/items/${itemId}`);
+}
+
+export function searchStickerPacks(query: string): Promise<{ packs: StickerPack[] }> {
+  return rest.get<{ packs: StickerPack[] }>(`/sticker-packs/search?q=${encodeURIComponent(query)}`);
 }

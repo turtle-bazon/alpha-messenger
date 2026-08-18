@@ -39,7 +39,12 @@ export interface LinkAttachment {
   thumb: string; // base64 крошечного JPEG (без data: префикса), '' если нет
 }
 
-export type Attachment = ImageAttachment | LinkAttachment;
+export interface StickerAttachment {
+  kind: 'sticker';
+  blobId: string;
+}
+
+export type Attachment = ImageAttachment | LinkAttachment | StickerAttachment;
 
 // Сообщение — текст и/или вложения. Текст без вложений — обычное текстовое
 // сообщение; вложения без текста — медиа; возможна и комбинация.
@@ -56,28 +61,32 @@ export function encodeContent(c: MessageContent): string {
   const body: Record<string, unknown> = { t: 'msg' };
   if (c.text) body.text = c.text;
   if (c.attachments.length) {
-    body.atts = c.attachments.map((a) =>
-      a.kind === 'image'
-        ? {
-            k: 'image',
-            blob: a.blobId,
-            mime: a.mime,
-            w: a.width,
-            h: a.height,
-            size: a.size,
-            thumb: a.thumb,
-            ...(a.caption ? { cap: a.caption } : {}),
-            ...(a.key ? { key: a.key } : {}),
-          }
-        : {
-            k: 'link',
-            url: a.url,
-            title: a.title,
-            ...(a.description ? { desc: a.description } : {}),
-            ...(a.siteName ? { site: a.siteName } : {}),
-            ...(a.thumb ? { thumb: a.thumb } : {}),
-          },
-    );
+    body.atts = c.attachments.map((a) => {
+      if (a.kind === 'image') {
+        return {
+          k: 'image',
+          blob: a.blobId,
+          mime: a.mime,
+          w: a.width,
+          h: a.height,
+          size: a.size,
+          thumb: a.thumb,
+          ...(a.caption ? { cap: a.caption } : {}),
+          ...(a.key ? { key: a.key } : {}),
+        };
+      }
+      if (a.kind === 'sticker') {
+        return { k: 'sticker', blob: a.blobId };
+      }
+      return {
+        k: 'link',
+        url: a.url,
+        title: a.title,
+        ...(a.description ? { desc: a.description } : {}),
+        ...(a.siteName ? { site: a.siteName } : {}),
+        ...(a.thumb ? { thumb: a.thumb } : {}),
+      };
+    });
   }
   return encodeText(JSON.stringify(body));
 }
@@ -93,6 +102,10 @@ function decodeAttachment(o: Record<string, unknown>): Attachment | null {
       siteName: typeof o.site === 'string' ? o.site : '',
       thumb: typeof o.thumb === 'string' ? o.thumb : '',
     };
+  }
+  if (o.k === 'sticker') {
+    if (typeof o.blob !== 'string') return null;
+    return { kind: 'sticker', blobId: o.blob };
   }
   if (o.k !== 'image' && o.k !== undefined) return null;
   if (typeof o.thumb !== 'string' && typeof o.blob !== 'string') return null;
@@ -163,6 +176,8 @@ export function linkThumbUrl(a: LinkAttachment): string {
 // Краткое превью для списка чатов: для медиа — без раскодирования блоба. У превью
 // ссылки текст (сам URL) есть в сообщении — показываем его как обычный текст.
 export function previewText(c: MessageContent): string {
+  const sticker = c.attachments.find((a): a is StickerAttachment => a.kind === 'sticker');
+  if (sticker) return '🎯 Стикер';
   const img = c.attachments.find((a): a is ImageAttachment => a.kind === 'image');
   if (img) {
     const cap = img.caption || c.text;
