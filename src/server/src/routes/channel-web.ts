@@ -340,4 +340,96 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     reply.header('content-type', 'application/rss+xml; charset=utf-8');
     return reply.send(xml);
   });
+
+  // Private channel page: /channel/:chatId/ (by chatId, not username).
+  app.get('/channel/:chatId/', async (req, reply) => {
+    const { chatId } = req.params as { chatId: string };
+    if (!/^\d+$/.test(chatId)) return reply.code(404).send('Not found');
+
+    const chat = await pool.query(
+      `SELECT chat_id, title, description, username FROM chats WHERE chat_id = $1`,
+      [chatId],
+    );
+    if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
+
+    const { title, description, username } = chat.rows[0];
+    const label = title ?? username ?? `Channel #${chatId}`;
+
+    const msgs = await pool.query(
+      `SELECT message_id, ciphertext, created_at, view_count
+       FROM messages
+       WHERE chat_id = $1 AND deleted = false AND reply_to_message_id IS NULL
+       ORDER BY message_id DESC LIMIT 100`,
+      [chatId],
+    );
+
+    const posts = [];
+    for (const r of msgs.rows) {
+      const comments = await pool.query(
+        'SELECT count(*)::int AS c FROM messages WHERE reply_to_message_id = $1 AND deleted = false',
+        [r.message_id],
+      );
+      posts.push({
+        messageId: String(r.message_id),
+        text: decodeCiphertext((r.ciphertext as Buffer).toString('base64')),
+        ts: r.created_at.toISOString(),
+        viewCount: r.view_count as number,
+        commentCount: comments.rows[0].c,
+      });
+    }
+
+    const html = renderChannelHtml({ title: label, description: description ?? '', username: label, posts });
+    reply.header('content-type', 'text/html; charset=utf-8');
+    return reply.send(html);
+  });
+
+  // Private single post: /channel/:chatId/:postId
+  app.get('/channel/:chatId/:postId', async (req, reply) => {
+    const { chatId, postId } = req.params as { chatId: string; postId: string };
+    if (!/^\d+$/.test(chatId) || !/^\d+$/.test(postId)) return reply.code(404).send('Not found');
+
+    const chat = await pool.query(
+      `SELECT chat_id, title, username FROM chats WHERE chat_id = $1`,
+      [chatId],
+    );
+    if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
+
+    const { title, username } = chat.rows[0];
+    const label = title ?? username ?? `Channel #${chatId}`;
+
+    const postRow = await pool.query(
+      `SELECT message_id, ciphertext, created_at, view_count
+       FROM messages WHERE message_id = $1 AND chat_id = $2 AND deleted = false`,
+      [postId, chatId],
+    );
+    if (postRow.rowCount === 0) return reply.code(404).send('Post not found');
+
+    const pr = postRow.rows[0];
+    const post = {
+      messageId: String(pr.message_id),
+      text: decodeCiphertext((pr.ciphertext as Buffer).toString('base64')),
+      ts: pr.created_at.toISOString(),
+      viewCount: (pr.view_count as number) + 1,
+    };
+
+    await pool.query('UPDATE messages SET view_count = view_count + 1 WHERE message_id = $1', [pr.message_id]);
+
+    const commRes = await pool.query(
+      `SELECT m.message_id, m.ciphertext, m.created_at, a.username
+       FROM messages m JOIN accounts a ON a.user_id = m.sender_id
+       WHERE m.reply_to_message_id = $1 AND m.deleted = false
+       ORDER BY m.message_id`,
+      [pr.message_id],
+    );
+    const comments = commRes.rows.map((c) => ({
+      messageId: String(c.message_id),
+      text: decodeCiphertext((c.ciphertext as Buffer).toString('base64')),
+      ts: c.created_at.toISOString(),
+      senderUsername: c.username as string,
+    }));
+
+    const html = renderPostHtml({ title: label, username: label, post, comments });
+    reply.header('content-type', 'text/html; charset=utf-8');
+    return reply.send(html);
+  });
 }

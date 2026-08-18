@@ -112,7 +112,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
                   readOnly
                   value={chat.username
                     ? `${location.origin}/channel/${chat.username}/`
-                    : `${location.origin}/chat/${chat.chatId}`
+                    : `${location.origin}/channel/${chat.chatId}/`
                   }
                 />
                 <button
@@ -121,7 +121,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
                   onClick={() => {
                     const url = chat.username
                       ? `${location.origin}/channel/${chat.username}/`
-                      : `${location.origin}/chat/${chat.chatId}`;
+                      : `${location.origin}/channel/${chat.chatId}/`;
                     navigator.clipboard.writeText(url);
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
