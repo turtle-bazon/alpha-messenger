@@ -1734,7 +1734,7 @@ export function Conversation({
           onLink={onLink}
         />
         {/* Hide input for channel subscribers — they can only read. */}
-        {!(chat.username && chat.role === 'subscriber') && (
+        {!(chat.username && chat.role !== 'owner' && chat.role !== 'admin') && (
         <form className="conv-input" onSubmit={onSubmit}>
           <input
             ref={fileInputRef}

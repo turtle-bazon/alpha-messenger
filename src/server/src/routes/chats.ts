@@ -308,13 +308,13 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: 'missing username' });
       }
       const chat = await pool.query(
-        'SELECT type, created_by FROM chats WHERE chat_id = $1',
+        'SELECT type, created_by, username FROM chats WHERE chat_id = $1',
         [chatId],
       );
       if (chat.rowCount === 0) {
         return reply.code(404).send({ error: 'not found' });
       }
-      const { type, created_by: createdBy } = chat.rows[0];
+      const { type, created_by: createdBy, username: chatUsername } = chat.rows[0];
       if (createdBy !== callerId) {
         return reply.code(403).send({ error: 'not chat owner' });
       }
@@ -343,8 +343,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         // Состав ДО вставки — им шлём member_added, новому — chat.created.
         const existingIds = await getMemberIds(client, chatId);
         await client.query(
-          'INSERT INTO chat_members(chat_id, user_id) VALUES ($1, $2)',
-          [chatId, targetId],
+          'INSERT INTO chat_members(chat_id, user_id, role) VALUES ($1, $2, $3)',
+          [chatId, targetId, chatUsername ? 'subscriber' : 'member'],
         );
         await emitEvent(
           client,

@@ -60,10 +60,14 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       // Channel subscribers cannot post.
       const roleCheck = await pool.query(
-        'SELECT role FROM chat_members WHERE chat_id = $1 AND user_id = $2',
+        `SELECT m.role, c.username FROM chat_members m
+         JOIN chats c ON c.chat_id = m.chat_id
+         WHERE m.chat_id = $1 AND m.user_id = $2`,
         [chatId, userId],
       );
-      if (roleCheck.rows[0]?.role === 'subscriber') {
+      const memberRole: string | undefined = roleCheck.rows[0]?.role;
+      const isChannel: boolean = !!roleCheck.rows[0]?.username;
+      if (isChannel && memberRole !== 'owner' && memberRole !== 'admin') {
         return reply.code(403).send({ error: 'channel subscribers cannot post' });
       }
 
