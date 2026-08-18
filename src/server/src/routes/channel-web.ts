@@ -287,4 +287,37 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     reply.header('content-type', 'text/html; charset=utf-8');
     return reply.send(html);
   });
+
+  // RSS feed: /channel/:chatId/rss
+  app.get('/channel/:chatId/rss', async (req, reply) => {
+    const { chatId } = req.params as { chatId: string };
+    if (!/^\d+$/.test(chatId)) return reply.code(404).send('Not found');
+
+    const chat = await pool.query(
+      `SELECT chat_id, title, description, username FROM chats WHERE chat_id = $1`,
+      [chatId],
+    );
+    if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
+    const { title, description, username } = chat.rows[0];
+    const label = title ?? username ?? `Channel #${chatId}`;
+
+    const msgs = await pool.query(
+      `SELECT message_id, ciphertext, created_at
+       FROM messages
+       WHERE chat_id = $1 AND deleted = false AND reply_to_message_id IS NULL
+       ORDER BY message_id DESC LIMIT 50`,
+      [chatId],
+    );
+
+    const siteUrl = process.env.SITE_URL ?? 'http://localhost:3000';
+    const posts = msgs.rows.map((r) => ({
+      messageId: String(r.message_id),
+      text: decodeCiphertext((r.ciphertext as Buffer).toString('base64')),
+      ts: r.created_at.toISOString(),
+    }));
+
+    const xml = renderRssFeed({ title: label, description: description ?? '', username: label, siteUrl, posts });
+    reply.header('content-type', 'application/rss+xml; charset=utf-8');
+    return reply.send(xml);
+  });
 }

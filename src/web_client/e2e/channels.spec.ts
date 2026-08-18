@@ -135,3 +135,27 @@ test('channels: SSR page renders by chatId', async ({ page, request }) => {
   await expect(page.locator('.channel-title')).toHaveText('SSR Channel');
   await expect(page.locator('.post-text').first()).toContainText('Hello SSR World');
 });
+
+// RSS feed
+test('channels: RSS feed renders', async ({ request }) => {
+  const user = await registerViaApi();
+
+  const chatId = await createChannelViaApi(user.token, 'RSS Channel', `rss_${Date.now()}`);
+  await request.post(`${API}/api/chats/${chatId}/messages`, {
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${user.token}`,
+    },
+    data: {
+      clientMessageId: 'rss-msg-1',
+      ciphertext: Buffer.from(JSON.stringify({ t: 'msg', text: 'RSS Test Post' })).toString('base64'),
+    },
+  });
+
+  const response = await request.get(`${API}/channel/${chatId}/rss`);
+  expect(response.status()).toBe(200);
+  const body = await response.text();
+  expect(body).toContain('<rss version="2.0">');
+  expect(body).toContain('RSS Channel');
+  expect(body).toContain('RSS Test Post');
+});
