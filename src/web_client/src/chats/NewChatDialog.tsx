@@ -3,28 +3,24 @@ import { ApiError } from '../api/rest';
 import type { Participant } from '../api/types';
 import { IconX } from '../util/icons';
 
-// Модалка «новый чат» — точка входа из синей «+» (как кнопка compose в Telegram).
-// Две вкладки: личный чат по username и группа (название + участники).
-// Участников группы выбирают из уже знакомых пользователей (собеседники личных
-// чатов) — свободный ввод username убран (известная проблема №4): нельзя добавить
-// того, с кем ещё нет переписки. Создание выполняют переданные колбэки HomeScreen.
 export function NewChatDialog({
   knownUsers,
   onCreateDirect,
   onCreateGroup,
+  onCreateChannel,
   onClose,
 }: {
   knownUsers: Participant[];
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;
+  onCreateChannel: (title: string, channelUsername: string) => Promise<void>;
   onClose: () => void;
 }): JSX.Element {
-  const [mode, setMode] = useState<'direct' | 'group'>('direct');
+  const [mode, setMode] = useState<'direct' | 'group' | 'channel'>('direct');
   const [username, setUsername] = useState('');
   const [title, setTitle] = useState('');
+  const [channelUsername, setChannelUsername] = useState('');
   const [search, setSearch] = useState('');
-  // Выбранные участники — по username (их ждёт onCreateGroup; сервер добавит
-  // создателя сам).
   const [members, setMembers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,7 +58,7 @@ export function NewChatDialog({
     return 'Сервер недоступен';
   }
 
-  function switchMode(next: 'direct' | 'group'): void {
+  function switchMode(next: 'direct' | 'group' | 'channel'): void {
     setMode(next);
     setError(null);
   }
@@ -111,6 +107,39 @@ export function NewChatDialog({
     }
   }
 
+  async function submitChannel(e: FormEvent): Promise<void> {
+    e.preventDefault();
+    if (busy) return;
+    const t = title.trim();
+    const u = channelUsername.trim().replace(/^@/, '');
+    if (!t) {
+      setError('Введите название канала');
+      return;
+    }
+    if (!u) {
+      setError('Введите @username канала');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{5,32}$/.test(u)) {
+      setError('Username: 5–32 символа, только латиница, цифры и _');
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await onCreateChannel(t, u);
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setError('Этот @username уже занят');
+      } else {
+        setError(mapError(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div
       className="new-chat-backdrop"
@@ -127,7 +156,7 @@ export function NewChatDialog({
             className={mode === 'direct' ? 'is-active' : ''}
             onClick={() => switchMode('direct')}
           >
-            Новый чат
+            Чат
           </button>
           <button
             type="button"
@@ -135,7 +164,15 @@ export function NewChatDialog({
             className={mode === 'group' ? 'is-active' : ''}
             onClick={() => switchMode('group')}
           >
-            Новая группа
+            Группа
+          </button>
+          <button
+            type="button"
+            data-testid="new-chat-tab-channel"
+            className={mode === 'channel' ? 'is-active' : ''}
+            onClick={() => switchMode('channel')}
+          >
+            Канал
           </button>
           <button
             type="button"
@@ -148,7 +185,7 @@ export function NewChatDialog({
           </button>
         </div>
 
-        {mode === 'direct' ? (
+        {mode === 'direct' && (
           <form className="new-chat-form" onSubmit={submitDirect}>
             <input
               data-testid="new-chat-input"
@@ -162,7 +199,8 @@ export function NewChatDialog({
               Создать чат
             </button>
           </form>
-        ) : (
+        )}
+        {mode === 'group' && (
           <form className="new-chat-form" onSubmit={submitGroup}>
             <input
               data-testid="new-group-title"
@@ -223,6 +261,34 @@ export function NewChatDialog({
             )}
             <button type="submit" data-testid="new-group-submit" disabled={busy}>
               Создать группу
+            </button>
+          </form>
+        )}
+        {mode === 'channel' && (
+          <form className="new-chat-form" onSubmit={submitChannel}>
+            <input
+              data-testid="new-channel-title"
+              aria-label="Название канала"
+              placeholder="Название канала…"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <div className="new-channel-username-row">
+              <span className="new-channel-at">@</span>
+              <input
+                data-testid="new-channel-username"
+                aria-label="Username канала"
+                placeholder="username"
+                value={channelUsername}
+                onChange={(e) => setChannelUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+              />
+            </div>
+            <p className="new-group-hint">
+              Канал — это публичная страница. Подписчики видят только ваши посты.
+            </p>
+            <button type="submit" data-testid="new-channel-submit" disabled={busy}>
+              Создать канал
             </button>
           </form>
         )}

@@ -3022,6 +3022,34 @@ body {
 .channel-info-error { color: #e0533d; font-size: 13px; margin-top: 8px; text-align: center; }
 .channel-info-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
 
+/* New channel form. */
+.new-channel-username-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-input);
+  margin-top: 8px;
+}
+.new-channel-at {
+  padding: 8px 0 8px 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.new-channel-username-row input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 10px 8px 0;
+  font-size: 14px;
+  outline: none;
+}
+.new-channel-username-row:focus-within {
+  border-color: var(--accent);
+}
+
 /* View count in bubbles. */
 .bubble-views {
   font-size: 11px;

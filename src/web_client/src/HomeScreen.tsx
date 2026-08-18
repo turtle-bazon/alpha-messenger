@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  createChannel,
   createDirect,
   createGroup,
   getChat,
@@ -540,6 +541,12 @@ export function HomeScreen({
     setSelectedId(chat.chatId);
   }
 
+  async function onCreateChannel(title: string, channelUsername: string): Promise<void> {
+    const chat = await createChannel(title, channelUsername);
+    setChats((prev) => [chat, ...prev.filter((c) => c.chatId !== chat.chatId)]);
+    setSelectedId(chat.chatId);
+  }
+
   function onSelect(chatId: string): void {
     setSelectedId(chatId);
     // сбросить локальный счётчик непрочитанных при открытии (отметка read — п.16)
@@ -656,6 +663,7 @@ export function HomeScreen({
               onSelect={onSelect}
               onCreateDirect={onCreateDirect}
               onCreateGroup={onCreateGroup}
+              onCreateChannel={onCreateChannel}
               onFocusInput={() => inputRef.current?.focus()}
               onShowProfile={onShowProfile}
             />

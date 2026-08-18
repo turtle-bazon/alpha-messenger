@@ -23,6 +23,7 @@ export function ChatList({
   onSelect,
   onCreateDirect,
   onCreateGroup,
+  onCreateChannel,
   onFocusInput,
   onShowProfile,
 }: {
@@ -36,6 +37,7 @@ export function ChatList({
   onSelect: (chatId: string) => void;
   onCreateDirect: (username: string) => Promise<void>;
   onCreateGroup: (title: string, members: string[]) => Promise<void>;
+  onCreateChannel: (title: string, channelUsername: string) => Promise<void>;
   onFocusInput: () => void;
   onShowProfile: (userId: string) => void;
 }): JSX.Element {
@@ -95,6 +97,7 @@ export function ChatList({
           knownUsers={knownUsers}
           onCreateDirect={onCreateDirect}
           onCreateGroup={onCreateGroup}
+          onCreateChannel={onCreateChannel}
           onClose={() => setComposing(false)}
         />
       )}
