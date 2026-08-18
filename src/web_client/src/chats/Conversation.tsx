@@ -165,6 +165,7 @@ export function Conversation({
   onBack,
   onShowProfile,
   onChatUpdated,
+  onChatRemoved,
 }: {
   chat: Chat;
   ws: WsClient;
@@ -176,6 +177,7 @@ export function Conversation({
   onBack: () => void;
   onShowProfile: (userId: string) => void;
   onChatUpdated: (chat: Chat) => void;
+  onChatRemoved: (chatId: string) => void;
 }): JSX.Element {
   const chatId = chat.chatId;
   const [membersOpen, setMembersOpen] = useState(false);
@@ -1864,6 +1866,7 @@ export function Conversation({
           myId={myId}
           onClose={() => setGroupInfoOpen(false)}
           onUpdated={(updated) => { onChatUpdated(updated); }}
+          onRemoved={(chatId) => { onChatRemoved(chatId); }}
         />
       )}
       {groupInfoOpen && !chat.username && (

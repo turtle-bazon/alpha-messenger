@@ -688,6 +688,10 @@ export function HomeScreen({
                 prev.map((c) => (c.chatId === updated.chatId ? updated : c)),
               );
             }}
+            onChatRemoved={(chatId) => {
+              setChats((prev) => prev.filter((c) => c.chatId !== chatId));
+              setSelectedId(null);
+            }}
           />
         ) : (
           <div className="conversation-empty">Выберите чат</div>

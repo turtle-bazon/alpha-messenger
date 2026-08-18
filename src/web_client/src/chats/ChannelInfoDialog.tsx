@@ -14,9 +14,10 @@ interface ChannelInfoDialogProps {
   myId: string | null;
   onClose: () => void;
   onUpdated: (chat: Chat) => void;
+  onRemoved: (chatId: string) => void;
 }
 
-export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInfoDialogProps): JSX.Element {
+export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }: ChannelInfoDialogProps): JSX.Element {
   const [title, setTitle] = useState(chat.title ?? '');
   const [description, setDescription] = useState(chat.description ?? '');
   const [editing, setEditing] = useState(false);
@@ -38,7 +39,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
 
   async function handleUnsubscribe(): Promise<void> {
     await unsubscribeChannel(chat.chatId);
-    onUpdated({ ...chat, subscriberCount: chat.subscriberCount - 1 });
+    onRemoved(chat.chatId);
   }
 
   return (
