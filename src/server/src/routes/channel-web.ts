@@ -198,150 +198,7 @@ function renderRssFeed(opts: {
 }
 
 export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
-  // Public channel page: /channel/:username/
-  app.get('/channel/:username/', async (req, reply) => {
-    const { username } = req.params as { username: string };
-
-    const chat = await pool.query(
-      `SELECT chat_id, title, description FROM chats
-       WHERE username = $1 AND username IS NOT NULL`,
-      [username],
-    );
-    if (chat.rowCount === 0) {
-      return reply.code(404).send('Channel not found');
-    }
-    const { chat_id: chatId, title, description } = chat.rows[0];
-
-    // Root messages only (no reply_to_message_id), not deleted.
-    const msgs = await pool.query(
-      `SELECT message_id, ciphertext, created_at, view_count
-       FROM messages
-       WHERE chat_id = $1 AND deleted = false AND reply_to_message_id IS NULL
-       ORDER BY message_id DESC
-       LIMIT 100`,
-      [chatId],
-    );
-
-    const posts = [];
-    for (const r of msgs.rows) {
-      // Count comments (messages replying to this one).
-      const comments = await pool.query(
-        'SELECT count(*)::int AS c FROM messages WHERE reply_to_message_id = $1 AND deleted = false',
-        [r.message_id],
-      );
-      posts.push({
-        messageId: String(r.message_id),
-        text: decodeCiphertext((r.ciphertext as Buffer).toString('base64')),
-        ts: r.created_at.toISOString(),
-        viewCount: r.view_count as number,
-        commentCount: comments.rows[0].c,
-      });
-    }
-
-    const html = renderChannelHtml({ title: title ?? username, description: description ?? '', username, posts });
-    reply.header('content-type', 'text/html; charset=utf-8');
-    return reply.send(html);
-  });
-
-  // Single post + comments: /channel/:username/:postId
-  app.get('/channel/:username/:postId', async (req, reply) => {
-    const { username, postId } = req.params as { username: string; postId: string };
-    if (!/^\d+$/.test(postId)) {
-      return reply.code(404).send('Not found');
-    }
-
-    const chat = await pool.query(
-      `SELECT chat_id, title FROM chats
-       WHERE username = $1 AND username IS NOT NULL`,
-      [username],
-    );
-    if (chat.rowCount === 0) {
-      return reply.code(404).send('Channel not found');
-    }
-    const { chat_id: chatId, title } = chat.rows[0];
-
-    // The root post.
-    const postRes = await pool.query(
-      `SELECT message_id, ciphertext, created_at, view_count
-       FROM messages
-       WHERE message_id = $1 AND chat_id = $2 AND deleted = false`,
-      [postId, chatId],
-    );
-    if (postRes.rowCount === 0) {
-      return reply.code(404).send('Post not found');
-    }
-    const postRow = postRes.rows[0];
-
-    // Increment view count.
-    await pool.query(
-      'UPDATE messages SET view_count = view_count + 1 WHERE message_id = $1',
-      [postRow.message_id],
-    );
-
-    // Comments (messages replying to this post).
-    const commentsRes = await pool.query(
-      `SELECT m.message_id, m.ciphertext, m.created_at, a.username
-       FROM messages m
-       JOIN accounts a ON a.user_id = m.sender_id
-       WHERE m.reply_to_message_id = $1 AND m.deleted = false
-       ORDER BY m.message_id ASC`,
-      [postRow.message_id],
-    );
-
-    const post = {
-      messageId: String(postRow.message_id),
-      text: decodeCiphertext((postRow.ciphertext as Buffer).toString('base64')),
-      ts: postRow.created_at.toISOString(),
-      viewCount: (postRow.view_count as number) + 1,
-    };
-    const comments = commentsRes.rows.map((r) => ({
-      messageId: String(r.message_id),
-      senderUsername: r.username as string,
-      text: decodeCiphertext((r.ciphertext as Buffer).toString('base64')),
-      ts: r.created_at.toISOString(),
-    }));
-
-    const html = renderPostHtml({ title: title ?? username, username, post, comments });
-    reply.header('content-type', 'text/html; charset=utf-8');
-    return reply.send(html);
-  });
-
-  // RSS feed: /channel/:username/feed
-  app.get('/channel/:username/feed', async (req, reply) => {
-    const { username } = req.params as { username: string };
-
-    const chat = await pool.query(
-      `SELECT chat_id, title, description FROM chats
-       WHERE username = $1 AND username IS NOT NULL`,
-      [username],
-    );
-    if (chat.rowCount === 0) {
-      return reply.code(404).send('Channel not found');
-    }
-    const { chat_id: chatId, title, description } = chat.rows[0];
-
-    const msgs = await pool.query(
-      `SELECT message_id, ciphertext, created_at
-       FROM messages
-       WHERE chat_id = $1 AND deleted = false AND reply_to_message_id IS NULL
-       ORDER BY message_id DESC
-       LIMIT 50`,
-      [chatId],
-    );
-
-    const siteUrl = process.env.SITE_URL ?? 'http://localhost:3000';
-    const posts = msgs.rows.map((r) => ({
-      messageId: String(r.message_id),
-      text: decodeCiphertext((r.ciphertext as Buffer).toString('base64')),
-      ts: r.created_at.toISOString(),
-    }));
-
-    const xml = renderRssFeed({ title: title ?? username, description: description ?? '', username, siteUrl, posts });
-    reply.header('content-type', 'application/rss+xml; charset=utf-8');
-    return reply.send(xml);
-  });
-
-  // Private channel page: /channel/:chatId/ (by chatId, not username).
+  // Channel page: /channel/:chatId/
   app.get('/channel/:chatId/', async (req, reply) => {
     const { chatId } = req.params as { chatId: string };
     if (!/^\d+$/.test(chatId)) return reply.code(404).send('Not found');
@@ -351,7 +208,6 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
       [chatId],
     );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
-
     const { title, description, username } = chat.rows[0];
     const label = title ?? username ?? `Channel #${chatId}`;
 
@@ -383,7 +239,7 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(html);
   });
 
-  // Private single post: /channel/:chatId/:postId
+  // Single post + comments: /channel/:chatId/:postId
   app.get('/channel/:chatId/:postId', async (req, reply) => {
     const { chatId, postId } = req.params as { chatId: string; postId: string };
     if (!/^\d+$/.test(chatId) || !/^\d+$/.test(postId)) return reply.code(404).send('Not found');
@@ -393,39 +249,38 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
       [chatId],
     );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
-
     const { title, username } = chat.rows[0];
     const label = title ?? username ?? `Channel #${chatId}`;
 
-    const postRow = await pool.query(
+    const postRes = await pool.query(
       `SELECT message_id, ciphertext, created_at, view_count
        FROM messages WHERE message_id = $1 AND chat_id = $2 AND deleted = false`,
       [postId, chatId],
     );
-    if (postRow.rowCount === 0) return reply.code(404).send('Post not found');
+    if (postRes.rowCount === 0) return reply.code(404).send('Post not found');
+    const postRow = postRes.rows[0];
 
-    const pr = postRow.rows[0];
-    const post = {
-      messageId: String(pr.message_id),
-      text: decodeCiphertext((pr.ciphertext as Buffer).toString('base64')),
-      ts: pr.created_at.toISOString(),
-      viewCount: (pr.view_count as number) + 1,
-    };
+    await pool.query('UPDATE messages SET view_count = view_count + 1 WHERE message_id = $1', [postRow.message_id]);
 
-    await pool.query('UPDATE messages SET view_count = view_count + 1 WHERE message_id = $1', [pr.message_id]);
-
-    const commRes = await pool.query(
+    const commentsRes = await pool.query(
       `SELECT m.message_id, m.ciphertext, m.created_at, a.username
        FROM messages m JOIN accounts a ON a.user_id = m.sender_id
        WHERE m.reply_to_message_id = $1 AND m.deleted = false
-       ORDER BY m.message_id`,
-      [pr.message_id],
+       ORDER BY m.message_id ASC`,
+      [postRow.message_id],
     );
-    const comments = commRes.rows.map((c) => ({
-      messageId: String(c.message_id),
-      text: decodeCiphertext((c.ciphertext as Buffer).toString('base64')),
-      ts: c.created_at.toISOString(),
-      senderUsername: c.username as string,
+
+    const post = {
+      messageId: String(postRow.message_id),
+      text: decodeCiphertext((postRow.ciphertext as Buffer).toString('base64')),
+      ts: postRow.created_at.toISOString(),
+      viewCount: (postRow.view_count as number) + 1,
+    };
+    const comments = commentsRes.rows.map((r) => ({
+      messageId: String(r.message_id),
+      senderUsername: r.username as string,
+      text: decodeCiphertext((r.ciphertext as Buffer).toString('base64')),
+      ts: r.created_at.toISOString(),
     }));
 
     const html = renderPostHtml({ title: label, username: label, post, comments });
