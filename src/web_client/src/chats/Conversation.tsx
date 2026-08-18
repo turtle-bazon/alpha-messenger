@@ -49,6 +49,7 @@ import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
 import { MembersDialog } from './MembersDialog';
 import { GroupInfoDialog } from './GroupInfoDialog';
+import { ChannelInfoDialog } from './ChannelInfoDialog';
 import { FormattingToolbar } from './FormattingToolbar';
 import { WysiwygComposer, WysiwygComposerHandle } from './WysiwygComposer';
 import {
@@ -1857,7 +1858,15 @@ export function Conversation({
           onClose={() => setViewer(null)}
         />
       )}
-      {groupInfoOpen && (
+      {groupInfoOpen && chat.username && (
+        <ChannelInfoDialog
+          chat={chat}
+          myId={myId}
+          onClose={() => setGroupInfoOpen(false)}
+          onUpdated={(updated) => { onChatUpdated(updated); }}
+        />
+      )}
+      {groupInfoOpen && !chat.username && (
         <GroupInfoDialog
           chat={chat}
           myId={myId}

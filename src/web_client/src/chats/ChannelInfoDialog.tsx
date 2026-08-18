@@ -11,7 +11,7 @@ import type { Chat } from '../api/types';
 // Channel info dialog — shown when clicking channel header.
 interface ChannelInfoDialogProps {
   chat: Chat;
-  myId: string;
+  myId: string | null;
   onClose: () => void;
   onUpdated: (chat: Chat) => void;
 }
@@ -20,6 +20,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
   const [title, setTitle] = useState(chat.title ?? '');
   const [description, setDescription] = useState(chat.description ?? '');
   const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const isOwner = chat.createdBy === myId;
@@ -105,30 +106,32 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
               {description && (
                 <div className="channel-info-desc">{description}</div>
               )}
+              <div className="channel-info-link">
+                <input
+                  className="channel-info-link-input"
+                  readOnly
+                  value={chat.username
+                    ? `${location.origin}/channel/${chat.username}/`
+                    : `${location.origin}/chat/${chat.chatId}`
+                  }
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    const url = chat.username
+                      ? `${location.origin}/channel/${chat.username}/`
+                      : `${location.origin}/chat/${chat.chatId}`;
+                    navigator.clipboard.writeText(url);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? 'Скопировано' : 'Копировать'}
+                </button>
+              </div>
               <div className="channel-info-stats">
                 <span>{chat.subscriberCount} подписчиков</span>
-                {chat.username ? (
-                  <a
-                    href={`/channel/${chat.username}/`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="channel-info-web-link"
-                  >
-                    t.me/{chat.username}
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn channel-invite-btn"
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `${location.origin}/chat/${chat.chatId}`,
-                      );
-                    }}
-                  >
-                    Копировать инвайт-ссылку
-                  </button>
-                )}
               </div>
               {isOwner && (
                 <button

@@ -3011,6 +3011,15 @@ body {
   text-align: center; color: var(--text-muted); font-size: 13px;
   margin-top: 12px; display: flex; flex-direction: column; gap: 4px;
 }
+.channel-info-link {
+  display: flex; gap: 6px; margin-top: 12px;
+}
+.channel-info-link-input {
+  flex: 1; padding: 6px 10px; font-size: 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-input); color: var(--text-muted);
+  outline: none; min-width: 0;
+}
 .channel-info-web-link { color: var(--accent); text-decoration: none; }
 .channel-info-web-link:hover { text-decoration: underline; }
 .channel-info-input {
