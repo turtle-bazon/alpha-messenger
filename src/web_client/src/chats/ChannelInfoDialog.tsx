@@ -107,15 +107,27 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
               )}
               <div className="channel-info-stats">
                 <span>{chat.subscriberCount} подписчиков</span>
-                {chat.username && (
+                {chat.username ? (
                   <a
                     href={`/channel/${chat.username}/`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="channel-info-web-link"
                   >
-                    Открыть на сайте
+                    t.me/{chat.username}
                   </a>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn channel-invite-btn"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${location.origin}/chat/${chat.chatId}`,
+                      );
+                    }}
+                  >
+                    Копировать инвайт-ссылку
+                  </button>
                 )}
               </div>
               {isOwner && (

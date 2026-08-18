@@ -20,7 +20,6 @@ export function NewChatDialog({
   const [username, setUsername] = useState('');
   const [title, setTitle] = useState('');
   const [channelUsername, setChannelUsername] = useState('');
-  const [channelType, setChannelType] = useState<'public' | 'private'>('public');
   const [search, setSearch] = useState('');
   const [members, setMembers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -116,42 +115,24 @@ export function NewChatDialog({
       setError('Введите название канала');
       return;
     }
-    if (channelType === 'public') {
-      const u = channelUsername.trim().replace(/^@/, '');
-      if (!u) {
-        setError('Введите хэндл канала');
-        return;
-      }
-      if (!/^[a-zA-Z0-9_]{5,32}$/.test(u)) {
-        setError('Хэндл: 5–32 символа, только латиница, цифры и _');
-        return;
-      }
-      setError(null);
-      setBusy(true);
-      try {
-        await onCreateChannel(t, u);
-        onClose();
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
-          setError('Этот хэндл уже занят');
-        } else {
-          setError(mapError(err));
-        }
-      } finally {
-        setBusy(false);
-      }
-    } else {
-      // Private channel — no username, invite-only.
-      setError(null);
-      setBusy(true);
-      try {
-        await onCreateChannel(t, '');
-        onClose();
-      } catch (err) {
+    const u = channelUsername.trim().replace(/^@/, '');
+    if (u && !/^[a-zA-Z0-9_]{5,32}$/.test(u)) {
+      setError('Хэндл: 5–32 символа, только латиница, цифры и _');
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await onCreateChannel(t, u);
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setError('Этот хэндл уже занят');
+      } else {
         setError(mapError(err));
-      } finally {
-        setBusy(false);
       }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -289,40 +270,18 @@ export function NewChatDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            <div className="new-channel-type" data-testid="new-channel-type">
-              <button
-                type="button"
-                className={channelType === 'public' ? 'active' : ''}
-                onClick={() => setChannelType('public')}
-              >
-                Публичный
-              </button>
-              <button
-                type="button"
-                className={channelType === 'private' ? 'active' : ''}
-                onClick={() => setChannelType('private')}
-              >
-                Приватный
-              </button>
+            <div className="new-channel-handle-row">
+              <span className="new-channel-at">@</span>
+              <input
+                data-testid="new-channel-handle"
+                aria-label="Хэндл канала"
+                placeholder="хэндл (необязательно)"
+                value={channelUsername}
+                onChange={(e) => setChannelUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+              />
             </div>
-            {channelType === 'public' ? (
-              <div className="new-channel-handle-row">
-                <span className="new-channel-at">@</span>
-                <input
-                  data-testid="new-channel-handle"
-                  aria-label="Хэндл канала"
-                  placeholder="channel_handle"
-                  value={channelUsername}
-                  onChange={(e) => setChannelUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                />
-              </div>
-            ) : (
-              <p className="new-group-hint">
-                Приватный канал — виден только по инвайт-ссылке.
-              </p>
-            )}
             <p className="new-group-hint">
-              Подписчики видят ваши посты, но не могут писать в канал.
+              Заполните хэндл — канал будет публичным. Оставьте пустым — только по инвайт-ссылке.
             </p>
             <button type="submit" data-testid="new-channel-submit" disabled={busy}>
               Создать канал
