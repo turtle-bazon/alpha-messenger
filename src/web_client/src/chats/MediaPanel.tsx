@@ -75,6 +75,7 @@ export function MediaPanel({
             onSelect={onSelectEmoji}
             onClose={onClose}
             textareaRef={textareaRef}
+            standalone={false}
           />
         )}
         {tab === 'stickers' && (
@@ -82,6 +83,7 @@ export function MediaPanel({
             onSelectSticker={onSelectSticker}
             onClose={onClose}
             textareaRef={textareaRef}
+            standalone={false}
           />
         )}
         {tab === 'gifs' && (

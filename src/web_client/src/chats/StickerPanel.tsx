@@ -14,9 +14,10 @@ interface StickerPanelProps {
   onSelectSticker: (blobId: string) => void;
   onClose: () => void;
   textareaRef?: React.RefObject<HTMLDivElement>;
+  standalone?: boolean;
 }
 
-export function StickerPanel({ onSelectSticker, onClose, textareaRef }: StickerPanelProps): JSX.Element {
+export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone = true }: StickerPanelProps): JSX.Element {
   const [packs, setPacks] = useState<StickerPack[]>([]);
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
   const [items, setItems] = useState<StickerItem[]>([]);
@@ -33,6 +34,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef }: StickerP
 
   // Закрытие при клике вне
   useEffect(() => {
+    if (!standalone) return;
     function handleClick(e: MouseEvent): void {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         onClose();
@@ -51,7 +53,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef }: StickerP
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleKey);
     };
-  }, [onClose, textareaRef]);
+  }, [onClose, textareaRef, standalone]);
 
   // Загрузка стикеров выбранного пака
   useEffect(() => {

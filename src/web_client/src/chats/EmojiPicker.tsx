@@ -395,15 +395,18 @@ interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
   onClose: () => void;
   textareaRef?: React.RefObject<HTMLDivElement>;
+  /** Если false — не регистрирует свой обработчик закрытия (внешний панель сам закрывает). */
+  standalone?: boolean;
 }
 
-export function EmojiPicker({ onSelect, onClose, textareaRef }: EmojiPickerProps): JSX.Element {
+export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true }: EmojiPickerProps): JSX.Element {
   const [activeCategory, setActiveCategory] = useState(0);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
   // Закрытие при клике вне + возврат фокуса в textarea
   useEffect(() => {
+    if (!standalone) return;
     function handleClick(e: MouseEvent): void {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         onClose();
