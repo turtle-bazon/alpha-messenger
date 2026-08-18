@@ -377,3 +377,24 @@ export function deleteStickerItem(packId: string, itemId: string): Promise<{ ok:
 export function searchStickerPacks(query: string): Promise<{ packs: StickerPack[] }> {
   return rest.get<{ packs: StickerPack[] }>(`/sticker-packs/search?q=${encodeURIComponent(query)}`);
 }
+
+// ---- GIF (#63) ----
+
+export interface GifResult {
+  id: string;
+  title: string;
+  url: string;
+  fullUrl: string;
+  width: number;
+  height: number;
+}
+
+export function searchGifs(
+  query: string,
+  opts: { limit?: number; pos?: string } = {},
+): Promise<{ gifs: GifResult[]; next: string | null }> {
+  const params = new URLSearchParams({ q: query });
+  if (opts.limit) params.set('limit', String(opts.limit));
+  if (opts.pos) params.set('pos', opts.pos);
+  return rest.get<{ gifs: GifResult[]; next: string | null }>(`/gifs/search?${params}`);
+}

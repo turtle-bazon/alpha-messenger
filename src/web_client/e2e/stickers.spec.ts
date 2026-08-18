@@ -2,14 +2,17 @@ import { expect, test } from '@playwright/test';
 import { registerViaApi } from './helpers/api';
 import { registerViaUi } from './helpers/ui';
 
-// Создание пака, добавление стикеров, отправка стикера в чат
-test('stickers: create pack, add stickers, send sticker', async ({ page }) => {
+// Создание пака, добавление стикеров
+test('stickers: create pack and add stickers', async ({ page }) => {
   await registerViaApi();
   await registerViaUi(page);
 
-  // Открываем панель стикеров
-  await page.getByTestId('sticker-btn').click();
-  await expect(page.getByTestId('sticker-panel')).toBeVisible();
+  // Открываем панель через одну кнопку
+  await page.getByTestId('emoji-btn').click();
+  await expect(page.getByTestId('media-panel')).toBeVisible();
+
+  // Переключаемся на вкладку стикеров
+  await page.getByText('Стикеры', { exact: true }).click();
 
   // Создаём новый пак
   page.on('dialog', async (dialog) => {
@@ -22,40 +25,35 @@ test('stickers: create pack, add stickers, send sticker', async ({ page }) => {
 
   // Закрываем панель
   await page.keyboard.press('Escape');
-  await expect(page.getByTestId('sticker-panel')).toHaveCount(0);
+  await expect(page.getByTestId('media-panel')).toHaveCount(0);
 });
 
-// Панель стикеров: открытие/закрытие
-test('stickers: panel open and close', async ({ page }) => {
+// Панель: открытие/закрытие
+test('media panel: open and close', async ({ page }) => {
   await registerViaUi(page);
 
-  // Нет панели
-  await expect(page.getByTestId('sticker-panel')).toHaveCount(0);
+  await expect(page.getByTestId('media-panel')).toHaveCount(0);
 
-  // Открываем
-  await page.getByTestId('sticker-btn').click();
-  await expect(page.getByTestId('sticker-panel')).toBeVisible();
+  await page.getByTestId('emoji-btn').click();
+  await expect(page.getByTestId('media-panel')).toBeVisible();
 
-  // Закрываем по Escape
   await page.keyboard.press('Escape');
-  await expect(page.getByTestId('sticker-panel')).toHaveCount(0);
+  await expect(page.getByTestId('media-panel')).toHaveCount(0);
 });
 
-// Кнопки эмодзи и стикеров не конфликтуют
-test('stickers: emoji and sticker panels are mutually exclusive', async ({ page }) => {
+// Вкладки переключаются
+test('media panel: tabs switch', async ({ page }) => {
   await registerViaUi(page);
 
-  // Открываем эмодзи
   await page.getByTestId('emoji-btn').click();
+  await expect(page.getByTestId('media-panel')).toBeVisible();
+
+  // По умолчанию эмодзи
   await expect(page.getByTestId('emoji-picker')).toBeVisible();
 
-  // Открываем стикеры — эмодзи закрывается
-  await page.getByTestId('sticker-btn').click();
-  await expect(page.getByTestId('sticker-panel')).toBeVisible();
-  await expect(page.getByTestId('emoji-picker')).toHaveCount(0);
+  // Стикеры
+  await page.getByText('Стикеры', { exact: true }).click();
 
-  // Открываем эмодзи — стикеры закрываются
-  await page.getByTestId('emoji-btn').click();
-  await expect(page.getByTestId('emoji-picker')).toBeVisible();
-  await expect(page.getByTestId('sticker-panel')).toHaveCount(0);
+  // GIF
+  await page.getByText('GIF', { exact: true }).click();
 });

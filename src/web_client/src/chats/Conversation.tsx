@@ -43,7 +43,7 @@ import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
 import { ImageEditor } from './ImageEditor';
 import { EmojiPicker } from './EmojiPicker';
-import { StickerPanel } from './StickerPanel';
+import { MediaPanel } from './MediaPanel';
 import { MentionPopup, getFilteredParticipants } from './MentionPopup';
 import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
@@ -183,8 +183,7 @@ export function Conversation({
   // Ответ на сообщение: ID сообщения, на которое отвечаем.
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
-  const [emojiOpen, setEmojiOpen] = useState(false);
-  const [stickerOpen, setStickerOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
   // Пикер реакций: messageId для которого открыт, или null
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
@@ -1748,19 +1747,10 @@ export function Conversation({
             type="button"
             className="conv-emoji-btn"
             data-testid="emoji-btn"
-            aria-label="Эмодзи"
-            onClick={() => { setEmojiOpen(!emojiOpen); setStickerOpen(false); }}
+            aria-label="Эмодзи и стикеры"
+            onClick={() => setMediaOpen(!mediaOpen)}
           >
             😊
-          </button>
-          <button
-            type="button"
-            className="conv-emoji-btn"
-            data-testid="sticker-btn"
-            aria-label="Стикеры"
-            onClick={() => { setStickerOpen(!stickerOpen); setEmojiOpen(false); }}
-          >
-            🎯
           </button>
           <WysiwygComposer
             ref={composerRef}
@@ -1784,10 +1774,9 @@ export function Conversation({
         >
           <IconSend />
         </button>
-        {emojiOpen && (
-          <EmojiPicker
-            onSelect={(emoji) => {
-              // Вставка эмодзи через execCommand
+        {mediaOpen && (
+          <MediaPanel
+            onSelectEmoji={(emoji) => {
               const el = inputRef.current;
               if (el) {
                 el.focus();
@@ -1796,12 +1785,6 @@ export function Conversation({
                 setInput(input + emoji);
               }
             }}
-            onClose={() => setEmojiOpen(false)}
-            textareaRef={inputRef}
-          />
-        )}
-        {stickerOpen && (
-          <StickerPanel
             onSelectSticker={async (blobId) => {
               const clientMessageId = crypto.randomUUID();
               const content = { text: '', attachments: [{ kind: 'sticker' as const, blobId }] };
@@ -1827,7 +1810,7 @@ export function Conversation({
                 // ошибка отправки
               }
             }}
-            onClose={() => setStickerOpen(false)}
+            onClose={() => setMediaOpen(false)}
             textareaRef={inputRef}
           />
         )}

@@ -16,6 +16,7 @@ import { userRoutes } from './routes/users';
 import { versionRoutes } from './routes/version';
 import { clientRoutes } from './routes/client';
 import { stickerRoutes } from './routes/stickers';
+import { gifRoutes } from './routes/gifs';
 import { wsRoutes } from './ws';
 
 export function buildApp(): FastifyInstance {
@@ -47,6 +48,7 @@ export function buildApp(): FastifyInstance {
       api.register(draftRoutes);
       api.register(userRoutes);
       api.register(stickerRoutes);
+      api.register(gifRoutes);
     },
     { prefix: '/api' },
   );

@@ -111,14 +111,6 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef }: StickerP
         >
           Стикеры
         </button>
-        <button
-          type="button"
-          className="sticker-tab"
-          onClick={() => {}}
-          disabled
-        >
-          GIF
-        </button>
       </div>
 
       <div className="sticker-panel-search">

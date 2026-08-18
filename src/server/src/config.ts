@@ -42,4 +42,7 @@ export const config = {
     accessKeyId: process.env.S3_ACCESS_KEY ?? '',
     secretAccessKey: process.env.S3_SECRET_KEY ?? '',
   },
+
+  // Tenor GIF API (бесплатный план, client_key = имя приложения).
+  tenorApiKey: process.env.TENOR_API_KEY ?? '',
 };
