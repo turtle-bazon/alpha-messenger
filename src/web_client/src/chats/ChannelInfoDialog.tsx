@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   updateChat,
   subscribeChannel,
   unsubscribeChannel,
   searchChannels,
-  createChannel,
 } from '../api/rest';
 import type { Chat } from '../api/types';
+import { IconX } from '../util/icons';
 
 // Channel info dialog — shown when clicking channel header.
 interface ChannelInfoDialogProps {
@@ -21,25 +21,9 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
   const [description, setDescription] = useState(chat.description ?? '');
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
   const isOwner = chat.createdBy === myId;
   const isSubscribed = chat.participants.some((p) => p.userId === myId);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    function handleKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [onClose]);
 
   async function handleSave(): Promise<void> {
     const updated = await updateChat(chat.chatId, { title, description });
@@ -58,15 +42,21 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated }: ChannelInf
   }
 
   return (
-    <div className="dialog-overlay" data-testid="channel-info-dialog">
-      <div className="dialog channel-info-dialog" ref={ref}>
-        <div className="dialog-header">
-          <h3>Информация о канале</h3>
-          <button type="button" className="dialog-close" onClick={onClose} data-testid="channel-info-close">
-            &times;
+    <div
+      className="members-backdrop"
+      data-testid="channel-info-dialog"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="profile-dialog">
+        <div className="profile-head">
+          <span className="profile-title">Информация о канале</span>
+          <button type="button" className="members-close" onClick={onClose} data-testid="channel-info-close" aria-label="Закрыть">
+            <IconX />
           </button>
         </div>
-        <div className="dialog-body">
+        <div className="profile-body">
           <div className="channel-info-avatar">
             {title ? title.charAt(0).toUpperCase() : '#'}
           </div>
@@ -187,22 +177,6 @@ export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialog
     subscriberCount: number;
   }>>([]);
   const [loading, setLoading] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    function handleKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [onClose]);
 
   useEffect(() => {
     if (query.trim().length === 0) {
@@ -220,15 +194,21 @@ export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialog
   }, [query]);
 
   return (
-    <div className="dialog-overlay" data-testid="search-channels-dialog">
-      <div className="dialog search-channels-dialog" ref={ref}>
-        <div className="dialog-header">
-          <h3>Найти канал</h3>
-          <button type="button" className="dialog-close" onClick={onClose} data-testid="search-channels-close">
-            &times;
+    <div
+      className="members-backdrop"
+      data-testid="search-channels-dialog"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="profile-dialog">
+        <div className="profile-head">
+          <span className="profile-title">Найти канал</span>
+          <button type="button" className="members-close" onClick={onClose} data-testid="search-channels-close" aria-label="Закрыть">
+            <IconX />
           </button>
         </div>
-        <div className="dialog-body">
+        <div className="profile-body">
           <input
             className="search-input"
             placeholder="@хэндл или название…"
@@ -258,105 +238,6 @@ export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialog
             {!loading && query && results.length === 0 && (
               <div className="search-empty">Каналы не найдены</div>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Create channel dialog.
-interface CreateChannelDialogProps {
-  onClose: () => void;
-  onCreated: (chat: Chat) => void;
-}
-
-export function CreateChannelDialog({ onClose, onCreated }: CreateChannelDialogProps): JSX.Element {
-  const [title, setTitle] = useState('');
-  const [username, setUsername] = useState('');
-  const [error, setError] = useState('');
-  const [creating, setCreating] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    function handleKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [onClose]);
-
-  async function handleCreate(): Promise<void> {
-    if (!title.trim()) {
-      setError('Введите название');
-      return;
-    }
-    if (!username.trim()) {
-      setError('Введите хэндл канала');
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]{5,32}$/.test(username)) {
-      setError('Хэндл: 5-32 символов, только a-z, 0-9, _');
-      return;
-    }
-    setCreating(true);
-    setError('');
-    try {
-      const chat = await createChannel(title.trim(), username.trim());
-      onCreated(chat);
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('409')) setError('Этот хэндл уже занят');
-      else setError('Ошибка создания канала');
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  return (
-    <div className="dialog-overlay" data-testid="create-channel-dialog">
-      <div className="dialog create-channel-dialog" ref={ref}>
-        <div className="dialog-header">
-          <h3>Новый канал</h3>
-          <button type="button" className="dialog-close" onClick={onClose} data-testid="create-channel-close">
-            &times;
-          </button>
-        </div>
-        <div className="dialog-body">
-          <input
-            className="channel-info-input"
-            placeholder="Название канала"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            autoFocus
-            data-testid="channel-create-title"
-          />
-          <input
-            className="channel-info-input"
-            placeholder="@хэндл (латиница, 5-32 символов)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-            data-testid="channel-create-handle"
-          />
-          {error && <div className="channel-info-error">{error}</div>}
-          <div className="channel-info-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleCreate}
-              disabled={creating}
-              data-testid="channel-create-submit"
-            >
-              {creating ? 'Создание…' : 'Создать канал'}
-            </button>
           </div>
         </div>
       </div>
