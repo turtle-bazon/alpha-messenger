@@ -172,8 +172,19 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
       [chatId, userId],
     );
+    // Non-members can view public channels (for subscribe button).
     if (member.rowCount === 0) {
-      return reply.code(404).send({ error: 'not found' });
+      const ch = await pool.query(
+        'SELECT username FROM chats WHERE chat_id = $1',
+        [chatId],
+      );
+      if (ch.rowCount === 0 || !ch.rows[0].username) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+      // Return minimal channel info for non-member.
+      const full = await loadChat(pool, chatId, userId);
+      if (!full) return reply.code(404).send({ error: 'not found' });
+      return { ...full, role: 'non_member' };
     }
     return loadChat(pool, chatId, userId);
   });

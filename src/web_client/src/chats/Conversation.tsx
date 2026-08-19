@@ -21,6 +21,7 @@ import {
   saveDraft,
   deleteDraft,
   fetchBlob,
+  subscribeChannel,
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
 import type { Chat, Message, ReactionGroup, ServerEvent } from '../api/types';
@@ -1728,6 +1729,21 @@ export function Conversation({
         );
       })()}
       <div className="conv-composer-wrap">
+        {chat.role === 'non_member' ? (
+          <div className="channel-subscribe-banner" data-testid="channel-subscribe-banner">
+            <span>Вы не подписаны на этот канал</span>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={async () => {
+                await subscribeChannel(chat.chatId);
+                onChatUpdated({ ...chat, role: 'subscriber', subscriberCount: chat.subscriberCount + 1 });
+              }}
+            >
+              Подписаться
+            </button>
+          </div>
+        ) : (<>
         <FormattingToolbar
           visible={formatBarVisible}
           onBold={onBold}
@@ -1841,6 +1857,7 @@ export function Conversation({
         )}
       </form>
       )}
+      </>)}
       </div>
       {pendingImage && (
         <ImageEditor
