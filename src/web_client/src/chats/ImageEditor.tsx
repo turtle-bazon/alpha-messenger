@@ -33,10 +33,14 @@ export function ImageEditor({
     captionRef.current?.focus();
   }, []);
 
-  // Возврат фокуса при закрытии (#57)
+  // Возврат фокуса при закрытии (#57).
+  // Хранить актуальную ссылку через ref, чтобы cleanup не перезапускался
+  // при каждом ререндере родителя из-за inline onClose.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
-    return () => { onClose?.(); };
-  }, [onClose]);
+    return () => { onCloseRef.current?.(); };
+  }, []);
 
   useEffect(() => {
     let alive = true;
