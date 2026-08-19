@@ -1265,7 +1265,8 @@ export function Conversation({
                   (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
                   (m.failed ? ' bubble-failed' : '') +
-                  (m.replyToMessageId && messages.some((x) => x.messageId === m.replyToMessageId && x.senderId === myId) ? ' bubble-reply-to-me' : '')
+                  (m.replyToMessageId && messages.some((x) => x.messageId === m.replyToMessageId && x.senderId === myId) ? ' bubble-reply-to-me' : '') +
+                  (m.content.attachments.some((a) => a.kind === 'image') ? ' bubble--media' : '')
                 }
                 style={swipeMsgId === m.messageId ? { transform: `translateX(${swipeX}px)` } : undefined}
                 onTouchStart={(e) => onSwipeTouchStart(e, m.messageId!)}
