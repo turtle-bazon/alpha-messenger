@@ -1017,6 +1017,7 @@ body {
 
 .bubble-image img {
   display: block;
+  min-width: 200px;
   max-width: 280px;
   max-height: 320px;
   width: auto;
