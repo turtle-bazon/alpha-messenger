@@ -551,14 +551,26 @@ export function HomeScreen({
 
   // Intercept clicks on /channel/ links inside SPA — open channel instead of navigating.
   useEffect(() => {
+    function extractChannelId(href: string): string | null {
+      // Relative: /channel/:id/
+      const rel = href.match(/^\/channel\/([^/]+)\/?$/);
+      if (rel) return rel[1];
+      // Absolute on same origin: https://host/channel/:id/
+      try {
+        const url = new URL(href, window.location.origin);
+        if (url.origin === window.location.origin) {
+          const abs = url.pathname.match(/^\/channel\/([^/]+)\/?$/);
+          if (abs) return abs[1];
+        }
+      } catch { /* not a URL */ }
+      return null;
+    }
     function onClick(e: MouseEvent): void {
       const a = (e.target as HTMLElement).closest('a[href]');
       if (!a) return;
-      const href = a.getAttribute('href') ?? '';
-      const m = href.match(/^\/channel\/([^/]+)\/?$/);
-      if (!m) return;
+      const id = extractChannelId(a.getAttribute('href') ?? '');
+      if (!id) return;
       e.preventDefault();
-      const id = m[1];
       resolveChannelId(id)
         .then((chatId) => getChat(chatId))
         .then((chat) => {
