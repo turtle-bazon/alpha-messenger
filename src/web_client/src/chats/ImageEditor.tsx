@@ -70,7 +70,16 @@ export function ImageEditor({
   }
 
   return (
-    <div className="img-editor-backdrop" data-testid="image-editor">
+    <div
+      className="img-editor-backdrop"
+      data-testid="image-editor"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          onCancel();
+        }
+      }}
+    >
       <div className="img-editor">
         <div className="img-editor-preview">
           {src && (
@@ -99,6 +108,12 @@ export function ImageEditor({
             placeholder="Подпись…"
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                if (ready && !busy) void send();
+              }
+            }}
           />
           <button type="button" disabled={busy} onClick={onCancel}>
             Отмена
