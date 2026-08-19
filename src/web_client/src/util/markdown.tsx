@@ -64,6 +64,15 @@ function matchUrl(text: string, pos: number): string | null {
   return url || null;
 }
 
+function isSameOriginChannel(href: string): boolean {
+  try {
+    const url = new URL(href, window.location.origin);
+    return url.origin === window.location.origin && /^\/channel\/[^/]+\/?$/.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
@@ -198,7 +207,7 @@ function renderToken(
           key={`link-${t.url}`}
           className="message-link"
           href={t.url}
-          target="_blank"
+          target={t.url && isSameOriginChannel(t.url) ? undefined : '_blank'}
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
         >
@@ -211,7 +220,7 @@ function renderToken(
           key={`url-${t.url}`}
           className="message-link"
           href={t.url}
-          target="_blank"
+          target={t.url && isSameOriginChannel(t.url) ? undefined : '_blank'}
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
         >
