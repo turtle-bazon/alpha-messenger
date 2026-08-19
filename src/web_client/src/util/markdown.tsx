@@ -209,7 +209,13 @@ function renderToken(
           href={t.url}
           target={t.url && isSameOriginChannel(t.url) ? undefined : '_blank'}
           rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (t.url && isSameOriginChannel(t.url)) {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent('open-channel-link', { detail: t.url }));
+            }
+          }}
         >
           {t.value}
         </a>
@@ -222,7 +228,13 @@ function renderToken(
           href={t.url}
           target={t.url && isSameOriginChannel(t.url) ? undefined : '_blank'}
           rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (t.url && isSameOriginChannel(t.url)) {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent('open-channel-link', { detail: t.url }));
+            }
+          }}
         >
           {t.value}
         </a>

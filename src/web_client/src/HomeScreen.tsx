@@ -565,12 +565,7 @@ export function HomeScreen({
       } catch { /* not a URL */ }
       return null;
     }
-    function onClick(e: MouseEvent): void {
-      const a = (e.target as HTMLElement).closest('a[href]');
-      if (!a) return;
-      const id = extractChannelId(a.getAttribute('href') ?? '');
-      if (!id) return;
-      e.preventDefault();
+    function openChannel(id: string): void {
       resolveChannelId(id)
         .then((chatId) => getChat(chatId))
         .then((chat) => {
@@ -583,8 +578,25 @@ export function HomeScreen({
         })
         .catch(() => undefined);
     }
+    function onClick(e: MouseEvent): void {
+      const a = (e.target as HTMLElement).closest('a[href]');
+      if (!a) return;
+      const id = extractChannelId(a.getAttribute('href') ?? '');
+      if (!id) return;
+      e.preventDefault();
+      openChannel(id);
+    }
+    function onChannelLink(e: Event): void {
+      const href = (e as CustomEvent).detail as string;
+      const id = extractChannelId(href);
+      if (id) openChannel(id);
+    }
     document.addEventListener('click', onClick);
-    return () => document.removeEventListener('click', onClick);
+    window.addEventListener('open-channel-link', onChannelLink);
+    return () => {
+      document.removeEventListener('click', onClick);
+      window.removeEventListener('open-channel-link', onChannelLink);
+    };
   }, []);
 
   async function onCreateDirect(target: string): Promise<void> {
