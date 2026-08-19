@@ -483,7 +483,10 @@ export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true 
             key={`${emoji}-${i}`}
             type="button"
             className="emoji-btn"
-            onClick={() => handleSelect(emoji)}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              handleSelect(emoji);
+            }}
           >
             {emoji}
           </button>

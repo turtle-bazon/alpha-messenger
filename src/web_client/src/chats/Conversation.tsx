@@ -253,6 +253,7 @@ export function Conversation({
   const [mentionNavIndex, setMentionNavIndex] = useState(-1);
   // Свайп вправо для ответа на мобильных
   const swipeRef = useRef<{ startX: number; msgId: string } | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [swipeMsgId, setSwipeMsgId] = useState<string | null>(null);
   const [swipeX, setSwipeX] = useState(0);
   // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
@@ -1779,7 +1780,14 @@ export function Conversation({
             className="conv-emoji-btn"
             data-testid="emoji-btn"
             aria-label="Эмодзи и стикеры"
-            onClick={() => setMediaOpen(!mediaOpen)}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              const sel = window.getSelection();
+              if (sel && sel.rangeCount > 0) {
+                savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+              }
+              setMediaOpen(!mediaOpen);
+            }}
           >
             😊
           </button>
@@ -1811,6 +1819,14 @@ export function Conversation({
               const el = inputRef.current;
               if (el) {
                 el.focus();
+                const saved = savedRangeRef.current;
+                if (saved) {
+                  const sel = window.getSelection();
+                  if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(saved);
+                  }
+                }
                 document.execCommand('insertText', false, emoji);
               } else {
                 setInput(input + emoji);
