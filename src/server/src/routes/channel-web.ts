@@ -198,19 +198,27 @@ function renderRssFeed(opts: {
 }
 
 export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
-  // Channel page: /channel/:chatId/
-  app.get('/channel/:chatId/', async (req, reply) => {
-    const { chatId } = req.params as { chatId: string };
-    if (!/^\d+$/.test(chatId)) return reply.code(404).send('Not found');
+  // Channel page: /channel/:id/ — accepts both @handle and numeric chatId.
+  app.get('/channel/:id/', async (req, reply) => {
+    const { id } = req.params as { id: string };
 
-    const chat = await pool.query(
-      `SELECT chat_id, title, description, username FROM chats WHERE chat_id = $1`,
-      [chatId],
-    );
+    const chat = /^\d+$/.test(id)
+      ? await pool.query(
+          `SELECT chat_id, title, description, username FROM chats WHERE chat_id = $1`,
+          [id],
+        )
+      : await pool.query(
+          `SELECT chat_id, title, description, username FROM chats
+           WHERE username = $1 AND username IS NOT NULL`,
+          [id],
+        );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
-    const { title, description, username } = chat.rows[0];
-    const label = title ?? username ?? `Channel #${chatId}`;
+    const { chat_id: chatId, title, description, username } = chat.rows[0];
 
+    // Private channels: no SSR page, only chatId links work inside client.
+    if (!username) return reply.code(404).send('Private channel');
+
+    const label = title ?? username;
     const msgs = await pool.query(
       `SELECT message_id, ciphertext, created_at, view_count
        FROM messages
@@ -234,23 +242,30 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const html = renderChannelHtml({ title: label, description: description ?? '', username: label, posts });
+    const html = renderChannelHtml({ title: label, description: description ?? '', username, posts });
     reply.header('content-type', 'text/html; charset=utf-8');
     return reply.send(html);
   });
 
-  // Single post + comments: /channel/:chatId/:postId
-  app.get('/channel/:chatId/:postId', async (req, reply) => {
-    const { chatId, postId } = req.params as { chatId: string; postId: string };
-    if (!/^\d+$/.test(chatId) || !/^\d+$/.test(postId)) return reply.code(404).send('Not found');
+  // Single post + comments: /channel/:id/:postId
+  app.get('/channel/:id/:postId', async (req, reply) => {
+    const { id, postId } = req.params as { id: string; postId: string };
+    if (!/^\d+$/.test(postId)) return reply.code(404).send('Not found');
 
-    const chat = await pool.query(
-      `SELECT chat_id, title, username FROM chats WHERE chat_id = $1`,
-      [chatId],
-    );
+    const chat = /^\d+$/.test(id)
+      ? await pool.query(
+          `SELECT chat_id, title, username FROM chats WHERE chat_id = $1`,
+          [id],
+        )
+      : await pool.query(
+          `SELECT chat_id, title, username FROM chats
+           WHERE username = $1 AND username IS NOT NULL`,
+          [id],
+        );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
-    const { title, username } = chat.rows[0];
-    const label = title ?? username ?? `Channel #${chatId}`;
+    const { chat_id: chatId, title, username } = chat.rows[0];
+    if (!username) return reply.code(404).send('Private channel');
+    const label = title ?? username;
 
     const postRes = await pool.query(
       `SELECT message_id, ciphertext, created_at, view_count

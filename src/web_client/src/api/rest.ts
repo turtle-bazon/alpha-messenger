@@ -415,6 +415,14 @@ export function searchChannels(query: string): Promise<{ chats: ChannelSearchRes
   );
 }
 
+export async function resolveChannelId(id: string): Promise<string> {
+  if (/^\d+$/.test(id)) return id;
+  const res = await searchChannels(id);
+  const match = res.chats.find((c) => c.username === id);
+  if (!match) throw new Error('Channel not found');
+  return match.chatId;
+}
+
 export function createChannel(
   title: string,
   channelUsername: string,

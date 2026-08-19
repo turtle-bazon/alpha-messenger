@@ -8,6 +8,7 @@ import {
   getMe,
   getPresence,
   reportActivity,
+  resolveChannelId,
 } from './api/rest';
 import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
@@ -528,6 +529,25 @@ export function HomeScreen({
       ws.close();
     };
   }, [ws]);
+
+  // Open channel from URL: /channel/:id/
+  useEffect(() => {
+    const match = window.location.pathname.match(/^\/channel\/([^/]+)\/?$/);
+    if (!match) return;
+    const id = match[1];
+    resolveChannelId(id)
+      .then((chatId) => getChat(chatId))
+      .then((chat) => {
+        setChats((prev) =>
+          prev.some((c) => c.chatId === chat.chatId)
+            ? prev
+            : [chat, ...prev],
+        );
+        setSelectedId(chat.chatId);
+        window.history.replaceState(null, '', '/');
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function onCreateDirect(target: string): Promise<void> {
     const chat = await createDirect(target);
