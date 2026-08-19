@@ -549,6 +549,32 @@ export function HomeScreen({
       .catch(() => undefined);
   }, []);
 
+  // Intercept clicks on /channel/ links inside SPA — open channel instead of navigating.
+  useEffect(() => {
+    function onClick(e: MouseEvent): void {
+      const a = (e.target as HTMLElement).closest('a[href]');
+      if (!a) return;
+      const href = a.getAttribute('href') ?? '';
+      const m = href.match(/^\/channel\/([^/]+)\/?$/);
+      if (!m) return;
+      e.preventDefault();
+      const id = m[1];
+      resolveChannelId(id)
+        .then((chatId) => getChat(chatId))
+        .then((chat) => {
+          setChats((prev) =>
+            prev.some((c) => c.chatId === chat.chatId)
+              ? prev
+              : [chat, ...prev],
+          );
+          setSelectedId(chat.chatId);
+        })
+        .catch(() => undefined);
+    }
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, []);
+
   async function onCreateDirect(target: string): Promise<void> {
     const chat = await createDirect(target);
     setChats((prev) => [chat, ...prev.filter((c) => c.chatId !== chat.chatId)]);
