@@ -1011,14 +1011,16 @@ body {
 }
 
 /* Картинка в пузыре (inline-медиа). */
-/* Image/media bubbles — wider than text. */
+/* Image/media bubbles — wider than text, no padding (image IS the bubble). */
 .bubble--media {
   max-width: 90%;
-  padding: 4px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .bubble-image {
   display: block;
+  line-height: 0;
 }
 
 .bubble-image img {
@@ -1028,7 +1030,18 @@ body {
   max-height: 480px;
   width: 100%;
   height: auto;
-  border-radius: 8px;
+  border-radius: 0;
+}
+
+/* Round top corners for first image, bottom for last. */
+.bubble--media .bubble-image:first-child img {
+  border-radius: 12px 12px 0 0;
+}
+.bubble--media .bubble-image:last-child img {
+  border-radius: 0 0 12px 12px;
+}
+.bubble--media .bubble-image:only-child img {
+  border-radius: 12px;
 }
 
 .bubble-image img.is-openable {
