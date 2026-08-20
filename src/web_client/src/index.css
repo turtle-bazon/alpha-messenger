@@ -1647,6 +1647,343 @@ body {
   transform: translateX(1px);
 }
 
+/* ---- Голосовые и видео сообщения (#34) ---- */
+
+/* Кнопка 🎙/🎥 на месте серой «Отправить» при пустом вводе. Клик — toggle
+   с поворотом иконки; удержание — запись (пульсация красным). */
+.conv-mic-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+  touch-action: none; /* свайп-отмена не скроллит страницу */
+  user-select: none;
+}
+
+.conv-mic-btn:hover {
+  background: var(--accent-weak, rgba(0, 128, 96, 0.12));
+  color: var(--accent);
+}
+
+.conv-mic-icon {
+  display: inline-flex;
+  transition: transform 180ms ease;
+}
+
+/* Поворот при переключении режима — класс вешается на мгновение? Проще:
+   анимация через keyframes при смене иконки не отслеживается, поэтому просто
+   плавный transform на hover-нажатие. */
+.conv-mic-btn:active .conv-mic-icon {
+  transform: rotate(90deg) scale(0.9);
+}
+
+.conv-mic-btn.is-recording {
+  background: #e53935;
+  color: #fff;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(229, 57, 53, 0); }
+}
+
+/* Панель записи над композером: точка, таймер, живой waveform, подсказка. */
+.conv-rec-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: var(--bg-input);
+}
+
+.conv-rec-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e53935;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+.conv-rec-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.conv-rec-wave {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  overflow: hidden;
+}
+
+.conv-rec-wave span {
+  flex: none;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: height 80ms linear;
+}
+
+.conv-rec-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.conv-rec-hint.armed {
+  color: #e53935;
+  font-weight: 600;
+}
+
+/* Пузырь голосового: play, waveform, длительность, скорость. */
+.voice-bubble {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  padding: 4px 2px;
+}
+
+.voice-play {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.voice-play svg {
+  width: 18px;
+  height: 18px;
+}
+
+.voice-loading {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.voice-wave {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.voice-bar {
+  flex: none;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.55;
+}
+
+.voice-bar.filled {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.voice-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.voice-speed {
+  flex: none;
+  border: none;
+  border-radius: 10px;
+  padding: 2px 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.voice-speed:hover {
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--text);
+}
+
+/* Пузырь видео: постер + ▶ + длительность. */
+.bubble-video {
+  position: relative;
+  display: block;
+  line-height: 0;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bubble-video img {
+  display: block;
+  max-width: min(420px, 100%);
+  max-height: 320px;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+}
+
+.bubble-video-placeholder {
+  display: block;
+  width: 280px;
+  height: 160px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.bubble-video-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  pointer-events: none;
+}
+
+.bubble-video-play svg {
+  width: 26px;
+  height: 26px;
+  margin-left: 3px;
+}
+
+.bubble-video-duration {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Модалка записи видео. */
+.video-rec-backdrop {
+  z-index: 210;
+}
+
+.video-rec {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(520px, 92vw);
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.video-rec-live,
+.video-rec-preview {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: 8px;
+  background: #000;
+  object-fit: contain;
+}
+
+/* Зеркальность live-превью (селфи). */
+.video-rec-live {
+  transform: scaleX(-1);
+}
+
+.video-rec-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.video-rec-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.video-rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e53935;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+.video-rec-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+
+.video-rec-limit {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.video-rec-error {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Видео в полноэкранном просмотрщике. */
+.media-viewer-video {
+  max-width: 92vw;
+  max-height: 88vh;
+  border-radius: 8px;
+}
+
 /* ---- Уведомления уровня аккаунта (вход/новое устройство) ---- */
 .account-notices {
   position: fixed;

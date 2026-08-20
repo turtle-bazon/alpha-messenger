@@ -32,13 +32,15 @@ import {
   textContent,
   thumbUrl,
   type Attachment,
+  type AudioAttachment,
   type ImageAttachment,
   type LinkAttachment,
   type MessageContent,
+  type VideoAttachment,
 } from '../util/content';
-import { imageBytesToThumb, type PreparedImage } from '../util/image';
+import { imageBytesToThumb, videoPosterFrame, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -48,11 +50,14 @@ import { MediaPanel } from './MediaPanel';
 import { MentionPopup, getFilteredParticipants } from './MentionPopup';
 import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
+import { VoiceBubble, type VoiceBubbleHandle } from './VoiceBubble';
 import { MembersDialog } from './MembersDialog';
 import { GroupInfoDialog } from './GroupInfoDialog';
 import { ChannelInfoDialog } from './ChannelInfoDialog';
 import { FormattingToolbar } from './FormattingToolbar';
 import { WysiwygComposer, WysiwygComposerHandle } from './WysiwygComposer';
+import { useVoiceRecorder, type VoiceRecording } from './useVoiceRecorder';
+import { VideoRecorderModal, type VideoRecording } from './VideoRecorderModal';
 import {
   getChatMessages,
   putMessages,
@@ -65,6 +70,13 @@ import { LinkDialog } from './LinkDialog';
 interface OutgoingImage {
   blob: Blob;
   att: ImageAttachment;
+}
+
+// Секунды → m:ss (таймер записи, длительности голосовых/видео).
+function fmtSec(total: number): string {
+  const m = Math.floor(total / 60);
+  const s = Math.floor(total % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 // Склонение слова «участник» по числу (1 участник, 2 участника, 5 участников).
@@ -190,6 +202,12 @@ export function Conversation({
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
+  // Голосовые/видео (#34): режим кнопки (клик — toggle), модалка камеры
+  // (key>0 — открыта, инкремент для перемонтирования при «Перезаписать»),
+  // свайп-отмена при hold-записи голосового.
+  const [micMode, setMicMode] = useState<'voice' | 'video'>('voice');
+  const [videoRecKey, setVideoRecKey] = useState(0);
+  const [recCancelArmed, setRecCancelArmed] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
   // Пикер реакций: messageId для которого открыт, или null
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
@@ -226,10 +244,12 @@ export function Conversation({
   const dismissedRef = useRef<Set<string>>(new Set());
   // Скорректированная позиция контекстного меню (для EmojiPicker)
   const ctxMenuPosRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
-  // Открытый lightbox (полноразмерный просмотр) — blobId и подпись.
-  const [viewer, setViewer] = useState<{ blobId: string; caption: string } | null>(
+  // Открытый lightbox (полноразмерный просмотр) — blobId, подпись и тип медиа.
+  const [viewer, setViewer] = useState<{ blobId: string; caption: string; kind?: 'image' | 'video' } | null>(
     null,
   );
+  // Плееры голосовых (#34): refs по messageId — для playlist-автоперехода.
+  const voiceRefs = useRef<Map<string, VoiceBubbleHandle>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
@@ -268,6 +288,8 @@ export function Conversation({
       text: string;
       images: OutgoingImage[];
       link?: LinkAttachment;
+      // Голосовое/видео (#34): сырой блоб + метаданные вложения.
+      media?: { att: AudioAttachment | VideoAttachment; blob: Blob };
       replyToMessageId?: string;
     }[]
   >([]);
@@ -823,10 +845,12 @@ export function Conversation({
     images: OutgoingImage[],
     link?: LinkAttachment,
     replyToMessageId?: string,
+    media?: { att: AudioAttachment | VideoAttachment; blob: Blob },
   ): void {
     const clientMessageId = crypto.randomUUID();
     const attachments: Attachment[] = [
       ...images.map((i) => i.att),
+      ...(media ? [media.att] : []),
       ...(link ? [link] : []),
     ];
     const optimistic: MsgVM = {
@@ -846,7 +870,7 @@ export function Conversation({
     };
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
-    sendQueueRef.current.push({ clientMessageId, text, images, link, replyToMessageId });
+    sendQueueRef.current.push({ clientMessageId, text, images, link, media, replyToMessageId });
     // Набор завершён отправкой — сбрасываем троттл typing и flush-таймер.
     lastTypingSent.current = 0;
     if (typingFlushRef.current) {
@@ -881,16 +905,21 @@ export function Conversation({
               img.att.blobId = blobId;
             }
           }
+          if (head.media && !head.media.att.blobId) {
+            const { blobId } = await uploadBlob(head.media.blob);
+            head.media.att.blobId = blobId;
+          }
           const content: MessageContent = {
             text: head.text,
             attachments: [
               ...head.images.map((i) => i.att),
+              ...(head.media ? [head.media.att] : []),
               ...(head.link ? [head.link] : []),
             ],
           };
           // Прокинуть проставленные blobId в оптимистичное сообщение (чтобы клик
           // по превью открывал полноразмер ещё до прихода WS-эха).
-          if (head.images.length) {
+          if (head.images.length || head.media) {
             setMessages((prev) =>
               prev.map((m) =>
                 m.clientMessageId === head.clientMessageId
@@ -903,7 +932,10 @@ export function Conversation({
             chatId,
             head.clientMessageId,
             encodeContent(content),
-            head.images.map((i) => i.att.blobId),
+            [
+              ...head.images.map((i) => i.att.blobId),
+              ...(head.media && head.media.att.blobId ? [head.media.att.blobId] : []),
+            ],
             head.replyToMessageId,
           );
           setMessages((prev) =>
@@ -936,6 +968,119 @@ export function Conversation({
   // Повтор: голова всё ещё в очереди — просто перезапускаем насос.
   function retrySend(): void {
     void pump();
+  }
+
+  // --- Голосовые и видео сообщения (#34) ---
+
+  // Нормировка волны: относительный масштаб к максимуму, обрезка хвостовых нулей
+  // не нужна — длина волны соответствует времени записи.
+  function normalizeWave(wave: number[]): number[] {
+    if (!wave.length) return new Array(1).fill(0.2);
+    const max = Math.max(...wave, 0.01);
+    return wave.map((v) => Math.max(0.06, Math.min(1, v / max)));
+  }
+
+  const recCancelRef = useRef(false);
+  const recStartXRef = useRef(0);
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressFiredRef = useRef(false);
+
+  const voice = useVoiceRecorder(() => {
+    // Автостоп по лимиту 5 минут — завершаем как обычное отпускание.
+    pressFiredRef.current = true;
+    void finishVoice();
+  });
+
+  async function finishVoice(): Promise<void> {
+    const rec: VoiceRecording | null = await voice.stop();
+    setRecCancelArmed(false);
+    if (!rec) return;
+    // Свайп-отмена или случайное короткое нажатие — выбрасываем.
+    if (recCancelRef.current || rec.duration < 0.7) return;
+    const att: AudioAttachment = {
+      kind: 'audio',
+      blobId: '',
+      mime: (rec.mime.split(';')[0] || 'audio/webm'),
+      duration: Math.round(rec.duration * 10) / 10,
+      wave: normalizeWave(rec.wave),
+      size: rec.blob.size,
+    };
+    const replyId = replyTo;
+    setReplyTo(null);
+    enqueueSend('', [], undefined, replyId ?? undefined, { att, blob: rec.blob });
+  }
+
+  // Playlist (#34): после окончания голосового — включить следующее в чате.
+  function playNextVoice(finishedMsgId: string | null): void {
+    if (!finishedMsgId) return;
+    const idx = messages.findIndex((m) => m.messageId === finishedMsgId);
+    if (idx < 0) return;
+    for (let i = idx + 1; i < messages.length; i++) {
+      const att = messages[i].content.attachments.find(
+        (a): a is AudioAttachment => a.kind === 'audio',
+      );
+      if (!att || !messages[i].messageId) continue;
+      if (!att.blobId) continue; // ещё грузится — пропустить
+      voiceRefs.current.get(messages[i].messageId!)?.play();
+      return;
+    }
+  }
+
+  async function onVideoRecorded(rec: VideoRecording): Promise<void> {
+    setVideoRecKey(0);
+    const { thumb, width, height } = await videoPosterFrame(rec.blob);
+    const att: VideoAttachment = {
+      kind: 'video',
+      blobId: '',
+      mime: rec.mime.split(';')[0] || 'video/webm',
+      duration: Math.round(rec.duration * 10) / 10,
+      width,
+      height,
+      size: rec.blob.size,
+      thumb,
+    };
+    enqueueSend('', [], undefined, undefined, { att, blob: rec.blob });
+  }
+
+  // Hold-to-record: короткий клик — toggle 🎙/🎥; удержание ≥250мс — запись.
+  // Захват указателя обязателен, чтобы pointermove/pointerup приходили на кнопку
+  // при уходе курсора за её пределы (свайп-отмена).
+  function onMicPointerDown(e: React.PointerEvent<HTMLButtonElement>): void {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pressFiredRef.current = false;
+    recCancelRef.current = false;
+    setRecCancelArmed(false);
+    recStartXRef.current = e.clientX;
+    pressTimerRef.current = setTimeout(() => {
+      pressFiredRef.current = true;
+      if (micMode === 'voice') void voice.start();
+      else setVideoRecKey((k) => k + 1);
+    }, 250);
+  }
+
+  function onMicPointerUp(): void {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+    if (!pressFiredRef.current) {
+      setMicMode((m) => (m === 'voice' ? 'video' : 'voice'));
+      return;
+    }
+    if (micMode === 'voice' && voice.state === 'recording') void finishVoice();
+  }
+
+  function onMicPointerMove(e: React.PointerEvent<HTMLButtonElement>): void {
+    if (voice.state !== 'recording') return;
+    const dx = e.clientX - recStartXRef.current;
+    if (dx < -80 && !recCancelRef.current) {
+      recCancelRef.current = true;
+      setRecCancelArmed(true);
+    } else if (dx >= -40 && recCancelRef.current) {
+      recCancelRef.current = false;
+      setRecCancelArmed(false);
+    }
   }
 
   async function doSubmit(): Promise<void> {
@@ -1448,6 +1593,38 @@ export function Conversation({
                           <span className="bubble-sticker" key={ai}>
                             <StickerImage blobId={a.blobId} />
                           </span>
+                        ) : a.kind === 'audio' ? (
+                          <VoiceBubble
+                            key={ai}
+                            ref={(el) => {
+                              if (m.messageId && el) voiceRefs.current.set(m.messageId, el);
+                              else if (m.messageId) voiceRefs.current.delete(m.messageId);
+                            }}
+                            messageId={m.messageId ?? m.clientMessageId ?? ''}
+                            att={a}
+                            own={own}
+                            onEnded={() => playNextVoice(m.messageId)}
+                          />
+                        ) : a.kind === 'video' ? (
+                          <span
+                            className="bubble-video"
+                            key={ai}
+                            data-testid="message-video"
+                            onClick={() =>
+                              a.blobId &&
+                              setViewer({ blobId: a.blobId, caption: '', kind: 'video' })
+                            }
+                          >
+                            {a.thumb ? (
+                              <img src={`data:image/jpeg;base64,${a.thumb}`} alt="видео" />
+                            ) : (
+                              <span className="bubble-video-placeholder" />
+                            )}
+                            <span className="bubble-video-play">
+                              <IconPlay />
+                            </span>
+                            <span className="bubble-video-duration">{fmtSec(a.duration)}</span>
+                          </span>
                         ) : (
                           <a
                             className="bubble-link"
@@ -1746,6 +1923,21 @@ export function Conversation({
             </button>
           </div>
         ) : (<>
+        {/* Панель записи голосового (#34): таймер + живой waveform. */}
+        {voice.state === 'recording' && (
+          <div className="conv-rec-bar" data-testid="rec-bar">
+            <span className="conv-rec-dot" />
+            <span className="conv-rec-timer" data-testid="rec-timer">{fmtSec(voice.seconds)}</span>
+            <div className="conv-rec-wave">
+              {voice.levels.map((l, i) => (
+                <span key={i} style={{ height: `${Math.max(3, Math.round(l * 22))}px` }} />
+              ))}
+            </div>
+            <span className={'conv-rec-hint' + (recCancelArmed ? ' armed' : '')} data-testid="rec-hint">
+              {recCancelArmed ? 'Отпустите — отмена' : '← влево — отмена'}
+            </span>
+          </div>
+        )}
         <FormattingToolbar
           visible={formatBarVisible}
           onBold={onBold}
@@ -1805,15 +1997,29 @@ export function Conversation({
             data-testid="message-input"
           />
         </div>
-        <button
-          type="submit"
-          className="conv-send"
-          data-testid="message-send"
-          aria-label={editing ? 'Сохранить' : 'Отправить'}
-          disabled={!input.trim()}
-        >
-          <IconSend />
-        </button>
+        {input.trim() || editing ? (
+          <button
+            type="submit"
+            className="conv-send"
+            data-testid="message-send"
+            aria-label={editing ? 'Сохранить' : 'Отправить'}
+          >
+            <IconSend />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={'conv-mic-btn' + (voice.state === 'recording' ? ' is-recording' : '')}
+            data-testid="mic-btn"
+            aria-label={micMode === 'voice' ? 'Голосовое: удерживайте для записи' : 'Видео: удерживайте для записи'}
+            onPointerDown={onMicPointerDown}
+            onPointerUp={onMicPointerUp}
+            onPointerMove={onMicPointerMove}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <span className="conv-mic-icon">{micMode === 'voice' ? <IconMic /> : <IconCamera />}</span>
+          </button>
+        )}
         {mediaOpen && (
           <MediaPanel
             onSelectEmoji={(emoji) => {
@@ -1887,10 +2093,19 @@ export function Conversation({
           onClose={() => inputRef.current?.focus()}
         />
       )}
+      {videoRecKey > 0 && (
+        <VideoRecorderModal
+          key={videoRecKey}
+          onSend={(rec) => void onVideoRecorded(rec)}
+          onClose={() => setVideoRecKey(0)}
+          onReRecord={() => setVideoRecKey((k) => k + 1)}
+        />
+      )}
       {viewer && (
         <MediaViewer
           blobId={viewer.blobId}
           caption={viewer.caption}
+          kind={viewer.kind}
           onClose={() => setViewer(null)}
         />
       )}

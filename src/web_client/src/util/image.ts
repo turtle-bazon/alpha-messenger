@@ -103,3 +103,46 @@ export async function prepareImage(
     height: fullCanvas.height,
   };
 }
+
+// Постер-кадр видеосообщения (#34): из блоба видео — крошечный inline-JPEG
+// (base64 без префикса) + реальные размеры. Видео грузится в offscreen <video>,
+// кадр берётся на ~0.1с. При любом сбое — thumb '' и нулевые размеры
+// (пузырь покажет плейсхолдер).
+export async function videoPosterFrame(
+  blob: Blob,
+): Promise<{ thumb: string; width: number; height: number }> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.src = url;
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error('video load failed'));
+      setTimeout(() => reject(new Error('video load timeout')), 5000);
+    });
+    video.currentTime = Math.min(0.1, video.duration || 0.1);
+    await new Promise<void>((resolve, reject) => {
+      video.onseeked = () => resolve();
+      video.onerror = () => reject(new Error('video seek failed'));
+      setTimeout(() => reject(new Error('video seek timeout')), 5000);
+    });
+    const scale = Math.min(1, 320 / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('no 2d context');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    return {
+      thumb: dataUrl.slice(dataUrl.indexOf(',') + 1),
+      width: video.videoWidth,
+      height: video.videoHeight,
+    };
+  } catch {
+    return { thumb: '', width: 0, height: 0 };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

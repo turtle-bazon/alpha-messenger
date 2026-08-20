@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { blobObjectUrl } from '../util/blobUrl';
 import { IconX } from '../util/icons';
 
-// Полноэкранный просмотр изображения (lightbox). Тянет полный блоб по blobId через
-// кеш object-URL; до загрузки — индикатор, при ошибке — сообщение. Закрытие по
-// клику на фон, по Escape или по кнопке.
+// Полноэкранный просмотр изображения или видео (#34). Тянет полный блоб по blobId
+// через кеш object-URL; до загрузки — индикатор, при ошибке — сообщение. Закрытие
+// по клику на фон, по Escape или по кнопке. Видео — <video controls autoplay>.
 export function MediaViewer({
   blobId,
   caption,
+  kind = 'image',
   onClose,
 }: {
   blobId: string;
   caption?: string;
+  kind?: 'image' | 'video';
   onClose: () => void;
 }): JSX.Element {
   const [url, setUrl] = useState<string | null>(null);
@@ -52,7 +54,18 @@ export function MediaViewer({
         <IconX />
       </button>
       {error ? (
-        <div className="media-viewer-msg">Не удалось загрузить изображение</div>
+        <div className="media-viewer-msg">Не удалось загрузить медиа</div>
+      ) : url && kind === 'video' ? (
+        <figure className="media-viewer-fig" onClick={(e) => e.stopPropagation()}>
+          <video
+            className="media-viewer-video"
+            data-testid="media-viewer-video"
+            src={url}
+            controls
+            autoPlay
+          />
+          {caption && <figcaption>{caption}</figcaption>}
+        </figure>
       ) : url ? (
         <figure className="media-viewer-fig" onClick={(e) => e.stopPropagation()}>
           <img

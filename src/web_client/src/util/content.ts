@@ -44,7 +44,36 @@ export interface StickerAttachment {
   blobId: string;
 }
 
-export type Attachment = ImageAttachment | LinkAttachment | StickerAttachment;
+// Голосовое сообщение (#34). wave — пики громкости 0..1, снятые при записи
+// (AnalyserNode); хранятся в теле сообщения, чтобы рендерить waveform без
+// декодирования аудио. duration в секундах (дробное).
+export interface AudioAttachment {
+  kind: 'audio';
+  blobId: string;
+  mime: string;
+  duration: number;
+  wave: number[];
+  size: number;
+}
+
+// Видеосообщение (#34). thumb — крошечный inline JPEG постер-кадра.
+export interface VideoAttachment {
+  kind: 'video';
+  blobId: string;
+  mime: string;
+  duration: number;
+  width: number;
+  height: number;
+  size: number;
+  thumb: string; // base64 JPEG без data: префикса
+}
+
+export type Attachment =
+  | ImageAttachment
+  | LinkAttachment
+  | StickerAttachment
+  | AudioAttachment
+  | VideoAttachment;
 
 // Сообщение — текст и/или вложения. Текст без вложений — обычное текстовое
 // сообщение; вложения без текста — медиа; возможна и комбинация.
@@ -78,6 +107,28 @@ export function encodeContent(c: MessageContent): string {
       if (a.kind === 'sticker') {
         return { k: 'sticker', blob: a.blobId };
       }
+      if (a.kind === 'audio') {
+        return {
+          k: 'audio',
+          blob: a.blobId,
+          mime: a.mime,
+          dur: a.duration,
+          wave: a.wave,
+          size: a.size,
+        };
+      }
+      if (a.kind === 'video') {
+        return {
+          k: 'video',
+          blob: a.blobId,
+          mime: a.mime,
+          dur: a.duration,
+          w: a.width,
+          h: a.height,
+          size: a.size,
+          thumb: a.thumb,
+        };
+      }
       return {
         k: 'link',
         url: a.url,
@@ -106,6 +157,32 @@ function decodeAttachment(o: Record<string, unknown>): Attachment | null {
   if (o.k === 'sticker') {
     if (typeof o.blob !== 'string') return null;
     return { kind: 'sticker', blobId: o.blob };
+  }
+  if (o.k === 'audio') {
+    if (typeof o.blob !== 'string') return null;
+    return {
+      kind: 'audio',
+      blobId: o.blob,
+      mime: typeof o.mime === 'string' ? o.mime : 'audio/webm',
+      duration: typeof o.dur === 'number' ? o.dur : 0,
+      wave: Array.isArray(o.wave)
+        ? (o.wave as unknown[]).filter((n): n is number => typeof n === 'number')
+        : [],
+      size: typeof o.size === 'number' ? o.size : 0,
+    };
+  }
+  if (o.k === 'video') {
+    if (typeof o.blob !== 'string') return null;
+    return {
+      kind: 'video',
+      blobId: o.blob,
+      mime: typeof o.mime === 'string' ? o.mime : 'video/webm',
+      duration: typeof o.dur === 'number' ? o.dur : 0,
+      width: typeof o.w === 'number' ? o.w : 0,
+      height: typeof o.h === 'number' ? o.h : 0,
+      size: typeof o.size === 'number' ? o.size : 0,
+      thumb: typeof o.thumb === 'string' ? o.thumb : '',
+    };
   }
   if (o.k !== 'image' && o.k !== undefined) return null;
   if (typeof o.thumb !== 'string' && typeof o.blob !== 'string') return null;
@@ -178,6 +255,10 @@ export function linkThumbUrl(a: LinkAttachment): string {
 export function previewText(c: MessageContent): string {
   const sticker = c.attachments.find((a): a is StickerAttachment => a.kind === 'sticker');
   if (sticker) return '🎯 Стикер';
+  const audio = c.attachments.find((a): a is AudioAttachment => a.kind === 'audio');
+  if (audio) return '🎤 Голосовое сообщение';
+  const video = c.attachments.find((a): a is VideoAttachment => a.kind === 'video');
+  if (video) return '🎥 Видео';
   const img = c.attachments.find((a): a is ImageAttachment => a.kind === 'image');
   if (img) {
     const cap = img.caption || c.text;

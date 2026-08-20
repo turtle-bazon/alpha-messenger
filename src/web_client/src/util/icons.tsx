@@ -28,6 +28,10 @@ import {
   Monitor,
   Smartphone,
   Tablet,
+  Mic,
+  Video,
+  Play,
+  Pause,
 } from 'lucide-react';
 
 // Экспортируем Lucide-иконки напрямую.
@@ -59,4 +63,8 @@ export {
   Monitor as IconMonitor,
   Smartphone as IconSmartphone,
   Tablet as IconTablet,
+  Mic as IconMic,
+  Video as IconCamera,
+  Play as IconPlay,
+  Pause as IconPause,
 };

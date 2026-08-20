@@ -26,3 +26,19 @@
 
 ## Приоритет
 normal
+
+## Сделано
+- Миграция `0013_stickers.sql`: `sticker_packs`, `user_sticker_packs` (установка),
+  `sticker_items`.
+- Сервер `routes/stickers.ts`: полный CRUD паков (создание/список/удаление),
+  install/uninstall, элементы пака (add/list/remove), поиск публичных паков
+  (`GET /sticker-packs/search`). Хранение — через `/api/blobs`.
+- Клиент: типы и REST в `api/rest.ts`, `StickerPanel.tsx` (установленные паки,
+  поиск, загрузка своих), отправка стикером отдельным сообщением, рендер крупно
+  без облачка (`.bubble-sticker`).
+- Единая панель `MediaPanel.tsx` с вкладками Эмодзи / Стикеры / GIF (GIF — через
+  Tenor API, серверный прокси `/api/gifs/search`).
+- E2E: `e2e/stickers.spec.ts`.
+
+## Отложено
+- «Часто используемые» стикеры сверху панели — трекинг recent/frequent не делался.
