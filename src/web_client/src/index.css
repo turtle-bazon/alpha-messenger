@@ -1984,6 +1984,140 @@ body {
   border-radius: 8px;
 }
 
+/* ---- Звонки (#81) ---- */
+
+/* Кнопки звонка в заголовке direct-чата. */
+.conv-call-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Полноэкранный оверлей звонка. */
+.call-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #1f2c33 0%, #10181c 100%);
+  color: #fff;
+}
+
+.call-remote-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+/* Локальное PiP-превью в углу. */
+.call-local-video {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  width: min(220px, 28vw);
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transform: scaleX(-1);
+}
+
+.call-local-video.off {
+  opacity: 0.25;
+}
+
+.call-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.call-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  font-size: 38px;
+  font-weight: 600;
+  color: #fff;
+  user-select: none;
+}
+
+.call-name {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.call-status {
+  font-size: 15px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.call-controls {
+  position: absolute;
+  bottom: 48px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+.call-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  font-size: 26px;
+  cursor: pointer;
+  transition: filter var(--t-fast), opacity var(--t-fast);
+}
+
+.call-btn:hover {
+  filter: brightness(1.1);
+}
+
+.call-btn.small {
+  width: 52px;
+  height: 52px;
+  font-size: 21px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.call-btn.toggled {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.call-btn.accept {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.call-btn.decline {
+  background: #e53935;
+  color: #fff;
+}
+
 /* ---- Уведомления уровня аккаунта (вход/новое устройство) ---- */
 .account-notices {
   position: fixed;

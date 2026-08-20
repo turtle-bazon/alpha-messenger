@@ -40,7 +40,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, videoPosterFrame, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -177,6 +177,7 @@ export function Conversation({
   inputRef,
   onBack,
   onShowProfile,
+  onCall,
   onChatUpdated,
   onChatRemoved,
 }: {
@@ -189,6 +190,7 @@ export function Conversation({
   inputRef: React.RefObject<HTMLDivElement>;
   onBack: () => void;
   onShowProfile: (userId: string) => void;
+  onCall?: (peerId: string, video: boolean) => void;
   onChatUpdated: (chat: Chat) => void;
   onChatRemoved: (chatId: string) => void;
 }): JSX.Element {
@@ -1352,6 +1354,31 @@ export function Conversation({
             )}
           </span>
         </button>
+        {!isGroup && onCall && (() => {
+          const other = chat.participants.find((p) => p.userId !== myId);
+          return other ? (
+            <span className="conv-call-actions">
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Аудиозвонок"
+                data-testid="call-audio-btn"
+                onClick={() => onCall(other.userId, false)}
+              >
+                <IconPhone />
+              </button>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Видеозвонок"
+                data-testid="call-video-btn"
+                onClick={() => onCall(other.userId, true)}
+              >
+                <IconVideoCam />
+              </button>
+            </span>
+          ) : null;
+        })()}
         {typingUsers.size > 0 && (
           <span className="conv-typing" data-testid="typing-indicator">
             {formatTypingText(typingUsers)}

@@ -165,6 +165,11 @@ export class WsClient {
     this.send({ type: 'read', chatId, upToMessageId });
   }
 
+  // Call signaling (#81): opaque payload (offer/answer/ice/hangup) to a peer.
+  sendCallSignal(toUserId: string, data: Record<string, unknown>): void {
+    this.send({ type: 'call', to: toUserId, data });
+  }
+
   private send(obj: unknown): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(obj));

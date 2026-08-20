@@ -165,6 +165,9 @@ interface ClientMessage {
   upToMessageId?: unknown;
   draft?: string;
   deviceId?: string;
+  // Call signaling (#81): recipient and opaque payload (offer/answer/ice/hangup).
+  to?: unknown;
+  data?: unknown;
 }
 
 export async function wsRoutes(app: FastifyInstance): Promise<void> {
@@ -251,6 +254,24 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
         ) {
           if (await isMember(msg.chatId, conn.userId)) {
             await markRead(conn.userId, msg.chatId, String(msg.upToMessageId));
+          }
+        } else if (msg.type === 'call' && typeof msg.to === 'string') {
+          // Call signaling relay (#81). Transient: only to devices connected
+          // right now. The sender and recipient must share at least one chat —
+          // this prevents signaling to arbitrary users.
+          const shared = await pool.query(
+            `SELECT 1
+               FROM chat_members a
+               JOIN chat_members b ON b.chat_id = a.chat_id
+              WHERE a.user_id = $1 AND b.user_id = $2
+              LIMIT 1`,
+            [conn.userId, msg.to],
+          );
+          if (shared.rowCount && msg.data && typeof msg.data === 'object') {
+            sendTransient(msg.to, {
+              type: 'call',
+              payload: { from: conn.userId, data: msg.data },
+            });
           }
         }
       })();

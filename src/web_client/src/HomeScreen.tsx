@@ -21,6 +21,8 @@ import { UserProfileDialog } from './chats/UserProfileDialog';
 import { SettingsScreen } from './SettingsScreen';
 import { IconMenu, IconBell } from './util/icons';
 import { useTyping } from './chats/useTyping';
+import { useCall } from './chats/useCall';
+import { CallOverlay } from './chats/CallOverlay';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
@@ -76,6 +78,8 @@ export function HomeScreen({
   // Who is typing, per chat — single source for the chat list, conversation
   // header and members dialog (issue #27).
   const typingByChat = useTyping(ws, myId);
+  // Calls (#81): one manager for the whole app, overlay rendered above all.
+  const callCtl = useCall(ws);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
@@ -86,6 +90,16 @@ export function HomeScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   selectedRef.current = selectedId;
+
+  // Peer display name for the call overlay: look up the participant across
+  // all known chats (works for both outgoing and incoming calls).
+  const peerNameOf = (userId: string): string => {
+    for (const c of chats) {
+      const p = c.participants.find((x) => x.userId === userId);
+      if (p) return p.username;
+    }
+    return '—';
+  };
   // Up-to-date list for checks inside WS handlers (without restarting the
   // effect and without side effects in setState updaters).
   const chatsRef = useRef<Chat[]>([]);
@@ -753,6 +767,7 @@ export function HomeScreen({
             inputRef={inputRef}
             onBack={() => setSelectedId(null)}
             onShowProfile={onShowProfile}
+            onCall={(peerId, video) => void callCtl.startCall(peerId, video)}
             onChatUpdated={(updated) => {
               setChats((prev) =>
                 prev.map((c) => (c.chatId === updated.chatId ? updated : c)),
@@ -767,6 +782,19 @@ export function HomeScreen({
           <div className="conversation-empty">Выберите чат</div>
         )}
       </main>
+      {callCtl.call.phase !== 'idle' && (
+        <CallOverlay
+          call={callCtl.call}
+          peerName={peerNameOf(callCtl.call.peerId)}
+          remoteStream={callCtl.remoteStream}
+          localStream={callCtl.localStream}
+          onAccept={(v) => void callCtl.accept(v)}
+          onReject={callCtl.reject}
+          onHangup={callCtl.hangup}
+          onToggleMute={callCtl.toggleMute}
+          onToggleCamera={callCtl.toggleCamera}
+        />
+      )}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {profileUserId && (
         <UserProfileDialog
