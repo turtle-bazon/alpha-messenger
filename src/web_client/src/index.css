@@ -1310,6 +1310,50 @@ body {
   object-fit: contain;
 }
 
+/* Stage: image + annotation canvas exactly on top of it (#83). */
+.img-editor-stage {
+  position: relative;
+  flex: none;
+}
+
+.img-editor-stage img {
+  display: block;
+}
+
+.img-editor-canvas {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* Annotation toolbar: pen palette + undo/clear. */
+.img-editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.img-editor-tool-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.img-editor-color {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(127, 127, 127, 0.4);
+  cursor: pointer;
+  padding: 0;
+}
+
+.img-editor-color.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-weak, rgba(0, 128, 96, 0.25));
+}
+
 .img-editor-controls {
   display: flex;
   align-items: center;
@@ -2116,6 +2160,106 @@ body {
 .call-btn.decline {
   background: #e53935;
   color: #fff;
+}
+
+/* ---- Галерея медиа чата (#82) ---- */
+
+.gallery-backdrop {
+  z-index: 220;
+}
+
+.gallery-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 94vw);
+  height: min(560px, 86vh);
+  background: var(--bg);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.gallery-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.gallery-close {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  display: inline-flex;
+}
+
+.gallery-close:hover {
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--text);
+}
+
+.gallery-empty {
+  margin: auto;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.gallery-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 4px;
+  padding: 8px;
+}
+
+.gallery-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border: none;
+  padding: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-input);
+}
+
+.gallery-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-tile:hover img {
+  filter: brightness(1.08);
+}
+
+.gallery-tile-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-input);
+}
+
+.gallery-dur {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Уведомления уровня аккаунта (вход/новое устройство) ---- */

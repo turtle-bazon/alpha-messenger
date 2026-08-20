@@ -235,6 +235,95 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  // Media gallery of a chat (#82): image/video attachments from message history.
+  // The content envelope is base64 JSON (no encryption yet), so the server can
+  // decode it and filter by attachment kind — same as SSR channel pages.
+  app.get(
+    '/chats/:chatId/media',
+    { preHandler: authenticate },
+    async (req, reply) => {
+      const userId = req.user!.userId;
+      const { chatId } = req.params as { chatId: string };
+      if (!(await isMember(chatId, userId))) {
+        return reply.code(404).send({ error: 'not found' });
+      }
+
+      const q = req.query as { before?: string; limit?: string };
+      const before = q.before && /^\d+$/.test(q.before) ? q.before : null;
+      let limit = Number(q.limit ?? 60);
+      if (!Number.isFinite(limit) || limit < 1) limit = 60;
+      if (limit > 100) limit = 100;
+
+      type MediaItem = {
+        messageId: string;
+        ts: string;
+        att: Record<string, unknown>;
+      };
+      const items: MediaItem[] = [];
+      let cursor = before;
+      let hasMore = false;
+      let lastScanned: string | null = null;
+
+      // Scan candidate pages (messages with blobs only), decode ciphertext,
+      // collect until `limit` media items or history exhausted. Bounded loop.
+      for (let page = 0; page < 6 && items.length < limit; page++) {
+        const res = await pool.query(
+          `SELECT m.message_id, m.ciphertext, m.created_at
+             FROM messages m
+            WHERE m.chat_id = $1
+              AND m.deleted = false
+              AND EXISTS (SELECT 1 FROM message_blobs mb WHERE mb.message_id = m.message_id)
+              AND ($2::bigint IS NULL OR m.message_id < $2::bigint)
+            ORDER BY m.message_id DESC
+            LIMIT 200`,
+          [chatId, cursor],
+        );
+        if (res.rowCount === 0) break;
+        for (const r of res.rows) {
+          lastScanned = String(r.message_id);
+          if (items.length >= limit) continue;
+          try {
+            const json = JSON.parse(
+              Buffer.from(r.ciphertext as Buffer).toString('utf-8'),
+            ) as { t?: string; atts?: Array<Record<string, unknown>> };
+            if (!json || json.t !== 'msg' || !Array.isArray(json.atts)) continue;
+            for (const a of json.atts) {
+              if (
+                (a.k === 'image' || a.k === 'video') &&
+                typeof a.blob === 'string' &&
+                items.length < limit
+              ) {
+                items.push({
+                  messageId: String(r.message_id),
+                  ts: r.created_at.toISOString(),
+                  att: a,
+                });
+              }
+            }
+          } catch {
+            // Undecodable content — skip.
+          }
+        }
+        cursor = lastScanned;
+        if (res.rowCount! < 200) break;
+      }
+      // Is there anything older left for the next page?
+      if (cursor) {
+        const more = await pool.query(
+          `SELECT 1 FROM messages m
+            WHERE m.chat_id = $1 AND m.message_id < $2::bigint
+              AND m.deleted = false
+              AND EXISTS (SELECT 1 FROM message_blobs mb WHERE mb.message_id = m.message_id)
+            LIMIT 1`,
+          [chatId, cursor],
+        );
+        hasMore = (more.rowCount ?? 0) > 0;
+      }
+
+      return reply.send({ items, hasMore, nextBefore: hasMore ? cursor : null });
+    },
+  );
+
   app.patch(
     '/messages/:messageId',
     { preHandler: authenticate },

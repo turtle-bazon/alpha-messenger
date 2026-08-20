@@ -40,7 +40,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, videoPosterFrame, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam, IconImage } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -50,6 +50,7 @@ import { MediaPanel } from './MediaPanel';
 import { MentionPopup, getFilteredParticipants } from './MentionPopup';
 import { renderMessageText } from '../util/mentions';
 import { MediaViewer } from './MediaViewer';
+import { MediaGallery } from './MediaGallery';
 import { VoiceBubble, type VoiceBubbleHandle } from './VoiceBubble';
 import { MembersDialog } from './MembersDialog';
 import { GroupInfoDialog } from './GroupInfoDialog';
@@ -197,6 +198,8 @@ export function Conversation({
   const chatId = chat.chatId;
   const [membersOpen, setMembersOpen] = useState(false);
   const [groupInfoOpen, setGroupInfoOpen] = useState(false);
+  // Chat media gallery (#82).
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [messages, setMessages] = useState<MsgVM[]>([]);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -1379,6 +1382,15 @@ export function Conversation({
             </span>
           ) : null;
         })()}
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Медиа чата"
+          data-testid="gallery-btn"
+          onClick={() => setGalleryOpen(true)}
+        >
+          <IconImage />
+        </button>
         {typingUsers.size > 0 && (
           <span className="conv-typing" data-testid="typing-indicator">
             {formatTypingText(typingUsers)}
@@ -2126,6 +2138,22 @@ export function Conversation({
           onSend={(rec) => void onVideoRecorded(rec)}
           onClose={() => setVideoRecKey(0)}
           onReRecord={() => setVideoRecKey((k) => k + 1)}
+        />
+      )}
+      {galleryOpen && (
+        <MediaGallery
+          chatId={chatId}
+          onClose={() => setGalleryOpen(false)}
+          onOpen={(item) => {
+            const att = item.att as { k?: string; blob?: string };
+            if (!att.blob) return;
+            setGalleryOpen(false);
+            setViewer({
+              blobId: att.blob,
+              caption: '',
+              kind: att.k === 'video' ? 'video' : 'image',
+            });
+          }}
         />
       )}
       {viewer && (

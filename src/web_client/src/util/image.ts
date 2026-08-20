@@ -16,6 +16,39 @@ export interface PreparedImage {
   height: number;
 }
 
+// Freehand annotation stroke (#83). Points are normalized to the ROTATED view
+// (0..1 of the final canvas), so they survive resize and are drawn 1:1 at any
+// output resolution. width is also normalized (fraction of canvas width).
+export interface Stroke {
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+}
+
+// Draws strokes onto a finished canvas (normalized coords → pixels).
+function drawStrokes(
+  canvas: HTMLCanvasElement,
+  strokes: Stroke[],
+): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || strokes.length === 0) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const s of strokes) {
+    if (s.points.length < 2) continue;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = Math.max(2, s.width * w);
+    ctx.beginPath();
+    ctx.moveTo(s.points[0].x * w, s.points[0].y * h);
+    for (let i = 1; i < s.points.length; i++) {
+      ctx.lineTo(s.points[i].x * w, s.points[i].y * h);
+    }
+    ctx.stroke();
+  }
+}
+
 // Draws the image onto a canvas with rotation (0/90/180/270) and scaling so
 // the longer side doesn't exceed maxDim.
 function renderCanvas(
@@ -84,15 +117,19 @@ export async function imageBytesToThumb(
   }
 }
 
-// Prepares the full-size blob and thumbnail from a rendered <img>, honoring rotation.
+// Prepares the full-size blob and thumbnail from a rendered <img>, honoring
+// rotation and optional annotation strokes (#83) drawn on top.
 export async function prepareImage(
   img: HTMLImageElement,
   rotation: number,
+  strokes: Stroke[] = [],
 ): Promise<PreparedImage> {
   const fullCanvas = renderCanvas(img, rotation, FULL_MAX_DIM);
+  drawStrokes(fullCanvas, strokes);
   const full = await toJpegBlob(fullCanvas, FULL_QUALITY);
 
   const thumbCanvas = renderCanvas(img, rotation, THUMB_MAX_DIM);
+  drawStrokes(thumbCanvas, strokes);
   const url = thumbCanvas.toDataURL('image/jpeg', THUMB_QUALITY);
   const thumb = url.slice(url.indexOf(',') + 1);
 

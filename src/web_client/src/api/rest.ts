@@ -165,6 +165,31 @@ export interface SendResult {
   replyToMessageId: string | null;
 }
 
+// Media gallery of a chat (#82): image/video attachments from history.
+export interface MediaItem {
+  messageId: string;
+  ts: string;
+  // Raw attachment envelope (k:'image'|'video' with thumb/duration inside).
+  att: Record<string, unknown>;
+}
+
+export interface MediaPage {
+  items: MediaItem[];
+  hasMore: boolean;
+  nextBefore: string | null;
+}
+
+export function getChatMedia(
+  chatId: string,
+  opts: { before?: string; limit?: number } = {},
+): Promise<MediaPage> {
+  const params = new URLSearchParams();
+  if (opts.before) params.set('before', opts.before);
+  if (opts.limit) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+  return rest.get<MediaPage>(`/chats/${chatId}/media${qs ? `?${qs}` : ''}`);
+}
+
 export function sendMessage(
   chatId: string,
   clientMessageId: string,
