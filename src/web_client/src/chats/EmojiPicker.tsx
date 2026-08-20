@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Ключевые слова для поиска эмодзи
+// Keywords for emoji search
 const EMOJI_KEYWORDS: Record<string, string> = {};
 
 function kw(emoji: string, words: string): void {
   EMOJI_KEYWORDS[emoji] = words.toLowerCase();
 }
 
-// Смайлики
+// Smileys
 kw('😀','смех улыбка весело радость');
 kw('😃','улыбка радость');
 kw('😄','смех радость весело');
@@ -93,7 +93,7 @@ kw('😓','пот');
 kw('😩','усталость');
 kw('😫','истощение');
 
-// Жесты
+// Gestures
 kw('👋','привет waving');
 kw('🤚','ладонь');
 kw('✋','стоп ладонь');
@@ -121,7 +121,7 @@ kw('🤲','ладони вместе');
 kw('🤝','рукопожатие');
 kw('🙏','мольба благодарность');
 
-// Сердца и любовь
+// Hearts and love
 kw('❤️','сердце любовь');
 kw('🧡','оранжевое сердце');
 kw('💛','жёлтое сердце');
@@ -141,7 +141,7 @@ kw('💖','блестящее сердце');
 kw('💘','сердце стрела');
 kw('💝','сердце с бантом');
 
-// Природа
+// Nature
 kw('⭐','звезда');
 kw('🌟','звезда сияющая');
 kw('✨','блеск искры');
@@ -154,7 +154,7 @@ kw('☀️','солнце');
 kw('🌙','луна');
 kw('⭐','звезда');
 
-// Животные
+// Animals
 kw('🐶','собака');
 kw('🐱','кошка');
 kw('🐭','мышь');
@@ -189,7 +189,7 @@ kw('🐛','гусеница');
 kw('🦋','бабочка');
 kw('🐌','улитка');
 
-// Еда
+// Food
 kw('🍏','яблоко зелёное');
 kw('🍎','яблоко красное');
 kw('🍐','груша');
@@ -227,7 +227,7 @@ kw('🍺','пиво');
 kw('🍷','вино');
 kw('🥤','напиток');
 
-// Активности
+// Activities
 kw('⚽','футбол');
 kw('🏀','баскетбол');
 kw('🏈','американский футбол');
@@ -259,7 +259,7 @@ kw('🥁','барабан');
 kw('🎺','труба');
 kw('🎻','скрипка');
 
-// Объекты
+// Objects
 kw('📱','телефон');
 kw('💻','компьютер');
 kw('⌨️','клавиатура');
@@ -290,7 +290,7 @@ kw('⏰','будильник');
 kw('🧭','компас');
 kw('🗑️','мусорка');
 
-// Транспорт
+// Transport
 kw('🚗','машина');
 kw('🚕','такси');
 kw('🚌','автобус');
@@ -302,7 +302,7 @@ kw('🛸','НЛО');
 kw('🚂','поезд');
 kw('🚢','корабль');
 
-// Категории общие
+// Common categories
 kw('👍','лайк одобрение');
 kw('👎','дизлайк');
 kw('💯','сто баллов');
@@ -372,7 +372,7 @@ const CATEGORIES = [
   ]},
 ];
 
-// Хранение недавних эмодзи
+// Recent emojis storage
 const RECENT_KEY = 'alpha_recent_emojis';
 const MAX_RECENT = 24;
 
@@ -395,7 +395,7 @@ interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
   onClose: () => void;
   textareaRef?: React.RefObject<HTMLDivElement>;
-  /** Если false — не регистрирует свой обработчик закрытия (внешний панель сам закрывает). */
+  /** If false — doesn't register its own close handler (the parent panel handles closing). */
   standalone?: boolean;
 }
 
@@ -404,7 +404,7 @@ export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true 
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
-  // Закрытие при клике вне + возврат фокуса в textarea
+  // Close on outside click + return focus to the textarea
   useEffect(() => {
     if (!standalone) return;
     function handleClick(e: MouseEvent): void {
@@ -429,7 +429,7 @@ export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true 
 
   const recent = getRecent();
 
-  // Фильтрация по поиску
+  // Search filtering
   const filtered = search
     ? CATEGORIES.flatMap((c) => c.emojis).filter((emoji) => {
         const kw = EMOJI_KEYWORDS[emoji];

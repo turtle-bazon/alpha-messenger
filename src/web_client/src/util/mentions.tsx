@@ -1,10 +1,10 @@
 import React from 'react';
 import { renderMarkdown } from './markdown';
 
-// ─── Обратная совместимость ──────────────────────────────────────────
+// ─── Backward compatibility ──────────────────────────────────────────
 
-// Старая функция — теперь обёртка над renderMarkdown.
-// Оставлена для совместимости с существующими вызовами.
+// Legacy function — now a wrapper over renderMarkdown.
+// Kept for compatibility with existing callers.
 export function renderMentionText(
   text: string,
   usernames: Set<string>,
@@ -13,10 +13,10 @@ export function renderMentionText(
   return renderMarkdown(text, usernames, onMentionClick);
 }
 
-// ─── Основной экспорт ────────────────────────────────────────────────
+// ─── Main export ─────────────────────────────────────────────────────
 
-// Рендер markdown + ссылки + @mentions.
-// Поддерживает: **bold**, _italic_, ~~strike~~, `code`, [text](url),
-// автодетект URL, @mentions.
-// Code-spans защищены от парсинга внутри.
+// Markdown rendering + links + @mentions.
+// Supports: **bold**, _italic_, ~~strike~~, `code`, [text](url),
+// autodetected URLs, @mentions.
+// Code-spans are protected from parsing inside.
 export { renderMarkdown as renderMessageText } from './markdown';

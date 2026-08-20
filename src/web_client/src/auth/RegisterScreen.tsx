@@ -3,8 +3,8 @@ import { ApiError, register } from '../api/rest';
 import { getDeviceId, setSession } from '../api/session';
 import { PasswordInput } from './PasswordInput';
 
-// Регистрация по инвайт-ссылке (/register?invite=CODE). Без валидного кода
-// саморегистрации нет (см. architecture.md) — поле invite приходит из URL.
+// Registration via invite link (/register?invite=CODE). Without a valid code
+// there is no self-registration (see architecture.md) — invite comes from the URL.
 export function RegisterScreen({
   invite,
   onAuthed,

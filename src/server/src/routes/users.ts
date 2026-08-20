@@ -3,7 +3,7 @@ import { pool } from '../db';
 import { authenticate } from '../auth';
 
 export async function userRoutes(app: FastifyInstance): Promise<void> {
-  // GET /users?search= — поиск пользователей по username (начало совпадения).
+  // GET /users?search= — search users by username (prefix match).
   app.get('/users', { preHandler: authenticate }, async (req, reply) => {
     const { search } = req.query as { search?: string };
     if (!search || search.trim().length === 0) {
@@ -28,7 +28,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // GET /users/:userId — публичный профиль пользователя.
+  // GET /users/:userId — public user profile.
   app.get('/users/:userId', { preHandler: authenticate }, async (req, reply) => {
     const { userId } = req.params as { userId: string };
     const res = await pool.query(
@@ -48,9 +48,9 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // --- Заметки (личные, видны только автору) ---
+  // --- Notes (private, visible only to the author) ---
 
-  // GET /me/notes/:targetId — получить свою заметку о пользователе.
+  // GET /me/notes/:targetId — get my note about a user.
   app.get('/me/notes/:targetId', { preHandler: authenticate }, async (req, reply) => {
     const authorId = req.user!.userId;
     const { targetId } = req.params as { targetId: string };
@@ -67,7 +67,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     return { note: { text: r.note, createdAt: r.created_at, updatedAt: r.updated_at } };
   });
 
-  // PUT /me/notes/:targetId — создать или обновить заметку.
+  // PUT /me/notes/:targetId — create or update a note.
   app.put('/me/notes/:targetId', { preHandler: authenticate }, async (req) => {
     const authorId = req.user!.userId;
     const { targetId } = req.params as { targetId: string };
@@ -75,7 +75,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     const note = (text ?? '').trim();
 
     if (note === '') {
-      // Пустая заметка = удаление.
+      // Empty note = deletion.
       await pool.query(
         `DELETE FROM user_notes WHERE author_id = $1 AND target_id = $2`,
         [authorId, targetId],
@@ -95,7 +95,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     return { note: { text: note, createdAt: r.created_at, updatedAt: r.updated_at } };
   });
 
-  // DELETE /me/notes/:targetId — удалить заметку.
+  // DELETE /me/notes/:targetId — delete a note.
   app.delete('/me/notes/:targetId', { preHandler: authenticate }, async (req) => {
     const authorId = req.user!.userId;
     const { targetId } = req.params as { targetId: string };

@@ -24,8 +24,8 @@ export interface ChatView {
   updatedAt: string;
 }
 
-// Единый вид чата для POST /chats, GET /chats, GET /chats/{id}.
-// Предполагается, что userId — участник чата.
+// Single chat view for POST /chats, GET /chats, GET /chats/{id}.
+// Assumes userId is a chat member.
 export async function loadChat(
   db: Db,
   chatId: string,
@@ -45,14 +45,14 @@ export async function loadChat(
     [chatId],
   );
 
-  // Роль текущего пользователя в чате.
+  // Current user's role in the chat.
   const myRole = await db.query(
     'SELECT role FROM chat_members WHERE chat_id = $1 AND user_id = $2',
     [chatId, userId],
   );
   const role: string = myRole.rows[0]?.role ?? 'member';
 
-  // Количество подписчиков/участников.
+  // Subscriber/participant count.
   const subCount = await db.query(
     'SELECT count(*)::int AS c FROM chat_members WHERE chat_id = $1',
     [chatId],
@@ -79,8 +79,8 @@ export async function loadChat(
     [chatId, userId, lastReadId],
   );
 
-  // Непрочитанные ответы на мои сообщения: сообщения, которые отвечают на
-  // мои сообщения и ещё не прочитаны мной.
+  // Unread replies to my messages: messages replying to my messages
+  // that I haven't read yet.
   const unreadMentionsRes = await db.query(
     `SELECT count(*)::int AS c FROM messages m
      WHERE m.chat_id = $1 AND m.deleted = false AND m.sender_id <> $2
@@ -93,8 +93,8 @@ export async function loadChat(
     [chatId, userId, lastReadId],
   );
 
-  // До какого message_id нас прочитали другие участники (берём максимум —
-  // для direct это собеседник, для группы достаточно одного прочитавшего).
+  // Up to which message_id others have read us (take the max — for direct chats
+  // that's the peer; in a group one reader suffices).
   const peerRead = await db.query(
     `SELECT COALESCE(MAX(last_read_message_id), 0)::text AS m
        FROM chat_members WHERE chat_id = $1 AND user_id <> $2`,

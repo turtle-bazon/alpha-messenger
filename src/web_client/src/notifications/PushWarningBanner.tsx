@@ -3,8 +3,8 @@ import { shouldShowPushWarning } from './push';
 import { IconX } from '../util/icons';
 
 /**
- * Баннер-предупреждение о недоступности push-уведомлений.
- * Показывается на Android если нет ни FCM, ни UnifiedPush.
+ * Warning banner about push notifications being unavailable.
+ * Shown on Android when neither FCM nor UnifiedPush is available.
  */
 export function PushWarningBanner(): JSX.Element | null {
   const [visible, setVisible] = useState(false);
@@ -12,7 +12,7 @@ export function PushWarningBanner(): JSX.Element | null {
 
   useEffect(() => {
     setVisible(shouldShowPushWarning());
-    // Слушаем событие от android-setup: initAndroid() ставит флаг позже первого рендера
+    // Listen for the android-setup event: initAndroid() sets the flag after first render
     const handler = () => setVisible(shouldShowPushWarning());
     window.addEventListener('push-warning-changed', handler);
     return () => window.removeEventListener('push-warning-changed', handler);
@@ -71,7 +71,7 @@ export function PushWarningBanner(): JSX.Element | null {
               type="button"
               className="btn-primary"
               onClick={() => {
-                // Перерегистрация — вызывается из android_client если доступен
+                // Re-registration — invoked from android_client when available
                 window.location.reload();
               }}
             >

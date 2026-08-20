@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { pool } from '../db';
 
-// Decode ciphertext (base64 JSON) to plaintext for rendering.
+// Decode ciphertext (base64 JSON) into text for rendering.
 function decodeCiphertext(b64: string): string {
   try {
     const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf-8'));
@@ -215,7 +215,7 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
     const { chat_id: chatId, title, description, username } = chat.rows[0];
 
-    // Private channels: no SSR page, only chatId links work inside client.
+    // Private channels: no SSR page, the chatId link works only in the client.
     if (!username) return reply.code(404).send('Private channel');
 
     const label = title ?? username;
@@ -247,7 +247,7 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(html);
   });
 
-  // Single post + comments: /channel/:id/:postId
+  // Single post with comments: /channel/:id/:postId
   app.get('/channel/:id/:postId', async (req, reply) => {
     const { id, postId } = req.params as { id: string; postId: string };
     if (!/^\d+$/.test(postId)) return reply.code(404).send('Not found');

@@ -1,13 +1,13 @@
 import { pool } from './db';
 
-// Пуш — ортогональный транспорту канал «разбудить клиента», без содержимого
-// сообщения (см. doc/architecture.md). Получив wake-up, клиент переоткрывает WS
-// и досинхронизируется через hello/lastSeq — сам пуш ничего из outbox не несёт.
+// Push is a transport-independent "wake up the client" channel, without message
+// content (see doc/architecture.md). On wake-up the client reopens the WS and
+// re-syncs via hello/lastSeq — the push itself carries nothing from the outbox.
 
-// --- Конфигурация ---
+// --- Configuration ---
 
 const FCM_PROJECT_ID = process.env.FCM_PROJECT_ID ?? '';
-const FCM_SERVICE_ACCOUNT_KEY = process.env.FCM_SERVICE_ACCOUNT_KEY ?? ''; // JSON ключ
+const FCM_SERVICE_ACCOUNT_KEY = process.env.FCM_SERVICE_ACCOUNT_KEY ?? ''; // JSON key
 
 // --- FCM HTTP v1 API ---
 
@@ -50,7 +50,7 @@ async function sendFCM(token: string, chatId?: string): Promise<boolean> {
     });
 
     if (res.status === 404 || res.status === 410) {
-      // Токен недействителен — подписка будет удалена вызывающей стороной
+      // Token invalid — subscription will be removed by the caller
       return false;
     }
 
@@ -66,13 +66,13 @@ async function sendFCM(token: string, chatId?: string): Promise<boolean> {
   }
 }
 
-// Получение access token для FCM через сервисный аккаунт
+// Get FCM access token via service account
 async function getFCMAccessToken(): Promise<string | null> {
   try {
     if (!FCM_SERVICE_ACCOUNT_KEY) return null;
     const key = JSON.parse(FCM_SERVICE_ACCOUNT_KEY);
 
-    // JWT для Google OAuth2
+    // JWT for Google OAuth2
     const now = Math.floor(Date.now() / 1000);
     const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
     const payload = Buffer.from(JSON.stringify({
@@ -85,14 +85,14 @@ async function getFCMAccessToken(): Promise<string | null> {
 
     const unsignedJwt = `${header}.${payload}`;
 
-    // Подпись RSA-SHA256
+    // RSA-SHA256 signature
     const crypto = await import('node:crypto');
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(unsignedJwt);
     const signature = sign.sign(key.private_key, 'base64url');
     const jwt = `${unsignedJwt}.${signature}`;
 
-    // Обмен JWT на access token
+    // Exchange JWT for access token
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -113,8 +113,8 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boole
   try {
     console.log(`UP: sending to ${endpoint}`);
     
-    // Формат сообщения для ntfy: JSON или простой текст
-    // Используем JSON для передачи chatId
+    // Message format for ntfy: JSON or plain text
+    // Use JSON to carry chatId
     const message = chatId
       ? JSON.stringify({ type: 'wake-up', chatId })
       : 'wake-up';
@@ -123,7 +123,7 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boole
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-UnifiedPush': '1',  // Отключаем Firebase для UnifiedPush
+        'X-UnifiedPush': '1',  // Disable Firebase for UnifiedPush
       },
       body: message,
     });
@@ -145,7 +145,7 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boole
   }
 }
 
-// --- Основная функция ---
+// --- Main function ---
 
 export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, chatId?: string): Promise<number> {
   const { rows } = await pool.query(
@@ -157,7 +157,7 @@ export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, 
     [userId],
   );
 
-  // Фильтруем: пушим только тем устройствам, которых нет среди онлайн.
+  // Filter: push only to devices not among the online ones.
   const toNotify = onlineDeviceIds
     ? rows.filter((r) => !onlineDeviceIds.has(r.device_id))
     : rows;

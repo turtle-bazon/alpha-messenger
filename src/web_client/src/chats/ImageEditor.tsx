@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { prepareImage, type PreparedImage } from '../util/image';
 
-// Простой редактор изображения перед отправкой (v1): превью, поворот на 90°
-// и подпись. Кроп/разметка — позже. На выходе — подготовленный PreparedImage
-// (полноразмерный блоб + thumbnail) и подпись; загрузку блоба и отправку делает
-// вызывающий (см. Conversation).
+// Simple image editor before sending (v1): preview, 90° rotation
+// and caption. Crop/annotation — later. Output: a prepared PreparedImage
+// (full-size blob + thumbnail) and the caption; blob upload and sending are
+// done by the caller (see Conversation).
 //
-// Источник — data-URL через FileReader (без object URL: его revoke в cleanup
-// конфликтует с двойным прогоном эффектов в StrictMode). Размеры берём с уже
-// отрисованного <img>, поворот применяется при кодировании в canvas.
+// The source is a data-URL via FileReader (no object URL: revoking it in cleanup
+// conflicts with the double effect run in StrictMode). Dimensions are taken from
+// the already-rendered <img>; rotation is applied when encoding to canvas.
 export function ImageEditor({
   file,
   onCancel,
@@ -28,14 +28,14 @@ export function ImageEditor({
   const imgRef = useRef<HTMLImageElement>(null);
   const captionRef = useRef<HTMLInputElement>(null);
 
-  // Фокус на поле подписи при открытии (#57)
+  // Focus the caption field on open (#57)
   useEffect(() => {
     captionRef.current?.focus();
   }, []);
 
-  // Возврат фокуса при закрытии (#57).
-  // Хранить актуальную ссылку через ref, чтобы cleanup не перезапускался
-  // при каждом ререндере родителя из-за inline onClose.
+  // Return focus on close (#57).
+  // Keep the current reference in a ref so cleanup doesn't re-run
+  // on every parent rerender caused by the inline onClose.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
@@ -53,7 +53,7 @@ export function ImageEditor({
     return () => {
       alive = false;
     };
-    // onCancel стабилен на время жизни модалки
+    // onCancel is stable for the modal's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 
@@ -65,7 +65,7 @@ export function ImageEditor({
       const prepared = await prepareImage(el, rotation);
       onSend(prepared, caption.trim());
     } catch {
-      setBusy(false); // дать повторить; модалку не закрываем
+      setBusy(false); // let the user retry; keep the modal open
     }
   }
 

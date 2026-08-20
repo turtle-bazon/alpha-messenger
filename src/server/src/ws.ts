@@ -16,19 +16,19 @@ interface Conn {
   pending: boolean;
 }
 
-// Подключённые сокеты по аккаунту (одно WS-соединение на устройство, но
-// устройств у аккаунта может быть несколько).
+// Connected sockets by account (one WS connection per device, but an
+// account may have several devices).
 const byUser = new Map<string, Set<Conn>>();
 
-// Онлайн = есть хотя бы один живой сокет аккаунта (in-process; одна реплика
-// сервера). Бинарный статус, без «был в сети N назад».
+// Online = at least one live socket for the account (in-process; single server
+// replica). Binary status, no "last seen N ago".
 export function isOnline(userId: string): boolean {
   const set = byUser.get(userId);
   return !!set && set.size > 0;
 }
 
-// Кому видна смена статуса userId — со-участникам (всем, с кем он делит хотя бы
-// один чат). Транзиентно (мимо outbox) рассылаем тем из них, кто сейчас онлайн.
+// Who can see userId's status change — co-members (everyone sharing at least
+// one chat with them). Sent transiently (bypassing the outbox) to those online now.
 async function broadcastPresence(userId: string, online: boolean): Promise<void> {
   const res = await pool.query(
     `SELECT DISTINCT m2.user_id FROM chat_members m1
@@ -71,8 +71,8 @@ function unregister(conn: Conn): void {
   }
 }
 
-// Доставляет получателю все события из outbox с seq > conn.lastSeq.
-// Тот же путь используется и для replay по hello, и для живого fan-out.
+// Delivers all outbox events with seq > conn.lastSeq to the recipient.
+// The same path serves both replay after hello and live fan-out.
 async function drain(conn: Conn): Promise<void> {
   if (conn.draining) {
     conn.pending = true;
@@ -114,8 +114,8 @@ function notify(userId: string, chatId?: string): void {
   if (set && set.size > 0) {
     for (const conn of set) void drain(conn);
   }
-  // Пушим только оффлайн-устройствам (тем, у кого нет живого WS).
-  // Устройства с WS уже получат сообщение через drain.
+  // Push only offline devices (those without a live WS).
+  // Devices with WS will already receive the message via drain.
   const onlineDeviceIds = new Set<string>();
   if (set) {
     for (const conn of set) {
@@ -127,7 +127,7 @@ function notify(userId: string, chatId?: string): void {
   );
 }
 
-// Транзиентная отправка (typing, draft) — мимо outbox, только подключённым сейчас.
+// Transient send (typing, draft) — bypasses the outbox, only to currently connected clients.
 export function sendTransient(userId: string, obj: unknown): void {
   const set = byUser.get(userId);
   if (!set) return;
@@ -135,7 +135,7 @@ export function sendTransient(userId: string, obj: unknown): void {
   for (const conn of set) conn.send(data);
 }
 
-// Отдельное долгоживущее соединение под LISTEN; будит доставку на каждый commit.
+// Separate long-lived LISTEN connection; wakes delivery on every commit.
 export function startEventListener(): Client {
   const client = new Client({ connectionString: config.databaseUrl });
   client.on('notification', (msg) => {
@@ -144,7 +144,7 @@ export function startEventListener(): Client {
         const data = JSON.parse(msg.payload);
         notify(data.userId, data.chatId);
       } catch {
-        // Backward compat: plain userId string
+        // Backward compatibility: bare userId string
         notify(msg.payload);
       }
     }
@@ -171,8 +171,8 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
   await app.register(websocketPlugin);
 
   app.get('/ws', { websocket: true }, (raw, _req) => {
-    // защита от разницы версий @fastify/websocket: socket может быть сам ws
-    // либо лежать в .socket
+    // guard against @fastify/websocket version differences: socket may be the ws
+    // itself or nested in .socket
     const ws = (raw as { socket?: unknown }).socket ?? raw;
     const sock = ws as {
       send: (d: string) => void;
@@ -192,7 +192,7 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
         }
 
         if (!conn) {
-          // первое сообщение обязано быть hello с токеном
+          // first message must be hello with a token
           if (msg.type !== 'hello' || typeof msg.token !== 'string') {
             sock.close();
             return;
@@ -217,9 +217,9 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
           register(conn);
           void touchActivity(conn.userId);
           await drain(conn);
-          // Граница реплея: всё выше — история из outbox, всё ниже — live.
-          // Управляющий маркер без seq (не событие outbox): клиент по нему
-          // отделяет «уже было» от «происходит сейчас».
+          // Replay boundary: everything above is history from the outbox, below is live.
+          // Control marker without seq (not an outbox event): the client uses it to
+          // separate "already happened" from "happening now".
           conn.send(
             JSON.stringify({
               type: 'synced',

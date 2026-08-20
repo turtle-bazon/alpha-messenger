@@ -9,25 +9,25 @@ import {
   setNotifSound,
 } from '../util/notifications';
 
-// Кнопка-колокольчик в шапке + выпадающее меню с настройками уведомлений
-// (известная проблема №8): тумблеры звука и браузерных уведомлений. Включение
-// браузерных запрашивает системное разрешение; при отказе тумблер остаётся
-// выключенным, показываем подсказку.
+// Bell button in the header + dropdown menu with notification settings
+// (known issue #8): sound and browser notification toggles. Enabling browser
+// notifications requests system permission; on denial the toggle stays off
+// and we show a hint.
 export function NotificationSettings(): JSX.Element {
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [perm, setPerm] = useState<NotificationPermission>(getPermission());
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  // Координаты меню (position: fixed). null — ещё не позиционировано (скрыто).
+  // Menu coordinates (position: fixed). null — not positioned yet (hidden).
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Позиционирование меню (известная проблема №11). Колокольчик — не самая
-  // правая кнопка шапки, поэтому меню фиксированной ширины, выровненное по его
-  // правому краю, вылезало за левую границу .app-shell (overflow: hidden) и
-  // обрезалось. Решение как в Telegram: меню — position: fixed (вырывается из
-  // overflow-контейнера), выравниваем по правому краю кнопки и поджимаем
-  // (clamp) в пределах вьюпорта, чтобы не обрезалось ни слева, ни справа.
+  // Menu positioning (known issue #11). The bell is not the rightmost header
+  // button, so a fixed-width menu aligned to its right edge used to stick out
+  // past the left edge of .app-shell (overflow: hidden) and get clipped.
+  // Telegram-like solution: the menu is position: fixed (escapes the overflow
+  // container), aligned to the button's right edge and clamped within the
+  // viewport so it isn't clipped on either side.
   useLayoutEffect(() => {
     if (!open || !rootRef.current || !menuRef.current) {
       setPos(null);
@@ -45,7 +45,7 @@ export function NotificationSettings(): JSX.Element {
     setPos({ top: btn.bottom + 6, left });
   }, [open]);
 
-  // Закрытие по клику вне меню и по Escape.
+  // Close on outside click and Escape.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent): void => {
@@ -70,19 +70,19 @@ export function NotificationSettings(): JSX.Element {
     setPrefs((p) => ({ ...p, sound: next }));
   }
 
-  // Браузерные попапы реально работают, только когда и настройка, и системное
-  // разрешение «за» — это нужно для иконки колокольчика (anyOn).
+  // Browser popups actually work only when both the setting and the system
+  // permission are on — needed for the bell icon (anyOn).
   const browserActive = prefs.browser && perm === 'granted';
-  // Что показывает тумблер. При granted — честное состояние (browserActive).
-  // При default — намерение пользователя (prefs.browser): разрешение ещё не
-  // запрошено, но настройка уже может быть включена (дефолт '1'). При denied —
-  // тоже prefs.browser (включён, но заблокирован, тумблер disabled, как в Telegram).
+  // What the toggle shows. When granted — the real state (browserActive).
+  // When default — user intent (prefs.browser): permission not yet requested
+  // but the setting may already be on (default '1'). When denied — also
+  // prefs.browser (on but blocked, toggle disabled, like Telegram).
   const browserChecked = perm === 'granted' ? browserActive : prefs.browser;
 
   async function toggleBrowser(): Promise<void> {
-    // Выключение — просто гасим настройку. Включение требует системного
-    // разрешения: если ещё не дано — запрашиваем и включаем только при granted.
-    // (При denied input disabled — сюда не попадаем.)
+    // Turning off just clears the setting. Turning on requires system
+    // permission: if not yet granted — request it and enable only when granted.
+    // (When denied the input is disabled — we never get here.)
     if (browserActive) {
       setNotifBrowser(false);
       setPrefs((p) => ({ ...p, browser: false }));
@@ -100,11 +100,11 @@ export function NotificationSettings(): JSX.Element {
   }
 
   function openMenu(): void {
-    // Перечитываем разрешение и настройки при открытии — они могли измениться
-    // мимо этого компонента: системное разрешение (смена в настройках браузера),
-    // а prefs.browser — модальный диалог запроса при входе (handleNotifAllow/
-    // Skip пишут в localStorage, но не в это состояние). Иначе тумблер показал бы
-    // устаревшее значение.
+    // Re-read permission and prefs on open — they may have changed outside this
+    // component: system permission (changed in browser settings), and
+    // prefs.browser via the request modal at login (handleNotifAllow/Skip write
+    // to localStorage but not this state). Otherwise the toggle would show a
+    // stale value.
     if (!open) {
       setPerm(getPermission());
       setPrefs(getNotifPrefs());

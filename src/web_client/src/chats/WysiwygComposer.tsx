@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 
-// ─── Markdown → HTML (для setMarkdown — restore draft) ──────────────
+// ─── Markdown → HTML (for setMarkdown — restore draft) ──────────────
 
 function markdownToHtml(md: string): string {
   let r = md;
@@ -15,7 +15,7 @@ function markdownToHtml(md: string): string {
   return r;
 }
 
-// ─── HTML → Markdown (для getMarkdown — send) ───────────────────────
+// ─── HTML → Markdown (for getMarkdown — send) ───────────────────────
 
 function htmlToMarkdown(html: string): string {
   const div = document.createElement('div');
@@ -38,7 +38,7 @@ function nodeToMd(node: Node): string {
     case 'br': return '\n';
     case 'div': case 'p': return ch + '\n';
     default: {
-      // <span style="text-decoration: line-through"> из execCommand('strikeThrough')
+      // <span style="text-decoration: line-through"> from execCommand('strikeThrough')
       const style = el.getAttribute('style') ?? '';
       if (/text-decoration\s*:\s*line-through/.test(style)) {
         return ch.trim() ? `~~${ch}~~` : '';
@@ -68,7 +68,7 @@ export interface WysiwygComposerProps {
   'data-testid'?: string;
 }
 
-// ─── Компонент ───────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────
 
 export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposerProps>(
   function WysiwygComposer(
@@ -102,8 +102,8 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       },
     }));
 
-    // Синхронизация извне (restore draft, clear after send).
-    // При фокусе — НЕ трогаем innerHTML.
+    // External sync (restore draft, clear after send).
+    // While focused — do NOT touch innerHTML.
     useEffect(() => {
       const el = divRef.current;
       if (!el) return;
@@ -115,18 +115,18 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       }
     }, [value, divRef]);
 
-    // Ввод текста — передаём plain text наружу (для @mention детекта,
-    // драфта и т.п.). Markdown конвертируется только при send.
+    // Text input — pass plain text outward (for @mention detection,
+    // drafts, etc.). Markdown is converted only on send.
     const handleInput = useCallback(() => {
       if (skipNextInputRef.current) { skipNextInputRef.current = false; return; }
       const el = divRef.current;
       if (!el) return;
-      // innerText сохраняет \n для <br>/<div>, но не порождает markdown-синтаксис.
+      // innerText preserves \n for <br>/<div>, but produces no markdown syntax.
       const text = el.innerText.replace(/\n+$/, '');
       onChange(text);
     }, [divRef, onChange]);
 
-    // Blur — синхронизируем markdown state (для draft, link preview, send button)
+    // Blur — sync the markdown state (for draft, link preview, send button)
     const handleBlur = useCallback(() => {
       const el = divRef.current;
       if (!el) return;
@@ -134,7 +134,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       onBlur?.();
     }, [divRef, onChange, onBlur]);
 
-    // Выделение текста — позиция для тулбара
+    // Text selection — position for the toolbar
     const checkSelection = useCallback(() => {
       if (!onSelect) return;
       const el = divRef.current;
@@ -148,7 +148,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       onSelect(preRange.toString().length, preRange.toString().length + range.toString().length);
     }, [divRef, onSelect]);
 
-    // Копирование — гарантируем rich text (HTML) в буфере
+    // Copy — put rich text (HTML) into the clipboard
     const handleCopy = useCallback((e: React.ClipboardEvent) => {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;

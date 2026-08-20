@@ -22,7 +22,7 @@ function getServerUrl(): string | null {
   if ((window as any).__ALPHA_CONFIG__?.serverUrl) return (window as any).__ALPHA_CONFIG__.serverUrl;
   const ls = localStorage.getItem('alpha.serverUrl');
   if (ls) return ls;
-  // Если грузим с сервера напрямую — URL уже в window.location.origin
+  // When loaded straight from the server — the URL is already window.location.origin
   const origin = window.location.origin;
   if (origin && origin !== 'null' && !origin.startsWith('file:')) return origin;
   return null;
@@ -37,13 +37,13 @@ export function App(): JSX.Element {
     initPlatform();
   }, []);
 
-  // На Android: повторный запуск push-регистрации после логина
-  // (initPlatform при первом рендере мог пропустить —用户 ещё не был залогинен).
+  // On Android: re-run push registration after login
+  // (initPlatform at first render may have been skipped — the user wasn't logged in yet).
   useEffect(() => {
     if (authed) initPlatform();
   }, [authed]);
 
-  // Web/desktop: показываем SetupScreen если URL не настроен
+  // Web/desktop: show SetupScreen when the URL isn't configured
   if (!getServerUrl()) {
     return (
       <SetupScreen

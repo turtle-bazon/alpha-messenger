@@ -1,6 +1,6 @@
-// Android-специфичная инициализация.
-// Загружается только при запуске в Capacitor (Android WebView).
-// Никаких import из @capacitor/* — работаем через window.Capacitor.
+// Android-specific initialization.
+// Loaded only when running in Capacitor (Android WebView).
+// No imports from @capacitor/* — we work through window.Capacitor.
 
 import { registerPlatformInit } from './util/platform';
 import { getToken, getDeviceId } from './api/session';
@@ -8,17 +8,17 @@ import { subscribePush } from './api/rest';
 
 type PushPlatform = 'fcm' | 'unifiedpush' | 'none';
 
-// Capacitor API доступен через window в WebView
+// Capacitor API is available via window in the WebView
 const Capacitor = (window as any).Capacitor;
 
 /**
- * Регистрирует android-init в platform.ts.
- * Вызывается из main.tsx при запуске на Android.
+ * Registers android-init in platform.ts.
+ * Called from main.tsx when running on Android.
  */
 export function setupAndroid(): void {
   registerPlatformInit(initAndroid);
-  // Если пользователь уже залогинен — запускаем initAndroid немедленно,
-  // не дожидаясь следующего вызова initPlatform() (race condition с async import).
+  // If the user is already logged in — run initAndroid immediately,
+  // without waiting for the next initPlatform() call (race condition with async import).
   if (getToken()) {
     initAndroid();
   }
@@ -50,14 +50,14 @@ async function initAndroid(): Promise<void> {
     console.log('Alpha: Push not available');
     localStorage.setItem('alpha.push_platform', 'none');
     localStorage.setItem('alpha.push_warning', 'true');
-    // Уведомляем PushWarningBanner (он мог отрендериться до нашей инициализации)
+    // Notify PushWarningBanner (it may have rendered before our initialization)
     window.dispatchEvent(new Event('push-warning-changed'));
   }
 
   if (!appStateListenerAdded) {
     App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
       console.log(`Alpha: App ${isActive ? 'foregrounded' : 'backgrounded'}`);
-      // При возврате из фона — сигналим WS-клиенту переподключиться
+      // On return from background — signal the WS client to reconnect
       if (isActive) {
         window.dispatchEvent(new Event('app-foreground'));
       }
@@ -74,8 +74,8 @@ interface PushRegistration {
 }
 
 async function detectAndRegisterPush(): Promise<PushRegistration | null> {
-  // 1. Если уже注册ированы — используем сохранённый токен (без перерегистрации).
-  //    Endpoint стабилен пока дистрибьютор и приложение те же.
+  // 1. If already registered — use the saved token (no re-registration).
+  //    The endpoint is stable as long as distributor and app stay the same.
   const saved = localStorage.getItem('alpha.push_platform');
   const savedToken = localStorage.getItem('alpha.push_token');
   if (savedToken && (saved === 'fcm' || saved === 'unifiedpush')) {
@@ -83,11 +83,11 @@ async function detectAndRegisterPush(): Promise<PushRegistration | null> {
     return { platform: saved, token: savedToken };
   }
 
-  // 2. Первая регистрация — пробуем UnifiedPush
+  // 2. First registration — try UnifiedPush
   const upResult = await tryUnifiedPush();
   if (upResult) return upResult;
 
-  // 3. Пробуем FCM
+  // 3. Try FCM
   const fcmResult = await tryFCM();
   if (fcmResult) return fcmResult;
 
@@ -98,13 +98,13 @@ async function detectAndRegisterPush(): Promise<PushRegistration | null> {
 
 async function tryUnifiedPush(): Promise<PushRegistration | null> {
   try {
-    // 1. Пробуем нативный Capacitor плагин
+    // 1. Try the native Capacitor plugin
     const upPlugin = Capacitor?.Plugins?.UnifiedPush;
     if (upPlugin) {
       return await registerWithNativeUP(upPlugin);
     }
 
-    // 2. Пробуем ntfy HTTP API (локальный сервер на :80)
+    // 2. Try the ntfy HTTP API (local server on :80)
     const ntfyResult = await tryNtfyHttp();
     if (ntfyResult) return ntfyResult;
   } catch (err) {
@@ -114,13 +114,13 @@ async function tryUnifiedPush(): Promise<PushRegistration | null> {
 }
 
 /**
- * Регистрация через нативный Capacitor UnifiedPush плагин.
- * Показывает UI выбора дистрибьютора если их несколько.
+ * Registration via the native Capacitor UnifiedPush plugin.
+ * Shows a distributor picker UI if there are several.
  */
 async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | null> {
   try {
-    // Получаем список дистрибьюторов.
-    // Capacitor может вернуть: JSObject, строку, или массив — обрабатываем все случаи.
+    // Get the list of distributors.
+    // Capacitor may return: JSObject, string, or array — handle all cases.
     const raw = await upPlugin.getDistributors();
     console.log('Alpha: raw getDistributors:', JSON.stringify(raw));
 
@@ -130,11 +130,11 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
     if (Array.isArray(list)) {
       distributors = list.map(String);
     } else if (typeof list === 'string') {
-      // Capacitor иногда сериализует List<String> как строку "[a, b]"
+      // Capacitor sometimes serializes List<String> as the string "[a, b]"
       const cleaned = list.replace(/^\[|\]$/g, '');
       distributors = cleaned.split(',').map(s => s.trim()).filter(Boolean);
     } else if (list && typeof list === 'object') {
-      // JSObject {0: "a", 1: "b"} — конвертируем через Object.values
+      // JSObject {0: "a", 1: "b"} — convert via Object.values
       distributors = Object.values(list).map(String);
     }
 
@@ -145,7 +145,7 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
 
     console.log('Alpha: UP distributors ready:', JSON.stringify(distributors));
 
-    // Если один — используем его, если несколько — показываем выбор
+    // If one — use it; if several — show a picker
     let selectedDistributor: string | null;
     if (distributors.length === 1) {
       selectedDistributor = distributors[0];
@@ -154,15 +154,15 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
       if (!selectedDistributor) return null;
     }
 
-    // Сохраняем дистрибьютора
+    // Save the distributor
     await upPlugin.saveDistributor({ distributor: selectedDistributor });
     console.log('Alpha: UP distributor saved:', selectedDistributor);
 
-    // Регистрируемся
+    // Register
     await upPlugin.register();
     console.log('Alpha: UP registration initiated, waiting for endpoint...');
 
-    // Ждём endpoint от PushService (до 15 секунд)
+    // Wait for the endpoint from PushService (up to 15 seconds)
     const { endpoint } = await upPlugin.waitForEndpoint({ timeout: 15000 });
     if (!endpoint) {
       console.log('Alpha: No endpoint received from UP');
@@ -178,8 +178,8 @@ async function registerWithNativeUP(upPlugin: any): Promise<PushRegistration | n
 }
 
 /**
- * Пробуем ntfy HTTP API (если ntfy запущен локально).
- * UnifiedPush топики в ntfy начинаются с "up" префикса.
+ * Try the ntfy HTTP API (if ntfy runs locally).
+ * UnifiedPush topics in ntfy start with an "up" prefix.
  */
 async function tryNtfyHttp(): Promise<PushRegistration | null> {
   try {
@@ -191,7 +191,7 @@ async function tryNtfyHttp(): Promise<PushRegistration | null> {
 
     console.log('Alpha: ntfy HTTP API available');
 
-    // UnifiedPush топики в ntfy должны начинаться с "up" префикса
+    // UnifiedPush topics in ntfy must start with an "up" prefix
     const topic = `up${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
     const endpoint = `http://localhost:80/${topic}`;
 

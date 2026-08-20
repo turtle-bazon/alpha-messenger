@@ -35,9 +35,9 @@ import {
   setUnreadBadge,
 } from './util/notifications';
 
-// Самое свежее превью из набора кандидатов (по возрастанию message_id). Нужно,
-// чтобы превью в списке не «застревало» на раннем сообщении при гонке нескольких
-// параллельных getChat (см. задачу #28, ветка idx<0 ниже).
+// The freshest preview from a set of candidates (by ascending message_id). Keeps
+// the list preview from getting stuck on an early message when several parallel
+// getChat calls race (see issue #28, the idx<0 branch below).
 function newestPreview(
   ...candidates: (MessagePreview | null | undefined)[]
 ): MessagePreview | null {
@@ -49,22 +49,22 @@ function newestPreview(
   return best;
 }
 
-// Стабильная пустая ссылка для чатов без печатающих — чтобы не плодить новые
-// Map на каждый рендер (лишние ререндеры Conversation).
+// Stable empty reference for chats without typers — avoids creating new Maps
+// on every render (extra Conversation re-renders).
 const EMPTY_TYPING: Map<string, string> = new Map();
 
-// Главный экран: владеет списком чатов, WS-соединением и выбором чата.
-// Живые события (chat.created, message.new) обновляют список здесь — из одного
-// источника видны и список, и открытая переписка.
+// Main screen: owns the chat list, the WS connection and chat selection.
+// Live events (chat.created, message.new) update the list here — both the list
+// and the open conversation are visible from a single source.
 export function HomeScreen({
   onLogout,
 }: {
   onLogout: () => void;
 }): JSX.Element {
   const myId = getUserId();
-  // Курсор потока seed-ится из localStorage (resume между сессиями) и сохраняется
-  // при каждом продвижении — после reload реплеится только пропущенное, история не
-  // принимается за live повторно (известная проблема №8).
+  // The stream cursor is seeded from localStorage (resume across sessions) and
+  // saved on each advance — after reload only missed events are replayed; history
+  // is never treated as live again (known issue #8).
   const [ws] = useState(
     () => new WsClient(getToken() ?? '', getLastSeq(), setLastSeq),
   );
@@ -73,24 +73,24 @@ export function HomeScreen({
   const [loading, setLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [awayUsers, setAwayUsers] = useState<Set<string>>(new Set());
-  // Кто печатает, по чатам — единый источник для списка чатов, заголовка
-  // переписки и окна участников (задача #27).
+  // Who is typing, per chat — single source for the chat list, conversation
+  // header and members dialog (issue #27).
   const typingByChat = useTyping(ws, myId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
-  // Баннер запроса разрешения на уведомления: показываем только при первом входе
-  // (ключей нет в localStorage) и если разрешение ещё не выдано/заблокировано.
+  // Notification permission request banner: shown only on first visit (no keys
+  // in localStorage) and if permission is not yet granted/blocked.
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   selectedRef.current = selectedId;
-  // Актуальный список для проверок внутри WS-обработчиков (без перезапуска
-  // эффекта и без побочных эффектов в setState-апдейтерах).
+  // Up-to-date list for checks inside WS handlers (without restarting the
+  // effect and without side effects in setState updaters).
   const chatsRef = useRef<Chat[]>([]);
   chatsRef.current = chats;
-  // Ссылка на поле ввода сообщений — для глобального фокуса (задача #40).
+  // Reference to the message input field — for global focus (issue #40).
   const inputRef = useRef<HTMLDivElement>(null);
 
   function toggleTheme(): void {
@@ -103,23 +103,23 @@ export function HomeScreen({
     getMe()
       .then((me) => setUsername(me.username))
       .catch(() => undefined);
-    // Явно фиксируем дефолты уведомлений в localStorage (известная проблема
-    // №29) — чтобы хранилище и UI не расходились.
+    // Explicitly persist notification defaults to localStorage (known issue
+    // #29) so storage and UI don't diverge.
     initNotifDefaults();
-    // На Android запрашиваем POST_NOTIFICATIONS permission
+    // On Android, request POST_NOTIFICATIONS permission
     void ensureBrowserPermission();
-    // Если настройка браузерных уведомлений включена (дефолт '1' или пользователь
-    // включил), но системное разрешение ещё не запрошено (permission = 'default') —
-    // показываем баннер. Запрос произойдёт при клике (user gesture), иначе
-    // браузер молча игнорирует Notification.requestPermission().
+    // If browser notifications are enabled (default '1' or enabled by the user)
+    // but system permission hasn't been requested yet (permission = 'default'),
+    // show the banner. The request happens on click (user gesture); otherwise
+    // browsers silently ignore Notification.requestPermission().
     if (getNotifPrefs().browser && getPermission() === 'default') {
       setShowNotifBanner(true);
     }
   }, []);
 
-  // Глобальный фокус поля ввода при нажатии клавиши или вставке (задача #40).
-  // При открытом модале (members-backdrop, new-chat-backdrop и т.п.),
-  // эмодзи-пикере или пикере реакций фокус не смещаем (#47, #56, #23).
+  // Global focus of the input field on keypress or paste (issue #40).
+  // When a modal is open (members-backdrop, new-chat-backdrop etc.), or the
+  // emoji picker / reaction picker, focus is not moved (#47, #56, #23).
   useEffect(() => {
     const focusInput = () => inputRef.current?.focus();
     const isModalOpen = (): boolean =>
@@ -128,7 +128,7 @@ export function HomeScreen({
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;
       if (isModalOpen()) return;
-      // Если фокус уже на input/textarea — не перехватываем
+      // If focus is already on an input/textarea — don't intercept
       const active = document.activeElement;
       if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
       focusInput();
@@ -142,19 +142,19 @@ export function HomeScreen({
     };
   }, []);
 
-  // Счётчик непрочитанных в title вкладки (известная проблема №8): сумма по всем
-  // чатам. Сбрасываем title при размонтировании (логаут).
+  // Unread counter in the tab title (known issue #8): sum across all chats.
+  // Reset the title on unmount (logout).
   useEffect(() => {
     const total = chats.reduce((sum, c) => sum + c.unreadCount, 0);
     setUnreadBadge(total);
-    // Badge на иконке в трее (Electron desktop)
+    // Badge on the tray icon (Electron desktop)
     window.electronAPI?.setBadgeCount(total);
   }, [chats]);
   useEffect(() => () => setUnreadBadge(0), []);
 
-  // Периодическая проверка версии клиента. Если на сервере новая сборка —
-  // перезагружаем страницу (обновление без Ctrl+Shift+R).
-  // На Android/ desktop bundled-клиенте проверяем version.json на сервере напрямую.
+  // Periodic client version check. If the server has a newer build — reload
+  // the page (update without Ctrl+Shift+R).
+  // On Android / bundled desktop client, check version.json on the server directly.
   useEffect(() => {
     let currentVersion: string | null = null;
     const nativeServerUrl = ((window as any).AlphaConfig?.getServerUrl?.()
@@ -187,7 +187,7 @@ export function HomeScreen({
     return () => clearInterval(interval);
   }, []);
 
-  // Пинг активности каждые 30 сек (#36): чтобы сервер знал, когда пользователь "away".
+  // Activity ping every 30 sec (#36): lets the server know when the user is "away".
   useEffect(() => {
     const THROTTLE_MS = 30_000;
     let lastPing = 0;
@@ -208,7 +208,7 @@ export function HomeScreen({
     };
   }, []);
 
-  // Подъём списка чатов + WS-соединение на время сессии.
+  // Bootstrapping the chat list + WS connection for the session.
   useEffect(() => {
     let alive = true;
     getChats()
@@ -217,18 +217,18 @@ export function HomeScreen({
       .finally(() => {
         if (!alive) return;
         setLoading(false);
-        // Коннектимся к WS только после загрузки списка из REST. Тогда реплей
-        // ложится на уже готовый список (без дозапросов getChat на каждый чат),
-        // а WsClient применяет его одним пакетом — список не «мигает» на логине.
+        // Connect to WS only after the REST list has loaded. The replay then lands
+        // on an already populated list (no extra getChat per chat), and WsClient
+        // applies it in one batch — the list doesn't flicker on login.
         ws.connect();
       });
 
-    // Новый чат создан (payload несёт только chatId) — подтягиваем объект чата.
+    // New chat created (payload carries only chatId) — fetch the chat object.
     const offCreated = ws.on('chat.created', (ev: ServerEvent) => {
       const chatId = (ev.payload as { chatId?: string }).chatId ?? ev.chatId;
       if (!chatId) return;
-      // На реплее список уже авторитетен из getChats — getChat дёргаем только для
-      // реально отсутствующего чата (новый чат, созданный пока мы были офлайн).
+      // On replay the list is already authoritative from getChats — call getChat
+      // only for a genuinely missing chat (created while we were offline).
       if (!chatsRef.current.some((c) => c.chatId === chatId)) {
         void getChat(chatId)
           .then((chat) =>
@@ -240,8 +240,8 @@ export function HomeScreen({
           )
           .catch(() => undefined);
       }
-      // Presence: на реплее единый снимок переснимет обработчик 'synced' — здесь
-      // только для живого события (новый со-участник может быть уже онлайн).
+      // Presence: on replay the 'synced' handler takes a fresh snapshot — here
+      // only for the live event (a new member may already be online).
       if (ws.isLive()) {
         void getPresence()
           .then((p) => {
@@ -259,7 +259,7 @@ export function HomeScreen({
       }
     });
 
-    // Новое сообщение — обновляем превью/порядок/непрочитанные в списке.
+    // New message — update preview/order/unread counts in the list.
     const offNew = ws.on('message.new', (ev: ServerEvent) => {
       const p = ev.payload as {
         messageId: string;
@@ -271,14 +271,14 @@ export function HomeScreen({
       };
       const chatId = ev.chatId;
       if (!chatId) return;
-      // Живость фиксируем в МОМЕНТ приёма события, а не внутри отложенного
-      // setChats-апдейтера: к моменту его выполнения мог прийти 'synced' и
-      // ws.isLive() стало бы true — тогда реплей считался бы за live и накручивал
-      // непрочитанное (двойной счёт на холодном старте/переподключении).
+      // Capture liveness at the MOMENT the event arrives, not inside the deferred
+      // setChats updater: by the time it runs, 'synced' may have arrived making
+      // ws.isLive() true — then replay would count as live and inflate unread
+      // counts (double counting on cold start/reconnect).
       const live = ws.isLive();
-      // Уведомление о входящем (известная проблема №8): только живое чужое
-      // сообщение; звук/попап сработают, лишь если вкладка не активна (решает
-      // notifyIncoming). Имя чата берём из актуального списка (chatsRef).
+      // Incoming notification (known issue #8): only live messages from others;
+      // sound/popup fire only when the tab is inactive (handled by
+      // notifyIncoming). Chat name comes from the current list (chatsRef).
       if (live && p.senderId !== myId) {
         const chat = chatsRef.current.find((c) => c.chatId === chatId);
         notifyIncoming({
@@ -293,12 +293,12 @@ export function HomeScreen({
       setChats((prev) => {
         const idx = prev.findIndex((c) => c.chatId === chatId);
         if (idx < 0) {
-          // Чата ещё нет в списке (новый чат / всплеск сообщений в него) —
-          // тянем объект чата. Превью берём как самое свежее из загруженного
-          // снимка, уже лежащего в списке и самого события: несколько message.new
-          // в один новый чат запускают параллельные getChat, и «победитель» мог
-          // снять устаревший снимок — без этой подстраховки превью застревало бы
-          // на раннем сообщении (задача #28).
+          // Chat not in the list yet (new chat / burst of messages into it) —
+          // fetch the chat object. Take the preview as the freshest among the
+          // loaded snapshot already in the list and this event: several message.new
+          // into one new chat trigger parallel getChat calls, and the "winner"
+          // may have taken a stale snapshot — without this safeguard the preview
+          // would stick to an early message (issue #28).
           const preview: MessagePreview = {
             messageId: p.messageId,
             senderId: p.senderId,
@@ -323,8 +323,8 @@ export function HomeScreen({
           return prev;
         }
         const chat = prev[idx];
-        // Во время реплея истории счётчик непрочитанного авторитетен из
-        // GET /chats — не накручиваем его повторно, обновляем лишь превью/порядок.
+        // During history replay the unread count is authoritative from
+        // GET /chats — don't increment it again, update only preview/order.
         const keepUnread =
           chatId === selectedRef.current || p.senderId === myId || !live;
         const updated: Chat = {
@@ -342,7 +342,7 @@ export function HomeScreen({
       });
     });
 
-    // Превью списка отражает правку/удаление последнего сообщения.
+    // List preview reflects edit/deletion of the last message.
     const offEdited = ws.on('message.edited', (ev: ServerEvent) => {
       const p = ev.payload as { messageId: string; ciphertext: string };
       setChats((prev) =>
@@ -364,8 +364,8 @@ export function HomeScreen({
       );
     });
 
-    // Реакция на сообщение — уведомление (звук + browser notification).
-    // Свои реакции не уведомляем; уведомление срабатывает только когда вкладка не активна.
+    // Reaction to a message — notification (sound + browser notification).
+    // Own reactions don't notify; the notification fires only when the tab is inactive.
     const offReaction = ws.on('message.reaction', (ev: ServerEvent) => {
       const p = ev.payload as {
         messageId: string;
@@ -379,7 +379,7 @@ export function HomeScreen({
       if (p.action !== 'added') return;
       const chat = chatsRef.current.find((c) => c.chatId === chatId);
       const title = chat ? chatTitle(chat, myId) : 'Чат';
-      // Ищем имя реактора среди участников чата
+      // Look up the reactor's name among chat participants
       const reactor = chat?.participants.find((pt) => pt.userId === p.userId);
       const reactorName = reactor?.username ?? 'Пользователь';
       notifyReaction({
@@ -390,16 +390,16 @@ export function HomeScreen({
       });
     });
 
-    // Собеседник прочитал — двигаем peerReadUpTo в объекте чата вперёд, даже если
-    // чат сейчас закрыт. Тогда при открытии Conversation сидит верный статус ✓✓.
-    // Если это наше собственное событие (другое устройство) — обнуляем unreadCount.
+    // Peer read — advance peerReadUpTo in the chat object even if the chat is
+    // currently closed, so Conversation shows the correct ✓✓ status when opened.
+    // If it's our own event (another device) — reset unreadCount.
     const offReadMarker = ws.on('message.read', (ev: ServerEvent) => {
       const p = ev.payload as { userId: string; upToMessageId: string };
       const chatId = ev.chatId;
       if (!chatId) return;
 
       if (p.userId === myId) {
-        // Другое устройство прочитало — синхронизируем unreadCount
+        // Another device read the messages — sync unreadCount
         setChats((prev) =>
           prev.map((c) =>
             c.chatId === chatId ? { ...c, unreadCount: 0 } : c,
@@ -422,8 +422,8 @@ export function HomeScreen({
       );
     });
 
-    // После окончания реплея (synced) берём снимок онлайна; покрывает и
-    // переподключения — на каждом synced пересеиваем множество.
+    // After the replay finishes (synced), take a snapshot of online users; also
+    // covers reconnects — reseed the set on every synced.
     const offSynced = ws.on('synced', () => {
       void getPresence()
         .then((p) => {
@@ -440,7 +440,7 @@ export function HomeScreen({
         .catch(() => undefined);
     });
 
-    // Живая смена статуса со-участника.
+    // Live status change of a member.
     const offPresence = ws.on('presence', (ev: ServerEvent) => {
       const p = ev.payload as { userId: string; online: boolean };
       setOnlineUsers((prev) => {
@@ -451,15 +451,15 @@ export function HomeScreen({
       });
     });
 
-    // Участника добавили в чат (приходит уже состоящим участникам) — обновляем
-    // объект чата из REST, чтобы в заголовке поехал счётчик участников. Новый
-    // со-участник может быть онлайн — пересеиваем снимок присутствия.
+    // A member was added to the chat (sent to existing members) — refresh the
+    // chat object from REST so the header shows the updated member count. The
+    // new member may be online — reseed the presence snapshot.
     const offAdded = ws.on('chat.member_added', (ev: ServerEvent) => {
       const p = ev.payload as { chatId: string; userId: string };
       const chatId = p.chatId ?? ev.chatId;
       if (!chatId) return;
-      // На реплее состав и presence уже актуальны из getChats + снимка 'synced' —
-      // не дёргаем REST повторно; реагируем только на живое добавление.
+      // On replay, membership and presence are already current from getChats +
+      // the 'synced' snapshot — skip REST; react only to live additions.
       if (!ws.isLive()) return;
       void getChat(chatId)
         .then((chat) =>
@@ -483,8 +483,8 @@ export function HomeScreen({
         .catch(() => undefined);
     });
 
-    // Участника удалили из чата. Если удалили меня — убираем чат из списка и
-    // снимаем выбор. Иначе — обновляем участников чата из REST.
+    // A member was removed from the chat. If it was me — drop the chat from the
+    // list and clear selection. Otherwise — refresh chat participants from REST.
     const offRemoved = ws.on('chat.member_removed', (ev: ServerEvent) => {
       const p = ev.payload as { chatId: string; userId: string };
       const chatId = p.chatId ?? ev.chatId;
@@ -494,7 +494,7 @@ export function HomeScreen({
         if (selectedRef.current === chatId) setSelectedId(null);
         return;
       }
-      // На реплее состав чата уже актуален из getChats — обновляем только вживую.
+      // On replay, chat membership is already current from getChats — update live only.
       if (!ws.isLive()) return;
       void getChat(chatId)
         .then((chat) =>
@@ -505,7 +505,7 @@ export function HomeScreen({
         .catch(() => undefined);
     });
 
-    // На Android: при возврате из фона переподключаем WS и синхронизируемся
+    // On Android: reconnect WS and sync when returning from background
     const onForeground = (): void => {
       console.log('Alpha: foreground — reconnecting WS');
       ws.reconnect();
@@ -530,7 +530,7 @@ export function HomeScreen({
     };
   }, [ws]);
 
-  // Open channel from URL: /channel/:id/
+  // Open a channel from URL: /channel/:id/
   useEffect(() => {
     const match = window.location.pathname.match(/^\/channel\/([^/]+)\/?$/);
     if (!match) return;
@@ -549,7 +549,7 @@ export function HomeScreen({
       .catch(() => undefined);
   }, []);
 
-  // Intercept clicks on /channel/ links inside SPA — open channel instead of navigating.
+  // Intercept clicks on /channel/ links inside the SPA — open the channel instead of navigating.
   useEffect(() => {
     function extractChannelId(href: string): string | null {
       // Relative: /channel/:id/
@@ -619,7 +619,7 @@ export function HomeScreen({
 
   function onSelect(chatId: string): void {
     setSelectedId(chatId);
-    // сбросить локальный счётчик непрочитанных при открытии (отметка read — п.16)
+    // reset local unread counter on open (read marker — item 16)
     setChats((prev) =>
       prev.map((c) =>
         c.chatId === chatId ? { ...c, unreadCount: 0 } : c,

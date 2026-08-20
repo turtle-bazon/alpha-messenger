@@ -5,8 +5,8 @@ import { Readable } from 'node:stream';
 import { config } from '../config';
 import { BlobStore } from './types';
 
-// Content-addressed раскладка: <root>/ab/cd/<hash>. Шардинг по первым байтам
-// хэша держит число файлов в каталоге умеренным даже при миллионах блобов.
+// Content-addressed layout: <root>/ab/cd/<hash>. Sharding by the first hash bytes
+// keeps the per-directory file count moderate even with millions of blobs.
 export class FsBlobStore implements BlobStore {
   private root = config.fsBlobDir;
 
@@ -32,10 +32,10 @@ export class FsBlobStore implements BlobStore {
     const dest = this.pathFor(id);
     await mkdir(dirname(dest), { recursive: true });
     try {
-      // tmp и хранилище под одним корнем → переименование атомарно и дёшево.
+      // tmp and storage under one root → rename is atomic and cheap.
       await rename(srcPath, dest);
     } catch {
-      // Разные ФС (EXDEV) — копируем; гонка (файл уже появился) — не ошибка.
+      // Different filesystems (EXDEV) — copy; race (file already appeared) — not an error.
       if (await this.has(id)) return;
       await copyFile(srcPath, dest);
       await unlink(srcPath).catch(() => undefined);

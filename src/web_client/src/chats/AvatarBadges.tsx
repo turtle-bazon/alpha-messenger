@@ -1,12 +1,12 @@
-// Индикаторы поверх аватара (задача #27): кружок присутствия снизу-справа и
-// окантовка «печатает» вокруг всего аватара. Кладётся внутрь элемента-аватара
-// (у того должен быть position: relative). Это не то же, что «печатает» в
-// заголовке переписки — здесь именно визуальные метки на самом аватаре.
+// Indicators over the avatar (#27): presence dot at bottom-right and
+// a "typing" ring around the whole avatar. Placed inside the avatar element
+// (which must have position: relative). Not the same as "typing" in the
+// conversation header — these are visual marks on the avatar itself.
 //
-// online: true/false — показать кружок (зелёный/серый); undefined — не показывать
-//   (например, для групп присутствие на аватаре не отражаем).
-// away: true — жёлтый кружок (online > 5 мин).
-// typing: обвести аватар окантовкой.
+// online: true/false — show the dot (green/gray); undefined — don't show it
+//   (e.g., groups don't reflect presence on the avatar).
+// away: true — yellow dot (online > 5 min).
+// typing: outline the avatar with a ring.
 export function AvatarBadges({
   online,
   away,

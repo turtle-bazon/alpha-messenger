@@ -1,4 +1,4 @@
-// Push notification types and detection logic.
+// Push notification types and provider detection logic.
 // Used by both web_client (browser) and android_client (Capacitor).
 
 export type PushPlatform = 'fcm' | 'unifiedpush' | 'none';
@@ -13,7 +13,7 @@ const TOKEN_KEY = 'alpha.push_token';
 const WARNING_KEY = 'alpha.push_warning';
 
 /**
- * Сохраняет результат регистрации push.
+ * Saves the push registration result.
  */
 export function savePushRegistration(reg: PushRegistration): void {
   localStorage.setItem(STORAGE_KEY, reg.platform);
@@ -21,7 +21,7 @@ export function savePushRegistration(reg: PushRegistration): void {
 }
 
 /**
- * Получает сохранённую push-платформу.
+ * Returns the saved push platform.
  */
 export function getPushPlatform(): PushPlatform {
   const p = localStorage.getItem(STORAGE_KEY);
@@ -30,14 +30,14 @@ export function getPushPlatform(): PushPlatform {
 }
 
 /**
- * Получает сохранённый push-токен.
+ * Returns the saved push token.
  */
 export function getPushToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
 /**
- * Сбрасывает push-регистрацию.
+ * Clears the push registration.
  */
 export function clearPushRegistration(): void {
   localStorage.removeItem(STORAGE_KEY);
@@ -45,7 +45,7 @@ export function clearPushRegistration(): void {
 }
 
 /**
- * Помечает что нужно показать предупреждение о push.
+ * Marks that the push warning should be shown.
  */
 export function setPushWarning(show: boolean): void {
   if (show) {
@@ -56,14 +56,14 @@ export function setPushWarning(show: boolean): void {
 }
 
 /**
- * Нужно ли показывать предупреждение о push.
+ * Whether the push warning should be shown.
  */
 export function shouldShowPushWarning(): boolean {
   return localStorage.getItem(WARNING_KEY) === 'true';
 }
 
 /**
- * Push доступны на этой платформе?
+ * Is push supported on this platform?
  */
 export function isPushSupported(): boolean {
   return typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform();

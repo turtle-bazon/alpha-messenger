@@ -11,8 +11,8 @@ interface SubscribeBody {
 }
 
 export async function pushRoutes(app: FastifyInstance): Promise<void> {
-  // Регистрация канала пуша устройства. Идемпотентна по (device_id, endpoint):
-  // повторная отправка того же токена вернёт ту же подписку.
+  // Register a device push channel. Idempotent by (device_id, endpoint):
+  // resending the same token returns the same subscription.
   app.post(
     '/push/subscriptions',
     { preHandler: authenticate },
@@ -28,7 +28,7 @@ export async function pushRoutes(app: FastifyInstance): Promise<void> {
       if (!PROVIDERS.has(provider)) {
         return reply.code(400).send({ error: 'unknown provider' });
       }
-      // Подписать можно только собственное устройство.
+      // Only your own device can be subscribed.
       const dev = await pool.query(
         'SELECT 1 FROM devices WHERE device_id = $1 AND user_id = $2',
         [deviceId, userId],
@@ -36,9 +36,9 @@ export async function pushRoutes(app: FastifyInstance): Promise<void> {
       if (dev.rowCount === 0) {
         return reply.code(404).send({ error: 'device not found' });
       }
-      // Чистим старые подписки этого же provider для данного пользователя.
-      // При переустановке приложения device_id и endpoint меняются,
-      // но ntfy на телефоне может всё ещё слушать старые топики.
+      // Clean up old subscriptions of the same provider for this user.
+      // After app reinstall device_id and endpoint change,
+      // but ntfy on the phone may still listen on old topics.
       await pool.query(
         `DELETE FROM push_subscriptions ps
           USING devices d
@@ -60,7 +60,7 @@ export async function pushRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Удаление подписки. Только своей (через принадлежность устройства аккаунту).
+  // Delete a subscription. Only your own (via device ownership by the account).
   app.delete(
     '/push/subscriptions/:subscriptionId',
     { preHandler: authenticate },
@@ -75,7 +75,7 @@ export async function pushRoutes(app: FastifyInstance): Promise<void> {
             AND d.user_id = $2`,
         [subscriptionId, userId],
       );
-      // Идемпотентно: нет подписки — всё равно ok.
+      // Idempotent: no subscription still returns ok.
       return reply.send({ ok: true });
     },
   );

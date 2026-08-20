@@ -3,9 +3,9 @@ import { readdirSync, writeFileSync } from 'fs';
 import { join, relative } from 'path';
 
 /**
- * Vite-плагин: после сборки генерирует manifest.json в dist/.
- * Манифест содержит версию (BUILD_HASH) и список всех файлов бандла.
- * Android-клиент скачивает манифест для определения необходимости обновления.
+ * Vite plugin: generates manifest.json in dist/ after the build.
+ * The manifest contains the version (BUILD_HASH) and the list of all bundle files.
+ * The Android client fetches the manifest to decide whether an update is needed.
  */
 export function clientManifest(): Plugin {
   return {

@@ -1,4 +1,4 @@
-// Аватар чата: цветной кружок с инициалом (как в Telegram при отсутствии фото).
+// Chat avatar: colored circle with an initial (like Telegram when no photo).
 
 const PALETTE = [
   '#e17076',

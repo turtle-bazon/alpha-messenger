@@ -1,6 +1,6 @@
-// Преобразование текста сообщения в/из base64. Тело сообщения для сервера —
-// непрозрачный ciphertext (в v1 шифрования нет, это base64 от UTF-8; см.
-// encryption.md). Здесь же позже встанет реальное шифрование без смены вызовов.
+// Message text to/from base64 conversion. For the server the message body is
+// an opaque ciphertext (v1 has no encryption — it's base64 of UTF-8; see
+// encryption.md). Real encryption will slot in here later without changing callers.
 
 export function decodeText(b64: string): string {
   try {

@@ -4,7 +4,7 @@ import { authenticate } from '../auth';
 import { HEX64 } from './blobs';
 
 export async function stickerRoutes(app: FastifyInstance): Promise<void> {
-  // Создать пак стикеров
+  // Create a sticker pack
   app.post('/sticker-packs', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { title } = (req.body ?? {}) as { title?: string };
@@ -27,7 +27,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  // Получить мои паки
+  // Get my packs
   app.get('/sticker-packs', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const res = await pool.query(
@@ -49,7 +49,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ packs });
   });
 
-  // Установить пак (добавить в мои)
+  // Install a pack (add to mine)
   app.post('/sticker-packs/:packId/install', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { packId } = req.params as { packId: string };
@@ -65,7 +65,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
-  // Удалить пак из моих
+  // Remove a pack from mine
   app.delete('/sticker-packs/:packId/install', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { packId } = req.params as { packId: string };
@@ -76,7 +76,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
-  // Удалить пак (только владелец)
+  // Delete a pack (owner only)
   app.delete('/sticker-packs/:packId', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { packId } = req.params as { packId: string };
@@ -95,7 +95,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
-  // Добавить стикер в пак
+  // Add a sticker to a pack
   app.post('/sticker-packs/:packId/items', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { packId } = req.params as { packId: string };
@@ -105,7 +105,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: 'invalid blobId' });
     }
 
-    // Проверяем владение паком
+    // Check pack ownership
     const pack = await pool.query(
       'SELECT user_id FROM sticker_packs WHERE pack_id = $1',
       [packId],
@@ -117,13 +117,13 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(403).send({ error: 'forbidden' });
     }
 
-    // Проверяем существование блоба
+    // Check blob existence
     const blob = await pool.query('SELECT blob_id FROM blobs WHERE blob_id = $1', [blobId]);
     if (blob.rowCount === 0) {
       return reply.code(400).send({ error: 'unknown blob' });
     }
 
-    // Позиция = следующий порядковый номер
+    // Position = next sequential number
     const posRes = await pool.query(
       'SELECT COALESCE(MAX(position), -1) + 1 AS next_pos FROM sticker_items WHERE pack_id = $1',
       [packId],
@@ -137,7 +137,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({ itemId: res.rows[0].item_id, position });
   });
 
-  // Получить стикеры пака
+  // Get pack stickers
   app.get('/sticker-packs/:packId/items', { preHandler: authenticate }, async (req, reply) => {
     const { packId } = req.params as { packId: string };
     const res = await pool.query(
@@ -153,7 +153,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ items });
   });
 
-  // Удалить стикер из пака
+  // Remove a sticker from a pack
   app.delete('/sticker-packs/:packId/items/:itemId', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { packId, itemId } = req.params as { packId: string; itemId: string };
@@ -176,7 +176,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
-  // Поиск паков по названию (для каталога — публичные паки всех пользователей)
+  // Search packs by title (for the catalog — public packs of all users)
   app.get('/sticker-packs/search', { preHandler: authenticate }, async (req, reply) => {
     const q = (req.query as { q?: string }).q ?? '';
     if (q.trim().length === 0) {

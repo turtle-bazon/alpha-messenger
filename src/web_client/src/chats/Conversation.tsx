@@ -65,21 +65,21 @@ import {
 } from '../util/messageCache';
 import { LinkDialog } from './LinkDialog';
 
-// Исходящее изображение в очереди: сырые байты (полноразмерный блоб на загрузку)
-// и метаданные вложения. blobId в att заполняется после uploadBlob.
+// Outgoing image in the queue: raw bytes (full-size blob to upload)
+// plus attachment metadata. blobId in att is filled in after uploadBlob.
 interface OutgoingImage {
   blob: Blob;
   att: ImageAttachment;
 }
 
-// Секунды → m:ss (таймер записи, длительности голосовых/видео).
+// Seconds → m:ss (recording timer, voice/video durations).
 function fmtSec(total: number): string {
   const m = Math.floor(total / 60);
   const s = Math.floor(total % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-// Склонение слова «участник» по числу (1 участник, 2 участника, 5 участников).
+// Plural forms for the member count label (1 member, 2 members, 5 members).
 function pluralMembers(n: number): string {
   const mod10 = n % 10;
   const mod100 = n % 100;
@@ -93,15 +93,15 @@ function pluralMembers(n: number): string {
 
 const PAGE = 50;
 const TYPING_SEND_THROTTLE_MS = 2000;
-// Максимальная высота поля ввода (задача #25): дальше — внутренний скролл.
+// Max input height (issue #25): beyond this, inner scrolling.
 const MAX_INPUT_H = 160;
-// Период автоповтора неотправленных сообщений по таймеру (задача #26).
+// Timer interval for auto-retrying unsent messages (issue #26).
 const RETRY_TIMER_MS = 12000;
-// Превью ссылок (#32): задержка перед разворачиванием набираемого URL.
+// Link previews (#32): delay before unfurling the URL being typed.
 const LINK_PREVIEW_DEBOUNCE_MS = 600;
 
-// Первый http(s)-URL в тексте (для живого превью ссылки). Хвостовая пунктуация
-// (.,!?;: и закрывающие скобки) отрезается — она обычно не часть адреса.
+// First http(s) URL in text (for live link preview). Trailing punctuation
+// (.,!?;: and closing brackets) is stripped — usually not part of the address.
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/i;
 function firstUrl(text: string): string | null {
   const m = text.match(URL_RE);
@@ -109,8 +109,8 @@ function firstUrl(text: string): string | null {
   return m[0].replace(/[.,!?;:)\]]+$/, '');
 }
 
-// Модель сообщения в UI. Пока не подтверждено сервером — messageId == null
-// (pending), сверка оптимистичного сообщения с WS-эхом идёт по clientMessageId.
+// UI message model. Until confirmed by the server, messageId == null
+// (pending); the optimistic message is matched against the WS echo by clientMessageId.
 interface MsgVM {
   messageId: string | null;
   clientMessageId?: string;
@@ -147,11 +147,11 @@ function fromHistory(m: Message): MsgVM {
 function order(a: MsgVM, b: MsgVM): number {
   if (a.messageId && b.messageId) return Number(a.messageId) - Number(b.messageId);
   if (!a.messageId && !b.messageId) return a.ts < b.ts ? -1 : 1;
-  return a.messageId ? -1 : 1; // подтверждённые раньше pending
+  return a.messageId ? -1 : 1; // confirmed before pending
 }
 
-// Вставка/обновление с дедупликацией по messageId, а для своих ещё и по
-// clientMessageId (чтобы WS-эхо слилось с оптимистичным сообщением).
+// Insert/update with dedup by messageId, and for own messages also by
+// clientMessageId (so the WS echo merges with the optimistic message).
 function upsert(list: MsgVM[], vm: Partial<MsgVM> & { senderId: string }): MsgVM[] {
   const idx = list.findIndex(
     (m) =>
@@ -198,43 +198,43 @@ export function Conversation({
   const [messages, setMessages] = useState<MsgVM[]>([]);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
-  // Ответ на сообщение: ID сообщения, на которое отвечаем.
+  // Reply state: ID of the message being replied to.
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [mediaOpen, setMediaOpen] = useState(false);
-  // Голосовые/видео (#34): режим кнопки (клик — toggle), модалка камеры
-  // (key>0 — открыта, инкремент для перемонтирования при «Перезаписать»),
-  // свайп-отмена при hold-записи голосового.
+  // Voice/video (#34): button mode (click toggles), camera modal
+  // (key>0 means open, incremented to remount on "Re-record"),
+  // swipe-to-cancel during hold-to-record voice.
   const [micMode, setMicMode] = useState<'voice' | 'video'>('voice');
   const [videoRecKey, setVideoRecKey] = useState(0);
   const [recCancelArmed, setRecCancelArmed] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
-  // Пикер реакций: messageId для которого открыт, или null
+  // Reaction picker: messageId it is open for, or null
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
-  // Полный эмодзи-пикер (из стрелки в панели реакций)
+  // Full emoji picker (from the arrow in the reaction bar)
   const [fullEmojiPickerMsgId, setFullEmojiPickerMsgId] = useState<string | null>(null);
-  // @-упоминания: открыт ли попап и фильтр после @
+  // @-mentions: whether the popup is open and the filter after @
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionSelected, setMentionSelected] = useState(0);
-  // Панель форматирования (#69): видимость и выделение
+  // Formatting toolbar (#69): visibility and selection
   const [formatBarVisible, setFormatBarVisible] = useState(false);
   const [, setSelection] = useState<{ start: number; end: number } | null>(null);
-  // Скрывать панель когда поле пустое
+  // Hide the toolbar when the input is empty
   useEffect(() => { if (!input) setFormatBarVisible(false); }, [input]);
   const composerRef = useRef<WysiwygComposerHandle>(null);
-  // Диалог ввода ссылки (#69)
+  // Link input dialog (#69)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkDialogText, setLinkDialogText] = useState('');
-  // Живое превью ссылки в композере (#32) и сопутствующее состояние:
-  // previewReqRef — токен против гонок (применяем только последний запрос);
-  // shownUrlRef — какой URL уже показан/тянется (не дёргать unfurl на каждый
-  // символ); dismissedRef — URL'ы, снятые крестиком (не всплывают снова).
+  // Live link preview in the composer (#32) and related state:
+  // previewReqRef — token against races (only the latest request applies);
+  // shownUrlRef — which URL is already shown/being fetched (don't call unfurl
+  // on every keystroke); dismissedRef — URLs dismissed via X (won't reappear).
   const [linkPreview, setLinkPreview] = useState<LinkAttachment | null>(null);
   const previewReqRef = useRef(0);
   const shownUrlRef = useRef<string | null>(null);
-  // Строка для отслеживания изменений draft в deps useLayoutEffect (#49):
-  // меняется при появлении/исчезновении/изменении текста облачка.
+  // String to track draft changes in useLayoutEffect deps (#49):
+  // changes when the draft bubble appears/disappears or its text changes.
   const draftKey =
     typingUsers.size > 0
       ? [...typingUsers.entries()]
@@ -242,53 +242,53 @@ export function Conversation({
           .join('|')
       : '';
   const dismissedRef = useRef<Set<string>>(new Set());
-  // Скорректированная позиция контекстного меню (для EmojiPicker)
+  // Adjusted context menu position (for EmojiPicker)
   const ctxMenuPosRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
-  // Открытый lightbox (полноразмерный просмотр) — blobId, подпись и тип медиа.
+  // Open lightbox (full-size view) — blobId, caption and media type.
   const [viewer, setViewer] = useState<{ blobId: string; caption: string; kind?: 'image' | 'video' } | null>(
     null,
   );
-  // Плееры голосовых (#34): refs по messageId — для playlist-автоперехода.
+  // Voice players (#34): refs keyed by messageId — for playlist auto-advance.
   const voiceRefs = useRef<Map<string, VoiceBubbleHandle>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  // Защита от повторного входа в ленивую подгрузку — именно ref, а не state:
-  // несколько scroll-событий в одном тике читают одно (старое) значение state и
-  // проскакивают мимо guard'а, загружая одну и ту же страницу дважды → дубли.
+  // Guard against re-entering lazy loading — a ref, not state: several scroll
+  // events in one tick read the same (stale) state value, skip past the guard,
+  // and load the same page twice → duplicates.
   const loadingMoreRef = useRef(false);
   const [readUpTo, setReadUpTo] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [newCount, setNewCount] = useState(0);
-  // Стек навигации: при прыжке к сообщению сохраняем текущий scrollTop
+  // Navigation stack: save the current scrollTop when jumping to a message
   const navStackRef = useRef<number[]>([]);
   const [showBackBtn, setShowBackBtn] = useState(false);
   const lastTypingSent = useRef(0);
   const typingFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReadSent = useRef(0);
-  // Навигация по @: индекс текущего упоминания в списке
+  // @ navigation: index of the current mention in the list
   const [mentionNavIndex, setMentionNavIndex] = useState(-1);
-  // Свайп вправо для ответа на мобильных
+  // Swipe right to reply on mobile
   const swipeRef = useRef<{ startX: number; msgId: string } | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const [swipeMsgId, setSwipeMsgId] = useState<string | null>(null);
   const [swipeX, setSwipeX] = useState(0);
-  // Свежий chat для сидов внутри эффекта открытия чата (без перезапуска эффекта).
+  // Fresh chat for seeds inside the chat-open effect (no effect restart).
   const chatRef = useRef(chat);
   chatRef.current = chat;
-  // Очередь исходящих (задача #26): отправка строго последовательная, чтобы
-  // более позднее сообщение не обогнало раннее. Голова очереди отправляется
-  // первой; при ошибке остаётся в голове и блокирует следующие до повтора.
+  // Outgoing queue (issue #26): sending is strictly sequential so a later
+  // message never overtakes an earlier one. The queue head is sent first;
+  // on error it stays at the head and blocks the rest until retry.
   const sendQueueRef = useRef<
     {
       clientMessageId: string;
       text: string;
       images: OutgoingImage[];
       link?: LinkAttachment;
-      // Голосовое/видео (#34): сырой блоб + метаданные вложения.
+      // Voice/video (#34): raw blob + attachment metadata.
       media?: { att: AudioAttachment | VideoAttachment; blob: Blob };
       replyToMessageId?: string;
     }[]
@@ -297,29 +297,29 @@ export function Conversation({
   const myIdRef = useRef(myId);
   myIdRef.current = myId;
 
-  // Загрузка истории при открытии чата + подписка на живые события чата.
+  // Load history on chat open + subscribe to live chat events.
   useEffect(() => {
     let alive = true;
     setMessages([]);
-    // Очередь отправки относится к конкретному чату — сбрасываем при переключении.
+    // The send queue belongs to a specific chat — reset on switch.
     sendQueueRef.current = [];
     pumpingRef.current = false;
-    // Сид статуса прочтения из серверного состояния (а не только из live-событий):
-    // иначе при повторном открытии чата ✓✓ деградирует в ✓.
+    // Seed read status from server state (not just live events):
+    // otherwise reopening a chat degrades ✓✓ back to ✓.
     setReadUpTo(Number(chatRef.current.peerReadUpTo) || 0);
     setEditing(null);
     setInput('');
     setPendingImage(null);
     setViewer(null);
     setMembersOpen(false);
-    // Превью ссылок относится к набираемому тексту — сбрасываем при смене чата.
+    // Link preview belongs to the text being typed — reset on chat switch.
     setLinkPreview(null);
     shownUrlRef.current = null;
     previewReqRef.current++;
     dismissedRef.current.clear();
     navStackRef.current = [];
     setShowBackBtn(false);
-    // Показываем кеш мгновенно, параллельно тянем свежие данные с сервера.
+    // Show cache instantly while fetching fresh data from the server in parallel.
     getChatMessages(chatId).then((cached) => {
       if (!alive || !cached.length) return;
       setMessages(cached.map(fromHistory).sort(order));
@@ -348,7 +348,7 @@ export function Conversation({
           ts: string;
           replyToMessageId?: string;
         };
-        // Если пользователь от скролла — считаем новые
+        // User is scrolled away — count as new
         if (!atBottomRef.current && p.senderId !== myId) {
           setNewCount((c) => c + 1);
         }
@@ -366,7 +366,7 @@ export function Conversation({
             replyToMessageId: p.replyToMessageId ?? null,
           }),
         );
-        // Кеш: сохраняем wire-объект
+        // Cache: store the wire object
         putMessages(chatId, [{
           messageId: p.messageId,
           senderId: p.senderId,
@@ -406,7 +406,7 @@ export function Conversation({
       ws.on('message.read', (ev: ServerEvent) => {
         if (ev.chatId !== chatId) return;
         const p = ev.payload as { userId: string; upToMessageId: string };
-        if (p.userId === myId) return; // нас интересует прочтение собеседником
+        if (p.userId === myId) return; // we only care about the peer's read receipt
         setReadUpTo((cur) => Math.max(cur, Number(p.upToMessageId)));
       }),
       ws.on('message.reaction', (ev: ServerEvent) => {
@@ -435,7 +435,7 @@ export function Conversation({
     };
   }, [chatId, ws, myId]);
 
-  // Загрузка черновика при открытии чата (#41).
+  // Load draft on chat open (#41).
   useEffect(() => {
     let cancelled = false;
     getDraft(chatId).then(({ ciphertext }) => {
@@ -444,7 +444,7 @@ export function Conversation({
     return () => { cancelled = true; };
   }, [chatId]);
 
-  // Сохранение черновика с debounce при вводе (#41).
+  // Save draft with debounce while typing (#41).
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedDraftRef = useRef('');
   useEffect(() => {
@@ -458,9 +458,9 @@ export function Conversation({
     };
   }, [input, chatId]);
 
-  // Обновление черновика в лайв-режиме с других устройств (#41).
-  // Игнорируем draft.updated, если пользователь активно печатает
-  // (есть pending save) — иначе старый draft перезатирает ввод.
+  // Live draft updates from other devices (#41).
+  // Ignore draft.updated if the user is actively typing
+  // (a pending save exists) — otherwise a stale draft overwrites the input.
   useEffect(() => {
     const offDraft = ws.on('draft.updated', (ev) => {
       const evChatId = ev.chatId ?? (ev.payload as { chatId?: string }).chatId;
@@ -480,11 +480,11 @@ export function Conversation({
     return () => { offDraft(); offDelete(); };
   }, [chatId, ws]);
 
-  // Автопрокрутка вниз, если пользователь уже у низа (#47).
-  // Зависит от messages и draftKey — скроллим при новом сообщении,
-  // при появлении/исчезновении draft-облачка и при изменении его текста.
-  // Два прохода: useLayoutEffect (до paint) + rAF (после layout), чтобы
-  // поймать субпиксельный расчёт Firefox и асинхронные картинки.
+  // Auto-scroll to bottom if the user is already near it (#47).
+  // Depends on messages and draftKey — scroll on new message,
+  // on draft bubble appear/disappear, and on its text change.
+  // Two passes: useLayoutEffect (before paint) + rAF (after layout) to catch
+  // Firefox subpixel layout and async images.
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el || !atBottomRef.current) return;
@@ -494,8 +494,8 @@ export function Conversation({
     return () => cancelAnimationFrame(id);
   }, [messages, draftKey]);
 
-  // На мобилках при открытии чата contentEditable может получить фокус и
-  // открыть клавиатуру — снимаем фокус с поля ввода при маунте (#72).
+  // On mobile, opening a chat may focus the contentEditable and bring up the
+  // keyboard — blur the input on mount (#72).
   useEffect(() => {
     if (!('ontouchstart' in window)) return;
     const el = inputRef.current;
@@ -505,8 +505,8 @@ export function Conversation({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
-  // Авторасширение поля ввода под содержимое (задача #25): сбрасываем высоту и
-  // подгоняем под scrollHeight, но не выше потолка — дальше внутренний скролл.
+  // Auto-grow the input to fit its content (issue #25): reset height and fit
+  // scrollHeight, capped at the max — beyond that, inner scrolling.
   useLayoutEffect(() => {
     const el = inputRef.current;
     if (!el) return;
@@ -514,8 +514,8 @@ export function Conversation({
     el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_H)}px`;
   }, [input]);
 
-  // Живое превью ссылки (#32): на изменение текста ищем первый URL и с задержкой
-  // просим сервер развернуть его. Снятые крестиком и уже показанные URL пропускаем.
+  // Live link preview (#32): on text change find the first URL and ask the
+  // server to unfurl it after a delay. Skip dismissed and already-shown URLs.
   useEffect(() => {
     if (editing) {
       clearPreview();
@@ -526,14 +526,14 @@ export function Conversation({
       clearPreview();
       return;
     }
-    if (shownUrlRef.current === url) return; // уже показываем/тянем этот URL
+    if (shownUrlRef.current === url) return; // already showing/fetching this URL
     const t = setTimeout(() => void resolvePreview(url), LINK_PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, editing]);
 
-  // Автоповтор неотправленных (задача #26): при восстановлении сети, после
-  // reconnect WS (маркер 'synced') и по таймеру перезапускаем насос очереди.
+  // Auto-retry unsent (issue #26): restart the queue pump on network recovery,
+  // after WS reconnect ('synced' marker), and on a timer.
   useEffect(() => {
     const kick = (): void => retrySend();
     window.addEventListener('online', kick);
@@ -547,8 +547,8 @@ export function Conversation({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ws]);
 
-  // Отметка прочтения: при появлении новых сообщений в открытом чате двигаем
-  // маркер до последнего сообщения вперёд (см. POST /chats/{id}/read).
+  // Read marker: when new messages arrive in the open chat, advance the marker
+  // up to the last message (see POST /chats/{id}/read).
   useEffect(() => {
     let maxId = 0;
     for (const m of messages) if (m.messageId) maxId = Math.max(maxId, Number(m.messageId));
@@ -558,12 +558,12 @@ export function Conversation({
     }
   }, [messages, chatId, ws]);
 
-  // Таймаут допосылки draft при остановке набора (#48).
+  // Timeout to flush the draft after typing stops (#48).
   const TYPING_FLUSH_MS = 1000;
 
   function onInputChange(value: string): void {
     setInput(value);
-    // Детект @-упоминаний: ищем последний @ без пробела после
+    // Detect @-mentions: look for the last @ with no whitespace after it
     const lastAt = value.lastIndexOf('@');
     if (lastAt >= 0) {
       const afterAt = value.slice(lastAt + 1);
@@ -579,22 +579,22 @@ export function Conversation({
     }
     if (editing) return;
     const now = Date.now();
-    // Сброс предыдущего flush-таймера
+    // Reset the previous flush timer
     if (typingFlushRef.current) clearTimeout(typingFlushRef.current);
     if (now - lastTypingSent.current > TYPING_SEND_THROTTLE_MS) {
       lastTypingSent.current = now;
       ws.sendTyping(chatId, value || undefined);
     }
-    // Через TYPING_FLUSH_MS без нового ввода — допослать текущий draft
-    // (включая пустой — чтобы очистить draft на другом устройстве)
+    // After TYPING_FLUSH_MS without new input — send the current draft
+    // (including empty, to clear the draft on other devices)
     typingFlushRef.current = setTimeout(() => {
       ws.sendTyping(chatId, value || undefined);
     }, TYPING_FLUSH_MS);
   }
 
-  // ─── Форматирование текста (#69) ─────────────────────────────────
+  // ─── Text formatting (#69) ─────────────────────────────────
 
-  // Обработка выделения текста в композере
+  // Handle text selection in the composer
   function handleSelect(start: number, end: number): void {
     if (start !== end) {
       setFormatBarVisible(true);
@@ -605,7 +605,7 @@ export function Conversation({
     }
   }
 
-  // Форматирование через execCommand — WYSIWYG
+  // Formatting via execCommand — WYSIWYG
   function onBold(): void { document.execCommand('bold'); }
   function onItalic(): void { document.execCommand('italic'); }
   function onStrike(): void { document.execCommand('strikeThrough'); }
@@ -617,7 +617,7 @@ export function Conversation({
     document.execCommand('insertText', false, '`' + text + '`');
   }
 
-  // Диалог ввода ссылки
+  // Link input dialog
   function onLink(): void {
     const sel = window.getSelection();
     const selected = sel?.toString() ?? '';
@@ -629,14 +629,14 @@ export function Conversation({
     document.execCommand('createLink', false, url);
   }
 
-  // Снять текущее превью и инвалидировать любой запрос в полёте (инкремент токена).
+  // Clear the current preview and invalidate any in-flight request (bump the token).
   function clearPreview(): void {
     shownUrlRef.current = null;
     previewReqRef.current++;
     setLinkPreview(null);
   }
 
-  // Сообщения, упоминающие текущего пользователя (@username).
+  // Messages mentioning the current user (@username).
   const myUsername = chat.participants.find((p) => p.userId === myId)?.username ?? '';
   const mentionMessages = myUsername
     ? messages.filter((m) =>
@@ -646,7 +646,7 @@ export function Conversation({
       )
     : [];
 
-  // Навигация к следующему упоминанию.
+  // Jump to the next mention.
   function jumpToNextMention(): void {
     if (mentionMessages.length === 0) return;
     const nextIdx = (mentionNavIndex + 1) % mentionMessages.length;
@@ -671,7 +671,7 @@ export function Conversation({
         );
       }, 2000);
     };
-    // Если уже видно — подсвечиваем сразу
+    // Already visible — highlight right away
     const rect = targetEl.getBoundingClientRect();
     const scrollRect = el.getBoundingClientRect();
     if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
@@ -682,7 +682,7 @@ export function Conversation({
     }
   }
 
-  // Свайп вправо для ответа на мобильных: touch handlers
+  // Swipe right to reply on mobile: touch handlers
   function onSwipeTouchStart(e: React.TouchEvent, msgId: string): void {
     swipeRef.current = { startX: e.touches[0].clientX, msgId };
   }
@@ -703,7 +703,7 @@ export function Conversation({
     setSwipeMsgId(null);
   }
 
-  // Выбор пользователя из попапа @-упоминаний.
+  // Selecting a user from the @-mention popup.
   function onMentionSelect(username: string): void {
     const el = inputRef.current;
     if (!el) { setMentionOpen(false); return; }
@@ -717,7 +717,7 @@ export function Conversation({
     const currentText = el.textContent ?? '';
     const lastAt = currentText.lastIndexOf('@');
     if (lastAt < 0) { setMentionOpen(false); return; }
-    // Выделяем от @ до курсора
+    // Select from the @ to the cursor
     const selectRange = document.createRange();
     selectRange.setStart(range.startContainer, range.startOffset - (cursorPos - lastAt));
     selectRange.setEnd(range.startContainer, range.startOffset);
@@ -728,9 +728,9 @@ export function Conversation({
     el.focus();
   }
 
-  // Развернуть URL через сервер и собрать карточку. Токен previewReqRef отсекает
-  // устаревшие ответы (пока тянули — текст/URL могли смениться). Картинку превью
-  // ужимаем в маленький inline-thumbnail (как у изображений).
+  // Unfurl the URL via the server and build the card. The previewReqRef token
+  // discards stale responses (while fetching, text/URL may have changed).
+  // The preview image is shrunk into a small inline thumbnail (like images).
   async function resolvePreview(url: string): Promise<void> {
     shownUrlRef.current = url;
     const token = ++previewReqRef.current;
@@ -740,7 +740,7 @@ export function Conversation({
     } catch {
       preview = null;
     }
-    if (token !== previewReqRef.current) return; // устарело
+    if (token !== previewReqRef.current) return; // stale
     if (!preview) {
       setLinkPreview(null);
       return;
@@ -759,7 +759,7 @@ export function Conversation({
     });
   }
 
-  // Крестик на карточке: запоминаем URL как снятый и убираем превью.
+  // X on the card: mark the URL as dismissed and remove the preview.
   function dismissPreview(): void {
     if (linkPreview) dismissedRef.current.add(linkPreview.url);
     clearPreview();
@@ -782,8 +782,8 @@ export function Conversation({
           limit: PAGE,
         });
         setMessages((prev) => {
-          // Дедуп по messageId: страница не должна задвоить уже показанные
-          // сообщения, даже если диапазоны перекрылись (гонка подгрузок/сидов).
+          // Dedup by messageId: the page must not duplicate already shown
+          // messages even if ranges overlapped (load/seed race).
           const seen = new Set(
             prev.map((m) => m.messageId).filter((id): id is string => !!id),
           );
@@ -818,7 +818,7 @@ export function Conversation({
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }
 
-  // Сохраняем текущую позицию скролла в стек перед прыжком к сообщению.
+  // Save the current scroll position to the stack before jumping to a message.
   function pushNavStack(): void {
     const el = scrollRef.current;
     if (!el) return;
@@ -826,7 +826,7 @@ export function Conversation({
     setShowBackBtn(true);
   }
 
-  // Возврат к предыдущей позиции (pop из стека).
+  // Return to the previous position (pop from the stack).
   function goBack(): void {
     const el = scrollRef.current;
     const stack = navStackRef.current;
@@ -836,10 +836,10 @@ export function Conversation({
     if (stack.length === 0) setShowBackBtn(false);
   }
 
-  // Общий путь отправки (текст и/или картинки): оптимистичное сообщение ставится
-  // в очередь, дальше pump() грузит блобы и шлёт строго по порядку. Подтверждение
-  // — WS-эхом и ответом REST по clientMessageId. att-объекты вложений общие между
-  // очередью и оптимистичным content: после загрузки blobId проставится в обоих.
+  // Common send path (text and/or images): the optimistic message is queued,
+  // then pump() uploads blobs and sends strictly in order. Confirmation comes
+  // via the WS echo and REST response by clientMessageId. Attachment att objects
+  // are shared between queue and optimistic content: blobId lands in both.
   function enqueueSend(
     text: string,
     images: OutgoingImage[],
@@ -871,7 +871,7 @@ export function Conversation({
     atBottomRef.current = true;
     setMessages((prev) => upsert(prev, optimistic));
     sendQueueRef.current.push({ clientMessageId, text, images, link, media, replyToMessageId });
-    // Набор завершён отправкой — сбрасываем троттл typing и flush-таймер.
+    // Typing ended with a send — reset the typing throttle and flush timer.
     lastTypingSent.current = 0;
     if (typingFlushRef.current) {
       clearTimeout(typingFlushRef.current);
@@ -880,11 +880,11 @@ export function Conversation({
     void pump();
   }
 
-  // Последовательный «насос» очереди: для головы сперва догружаем недостающие
-  // блобы, затем шлём сообщение; при успехе — сдвигаем и идём дальше; при ошибке
-  // (загрузки или отправки) — помечаем failed и СТОП (голова блокирует очередь до
-  // повтора). Повтор переиспользует уже загруженные блобы (blobId сохранён в att).
-  // Единственный экземпляр в полёте (pumpingRef).
+  // Sequential queue pump: for the head, first upload missing blobs, then send
+  // the message; on success shift and continue; on failure (upload or send),
+  // mark failed and STOP (the head blocks the queue until retried). A retry
+  // reuses already uploaded blobs (blobId kept in att).
+  // Single instance in flight (pumpingRef).
   async function pump(): Promise<void> {
     if (pumpingRef.current) return;
     pumpingRef.current = true;
@@ -917,8 +917,8 @@ export function Conversation({
               ...(head.link ? [head.link] : []),
             ],
           };
-          // Прокинуть проставленные blobId в оптимистичное сообщение (чтобы клик
-          // по превью открывал полноразмер ещё до прихода WS-эха).
+          // Propagate assigned blobIds into the optimistic message (so clicking
+          // the preview opens full size even before the WS echo arrives).
           if (head.images.length || head.media) {
             setMessages((prev) =>
               prev.map((m) =>
@@ -957,7 +957,7 @@ export function Conversation({
                 : m,
             ),
           );
-          break; // не обгоняем застрявшую голову
+          break; // don't overtake the stuck head
         }
       }
     } finally {
@@ -965,15 +965,15 @@ export function Conversation({
     }
   }
 
-  // Повтор: голова всё ещё в очереди — просто перезапускаем насос.
+  // Retry: the head is still queued — just restart the pump.
   function retrySend(): void {
     void pump();
   }
 
-  // --- Голосовые и видео сообщения (#34) ---
+  // --- Voice and video messages (#34) ---
 
-  // Нормировка волны: относительный масштаб к максимуму, обрезка хвостовых нулей
-  // не нужна — длина волны соответствует времени записи.
+  // Normalize the wave: relative scale to the max; no need to trim trailing
+  // zeros — wave length matches recording time.
   function normalizeWave(wave: number[]): number[] {
     if (!wave.length) return new Array(1).fill(0.2);
     const max = Math.max(...wave, 0.01);
@@ -986,7 +986,7 @@ export function Conversation({
   const pressFiredRef = useRef(false);
 
   const voice = useVoiceRecorder(() => {
-    // Автостоп по лимиту 5 минут — завершаем как обычное отпускание.
+    // Auto-stop at the 5-minute limit — finish like a normal release.
     pressFiredRef.current = true;
     void finishVoice();
   });
@@ -995,7 +995,7 @@ export function Conversation({
     const rec: VoiceRecording | null = await voice.stop();
     setRecCancelArmed(false);
     if (!rec) return;
-    // Свайп-отмена или случайное короткое нажатие — выбрасываем.
+    // Swipe-cancel or accidental short tap — discard.
     if (recCancelRef.current || rec.duration < 0.7) return;
     const att: AudioAttachment = {
       kind: 'audio',
@@ -1010,7 +1010,7 @@ export function Conversation({
     enqueueSend('', [], undefined, replyId ?? undefined, { att, blob: rec.blob });
   }
 
-  // Playlist (#34): после окончания голосового — включить следующее в чате.
+  // Playlist (#34): when a voice message ends, play the next one in the chat.
   function playNextVoice(finishedMsgId: string | null): void {
     if (!finishedMsgId) return;
     const idx = messages.findIndex((m) => m.messageId === finishedMsgId);
@@ -1020,7 +1020,7 @@ export function Conversation({
         (a): a is AudioAttachment => a.kind === 'audio',
       );
       if (!att || !messages[i].messageId) continue;
-      if (!att.blobId) continue; // ещё грузится — пропустить
+      if (!att.blobId) continue; // still uploading — skip
       voiceRefs.current.get(messages[i].messageId!)?.play();
       return;
     }
@@ -1042,9 +1042,9 @@ export function Conversation({
     enqueueSend('', [], undefined, undefined, { att, blob: rec.blob });
   }
 
-  // Hold-to-record: короткий клик — toggle 🎙/🎥; удержание ≥250мс — запись.
-  // Захват указателя обязателен, чтобы pointermove/pointerup приходили на кнопку
-  // при уходе курсора за её пределы (свайп-отмена).
+  // Hold-to-record: short click toggles mic/camera; hold ≥250ms records.
+  // Pointer capture is required so pointermove/pointerup reach the button
+  // when the cursor leaves it (swipe-to-cancel).
   function onMicPointerDown(e: React.PointerEvent<HTMLButtonElement>): void {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -1093,7 +1093,7 @@ export function Conversation({
       setInput('');
       composerRef.current?.setMarkdown('');
       setFormatBarVisible(false);
-      // оптимистично + событие message.edited подтвердит (правим только текст)
+      // optimistic + the message.edited event confirms (text-only edit)
       setMessages((prev) =>
         prev.map((m) =>
           m.messageId === messageId
@@ -1104,12 +1104,12 @@ export function Conversation({
       try {
         await editMessage(messageId, encodeContent(textContent(text)));
       } catch {
-        /* событие не придёт — оставляем как есть; в v1 без отката */
+        /* the event won't come — leave as is; no rollback in v1 */
       }
       return;
     }
 
-    // Прицепляем превью ссылки, если оно готово и его URL ещё есть в тексте (#32).
+    // Attach the link preview if ready and its URL is still in the text (#32).
     const link =
       linkPreview && text.includes(linkPreview.url) ? linkPreview : undefined;
     const replyId = replyTo;
@@ -1128,14 +1128,14 @@ export function Conversation({
     void doSubmit();
   }
 
-  // Enter — отправка, Shift+Enter — перенос строки (задача #25). isComposing
-  // отсекает Enter, подтверждающий ввод IME (иероглифы и т.п.).
+  // Enter sends, Shift+Enter inserts a newline (issue #25). isComposing filters
+  // out the Enter confirming IME input (CJK characters etc.).
   function onInputKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     if (e.key === 'Escape' && replyTo) {
       setReplyTo(null);
       return;
     }
-    // Горячие клавиши форматирования (#69)
+    // Formatting shortcuts (#69)
     if ((e.ctrlKey || e.metaKey) && !e.altKey) {
       if (e.key === 'b' || e.key === 'B') {
         e.preventDefault();
@@ -1153,7 +1153,7 @@ export function Conversation({
         return;
       }
     }
-    // Навигация по попапу @-упоминаний
+    // @-mention popup navigation
     if (mentionOpen) {
       const filtered = getFilteredParticipants(chat.participants, mentionFilter, myId);
       if (e.key === 'ArrowDown') {
@@ -1182,13 +1182,13 @@ export function Conversation({
 
   function onPickFile(e: ChangeEvent<HTMLInputElement>): void {
     const file = e.target.files?.[0];
-    e.target.value = ''; // позволить выбрать тот же файл повторно
+    e.target.value = ''; // allow picking the same file again
     if (file) setPendingImage(file);
   }
 
-  // Вставка изображения из буфера (Ctrl/Cmd+V): если в буфере есть картинка —
-  // открываем тот же редактор, что и при прикреплении через 📎 (issue #17).
-  // При редактировании вложения не добавляем — обычная вставка текста.
+  // Paste image from clipboard (Ctrl/Cmd+V): if there's an image, open the same
+  // editor as when attaching via 📎 (issue #17). While editing, no attachments —
+  // fall through to plain text paste.
   function onPaste(e: ClipboardEvent<HTMLDivElement>): void {
     if (editing) return;
     const items = e.clipboardData?.items;
@@ -1198,7 +1198,7 @@ export function Conversation({
       if (it.kind === 'file' && it.type.startsWith('image/')) {
         const file = it.getAsFile();
         if (file) {
-          e.preventDefault(); // не вставлять в textarea сопутствующий текст
+          e.preventDefault(); // don't also paste accompanying text into the input
           setPendingImage(file);
           return;
         }
@@ -1207,14 +1207,14 @@ export function Conversation({
   }
 
   function startEdit(m: MsgVM): void {
-    // Редактируем только чисто текстовые сообщения (без вложений).
+    // Only plain-text messages (no attachments) are editable.
     if (!m.messageId || m.content.attachments.length > 0) return;
     setEditing(m.messageId);
     setInput(m.content.text);
   }
 
-  // Из редактора изображения: собираем вложение с thumbnail и ставим в очередь
-  // (полный блоб загрузится в pump). Подпись хранится на вложении.
+  // From the image editor: build the attachment with thumbnail and enqueue it
+  // (the full blob uploads in pump). The caption lives on the attachment.
   function onImagePrepared(prepared: PreparedImage, caption: string): void {
     const att: ImageAttachment = {
       kind: 'image',
@@ -1244,12 +1244,12 @@ export function Conversation({
     try {
       await deleteMessage(m.messageId);
     } catch {
-      /* идемпотентно; событие message.deleted подтвердит */
+      /* idempotent; the message.deleted event will confirm */
     }
   }
 
-  // Подзаголовок под названием: для группы — «N участников, M в сети»,
-  // для direct — статус собеседника. Себя считаем онлайн (мы подключены).
+  // Subtitle under the title: for groups "N members, M online",
+  // for direct chats the peer's status. Self counts as online (we're connected).
   const onlineCount = chat.participants.filter(
     (p) => p.userId === myId || onlineUsers.has(p.userId),
   ).length;
@@ -1274,12 +1274,12 @@ export function Conversation({
     }
   }
   const isGroup = chat.type === 'group';
-  // Имя отправителя по id — для идентификации автора в группе (задача #21).
+  // Sender name by id — to identify the author in groups (issue #21).
   const nameOf = (id: string): string =>
     chat.participants.find((p) => p.userId === id)?.username ?? '—';
 
-  // Форматирование строки «печатает» с именами (задача #35).
-  // Возвращает текст БЕЗ «...» — анимированные точки добавляются отдельно в JSX.
+  // Format the "typing" string with names (issue #35).
+  // Returns text WITHOUT "..." — animated dots are added separately in JSX.
   const formatTypingText = (users: Map<string, string>): string => {
     const names = [...users.keys()]
       .map((id) => chat.participants.find((p) => p.userId === id)?.username)
@@ -1288,7 +1288,7 @@ export function Conversation({
     const MAX_LEN = 40;
     if (names.length === 1) return `${names[0]} печатает`;
     if (names.length === 2) return `${names[0]} и ${names[1]} печатают`;
-    // 3+ имён: добавляем по одному, пока влезает. Если не влезает — «и др.».
+    // 3+ names: append one by one while it fits; otherwise "and others".
     let result = names[0];
     for (let i = 1; i < names.length; i++) {
       const candidate = `${result}, ${names[i]}`;
@@ -1379,10 +1379,10 @@ export function Conversation({
               own && m.messageId ? Number(m.messageId) <= readUpTo : false;
             const prev = messages[i - 1];
             const next = messages[i + 1];
-            // Новый календарный день — разделитель дат перед сообщением.
+            // New calendar day — date divider before the message.
             const showDate = !prev || !sameDay(prev.ts, m.ts);
-            // Группировка подряд идущих сообщений одного автора в пределах дня:
-            // хвостик — только у последнего в группе, верхний отступ — у первого.
+            // Group consecutive messages by the same author within a day:
+            // tail only on the last in the group, top margin on the first.
             const groupStart =
               !prev || prev.senderId !== m.senderId || showDate;
             const groupEnd =
@@ -1431,7 +1431,7 @@ export function Conversation({
                   }
                   items.push({ separator: true, label: '', onClick: () => {} });
                   items.push({ label: 'Копировать текст', icon: <IconCopy />, onClick: () => {
-                    // Strip markdown: **, _, ~~, `
+                    // Strip markup: **, _, ~~, `
                     const plain = m.content.text
                       .replace(/\*\*(.+?)\*\*/g, '$1')
                       .replace(/_(.+?)_/g, '$1')
@@ -1449,13 +1449,13 @@ export function Conversation({
                   setFullEmojiPickerMsgId(null);
                 }}
               >
-                {/* Свайп-индикатор: стрелка ответа при свайпе вправо */}
+                {/* Swipe indicator: reply arrow while swiping right */}
                 {swipeMsgId === m.messageId && swipeX > 20 && (
                   <span className="bubble-swipe-indicator" style={{ opacity: Math.min(1, (swipeX - 20) / 60) }}>
                     <IconReply />
                   </span>
                 )}
-                {/* Аватар автора у последнего пузыря серии (группа, чужие) — #21 */}
+                {/* Author avatar on the last bubble of a series (group, others) — #21 */}
                 {isGroup && !own && groupEnd && (
                   <span
                     className="bubble-avatar"
@@ -1466,7 +1466,7 @@ export function Conversation({
                     {initialFor(nameOf(m.senderId))}
                   </span>
                 )}
-                {/* Имя автора над первым пузырём серии (группа, чужие) — #21 */}
+                {/* Author name above the first bubble of a series (group, others) — #21 */}
                 {isGroup && !own && groupStart && (
                   <span
                     className="bubble-sender"
@@ -1482,7 +1482,7 @@ export function Conversation({
                     <em>Сообщение удалено</em>
                   ) : (
                     <>
-                      {/* Превью сообщения, на которое отвечаем (#33) */}
+                      {/* Preview of the message being replied to (#33) */}
                       {m.replyToMessageId && (() => {
                         const ref = messages.find((x) => x.messageId === m.replyToMessageId);
                         const refName = ref
@@ -1503,7 +1503,7 @@ export function Conversation({
                               );
                               if (!target) return;
                               pushNavStack();
-                              // Сбрасываем atBottom, чтобы auto-scroll не тянул обратно вниз
+                              // Reset atBottom so auto-scroll doesn't pull back down
                               atBottomRef.current = false;
                               const doHighlight = () => {
                                 setMessages((prev) =>
@@ -1523,15 +1523,15 @@ export function Conversation({
                                   );
                                 }, 2000);
                               };
-                              // Если сообщение уже видно — подсвечиваем сразу
+                              // Message already visible — highlight right away
                               const rect = target.getBoundingClientRect();
                               const scrollRect = el.getBoundingClientRect();
                               if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
                                 doHighlight();
                               } else {
-                                // Ручной расчёт позиции вместо scrollIntoView —
-                                // scrollIntoView на Android WebView может скроллить
-                                // не тот контейнер.
+                                // Manual position math instead of scrollIntoView —
+                                // on Android WebView scrollIntoView may scroll
+                                // the wrong container.
                                 const targetTop = (target as HTMLElement).offsetTop
                                   - el.offsetTop
                                   - el.clientHeight / 2
@@ -1662,7 +1662,7 @@ export function Conversation({
                 </span>
                 {!m.deleted && (
                   <span className="bubble-footer">
-                    {/* Реакции — слева (#23) */}
+                    {/* Reactions on the left (#23) */}
                     {m.reactions && m.reactions.length > 0 && (
                       <span className="bubble-reactions">
                         {m.reactions.map((rx) => (
@@ -1684,9 +1684,9 @@ export function Conversation({
                     {chat.username && m.viewCount > 0 && (
                       <span className="bubble-views">👁 {m.viewCount}</span>
                     )}
-                    {/* Статус доставки своих сообщений (#24/#26): отправка —
-                        спиннер, ошибка — «!», отправлено — одна галочка,
-                        прочитано — двойная синяя. */}
+                    {/* Own message delivery status (#24/#26): sending —
+                        spinner, failed — "!", sent — single check,
+                        read — double blue. */}
                     {own &&
                       (m.failed ? (
                         <span
@@ -1728,7 +1728,7 @@ export function Conversation({
                     Повторить
                   </button>
                 )}
-                {/* Кнопки действий: удалить, редактировать, ответить (#50) */}
+                {/* Action buttons: delete, edit, reply (#50) */}
                 {!m.deleted && m.messageId && (() => {
                   const canDelete = own || (chat.createdBy === myId);
                   const canEdit = own;
@@ -1786,9 +1786,9 @@ export function Conversation({
               </Fragment>
             );
           })}
-          {/* Облачко-превью набираемого сообщения (#18 Live Draft) */}
+          {/* Draft bubble preview of the message being typed (#18 Live Draft) */}
           {typingUsers.size > 0 && (() => {
-            // Показываем draft от первого пользователя, у которого есть текст
+            // Show the draft from the first user who has text
             for (const [userId, draft] of typingUsers) {
               if (draft) {
                 const name = chat.participants.find((p) => p.userId === userId)?.username ?? '—';
@@ -1923,7 +1923,7 @@ export function Conversation({
             </button>
           </div>
         ) : (<>
-        {/* Панель записи голосового (#34): таймер + живой waveform. */}
+        {/* Voice recording bar (#34): timer + live waveform. */}
         {voice.state === 'recording' && (
           <div className="conv-rec-bar" data-testid="rec-bar">
             <span className="conv-rec-dot" />
@@ -2061,7 +2061,7 @@ export function Conversation({
                   }),
                 );
               } catch {
-                // ошибка отправки
+                // send failed
               }
             }}
             onClose={() => setMediaOpen(false)}
@@ -2171,7 +2171,7 @@ export function Conversation({
           />
         </>
       )}
-      {/* Полный эмодзи-пикер (из стрелки в панели реакций) */}
+      {/* Full emoji picker (from the arrow in the reaction bar) */}
       {fullEmojiPickerMsgId && ctxMenuPosRef.current && (
         <PositionedEmojiPicker
           pos={ctxMenuPosRef.current}
@@ -2185,7 +2185,7 @@ export function Conversation({
           }}
         />
       )}
-      {/* Диалог ввода ссылки (#69) */}
+      {/* Link input dialog (#69) */}
       {linkDialogOpen && (
         <LinkDialog
           initialText={linkDialogText}
@@ -2197,7 +2197,7 @@ export function Conversation({
   );
 }
 
-// Панель быстрых реакций — внутри контекстного меню (#23, как в Telegram).
+// Quick reaction bar — inside the context menu (#23, like Telegram).
 const QUICK_REACTIONS_DEFAULT = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
 
 function getFrequentReactions(): string[] {
@@ -2275,7 +2275,7 @@ function ReactionBar({
   );
 }
 
-// EmojiPicker с авто-коррекцией позиции по экрану (#23).
+// EmojiPicker with on-screen position correction (#23).
 function PositionedEmojiPicker({
   pos,
   onSelect,
@@ -2316,7 +2316,7 @@ function PositionedEmojiPicker({
   );
 }
 
-// Компонент для отображения стикера по blobId
+// Component rendering a sticker by blobId
 function StickerImage({ blobId }: { blobId: string }): JSX.Element {
   const [url, setUrl] = useState<string | null>(null);
 

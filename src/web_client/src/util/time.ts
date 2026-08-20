@@ -1,4 +1,4 @@
-// Форматирование времени для UI (ориентир — десктопный Telegram).
+// Time formatting for the UI (modeled after desktop Telegram).
 
 export function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -6,7 +6,7 @@ export function formatTime(iso: string): string {
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Время для списка чатов: сегодня — часы:минуты, иначе — дата дд.мм.
+// Time for the chat list: hh:mm today, otherwise a dd.mm date.
 export function formatListTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -15,7 +15,7 @@ export function formatListTime(iso: string): string {
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
 }
 
-// Один ли это календарный день (для группировки сообщений и разделителей дат).
+// Whether two timestamps share a calendar day (for grouping messages and date dividers).
 export function sameDay(a: string, b: string): boolean {
   const da = new Date(a);
   const db = new Date(b);
@@ -23,8 +23,8 @@ export function sameDay(a: string, b: string): boolean {
   return da.toDateString() === db.toDateString();
 }
 
-// Подпись разделителя дат в переписке: «Сегодня», «Вчера», «24 июня»
-// (с годом, если сообщение не из текущего года).
+// Date divider label in a conversation: "Today", "Yesterday", "June 24"
+// (with the year if the message isn't from the current year).
 export function formatDateDivider(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -40,7 +40,7 @@ export function formatDateDivider(iso: string): string {
   return d.toLocaleDateString('ru-RU', opts);
 }
 
-// Форматирование "последний раз был активен" (#36).
+// Formatting of "last seen" (#36).
 export function formatLastSeen(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';

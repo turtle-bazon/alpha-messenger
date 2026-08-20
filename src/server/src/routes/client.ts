@@ -2,9 +2,9 @@ import { FastifyInstance } from 'fastify';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { join, extname } from 'path';
 
-// Маршруты для раздачи файлов веб-клиента.
-// Используется Android-приложением для скачивания обновлений (manifest.json + файлы бандла).
-// Каталог задаётся через WEB_CLIENT_DIR (по умолчанию: /app/mobile-client).
+// Routes serving web client files.
+// Used by the Android app to download updates (manifest.json + bundle files).
+// Directory is set via WEB_CLIENT_DIR (default: /app/mobile-client).
 
 const WEB_CLIENT_DIR = process.env.WEB_CLIENT_DIR || '/app/mobile-client';
 
@@ -23,14 +23,14 @@ const MIME: Record<string, string> = {
 };
 
 function safePath(requested: string): string | null {
-  // Запрещаем path traversal
+  // Block path traversal
   const normalized = requested.replace(/\\/g, '/').replace(/\/+/g, '/');
   if (normalized.startsWith('..') || normalized.startsWith('/')) return null;
   return normalized;
 }
 
 export async function clientRoutes(app: FastifyInstance): Promise<void> {
-  // Манифест — список файлов бандла и версия
+  // Manifest — bundle file list and version
   app.get('/mobile-client/manifest.json', async (req, reply) => {
     const file = join(WEB_CLIENT_DIR, 'manifest.json');
     if (!existsSync(file)) return reply.code(404).send({ error: 'not built' });
@@ -41,7 +41,7 @@ export async function clientRoutes(app: FastifyInstance): Promise<void> {
       .send(data);
   });
 
-  // Любой файл из бандла клиента
+  // Any file from the client bundle
   app.get<{ Params: { '*': string } }>('/mobile-client/*', async (req, reply) => {
     const raw = (req.params as { '*': string })['*'];
     const rel = safePath(raw);

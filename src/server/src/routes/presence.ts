@@ -4,9 +4,9 @@ import { authenticate } from '../auth';
 import { isOnline } from '../ws';
 import { getLastActiveMap } from '../chat-helpers';
 
-// Снимок онлайна для сидирования клиента после коннекта: возвращает тех
-// со-участников (с кем вызывающий делит хотя бы один чат), кто сейчас в сети.
-// Дальше актуальность клиент держит по транзиентным событиям presence из /ws.
+// Online snapshot to seed the client after connect: returns co-members (those
+// sharing at least one chat with the caller) who are currently online.
+// Afterwards the client keeps it fresh via transient presence events from /ws.
 export async function presenceRoutes(app: FastifyInstance): Promise<void> {
   app.get('/presence', { preHandler: authenticate }, async (req) => {
     const userId = req.user!.userId;
@@ -20,7 +20,7 @@ export async function presenceRoutes(app: FastifyInstance): Promise<void> {
     const onlineIds = userIds.filter((id) => isOnline(id));
     const lastActiveMap = await getLastActiveMap(userIds);
     const now = Date.now();
-    const AWAY_MS = 5 * 60 * 1000; // 5 минут
+    const AWAY_MS = 5 * 60 * 1000; // 5 minutes
 
     const presence: Record<string, { online: boolean; away: boolean; lastActiveAt?: string }> = {};
     for (const id of userIds) {

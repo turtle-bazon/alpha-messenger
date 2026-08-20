@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { blobObjectUrl } from '../util/blobUrl';
 import { IconX } from '../util/icons';
 
-// Полноэкранный просмотр изображения или видео (#34). Тянет полный блоб по blobId
-// через кеш object-URL; до загрузки — индикатор, при ошибке — сообщение. Закрытие
-// по клику на фон, по Escape или по кнопке. Видео — <video controls autoplay>.
+// Fullscreen image/video viewer (#34). Fetches the full blob by blobId
+// through the object-URL cache; shows a spinner until loaded, a message on error.
+// Close via backdrop click, Escape, or the button. Video uses <video controls autoplay>.
 export function MediaViewer({
   blobId,
   caption,

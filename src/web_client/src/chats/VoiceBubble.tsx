@@ -9,12 +9,12 @@ import { blobObjectUrl } from '../util/blobUrl';
 import { IconPause, IconPlay } from '../util/icons';
 import type { AudioAttachment } from '../util/content';
 
-// Пузырь голосового сообщения (#34): play/pause, waveform из wave[] с
-// прогресс-заливкой (клик — seek), длительность, скорость 1x→1.5x→2x.
-// Одновременное воспроизведение одно (модульный синглтон activeVoice).
-// Playlist: по ended дергается onEnded — родитель включает следующее голосовое.
+// Voice message bubble (#34): play/pause, waveform from wave[] with
+// progress fill (click to seek), duration, speed 1x→1.5x→2x.
+// Only one playback at a time (module-level activeVoice singleton).
+// Playlist: on ended, onEnded fires — the parent starts the next voice message.
 
-// Единственное активное голосовое: старт нового глушит предыдущее.
+// The single active voice message: starting a new one stops the previous.
 const activeVoice: { id: string | null; pause: (() => void) | null } = {
   id: null,
   pause: null,
@@ -66,7 +66,7 @@ export const VoiceBubble = forwardRef<
   }
 
   async function play(): Promise<void> {
-    // Глушим чужое воспроизведение.
+    // Stop any other playback.
     if (activeVoice.id !== messageId) activeVoice.pause?.();
     const a = ensureAudio();
     if (!urlRef.current) {
@@ -88,7 +88,7 @@ export const VoiceBubble = forwardRef<
 
   useImperativeHandle(ref, () => ({ play }), [speed]);
 
-  // Освобождение object-URL при размонтировании.
+  // Release the object URL on unmount.
   useEffect(() => {
     return () => {
       audioRef.current?.pause();
@@ -114,7 +114,7 @@ export const VoiceBubble = forwardRef<
     if (audioRef.current) audioRef.current.playbackRate = next;
   }
 
-  // Клик по волне — seek по доле ширины.
+  // Click on the wave — seek by width fraction.
   function seek(e: React.MouseEvent<HTMLDivElement>): void {
     const el = waveRef.current;
     const a = audioRef.current;

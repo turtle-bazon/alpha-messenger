@@ -5,8 +5,8 @@ import { colorFor, initialFor } from './avatar';
 import { formatLastSeen } from '../util/time';
 import { IconX } from '../util/icons';
 
-// Диалог профиля пользователя (#22). Открывается кликом по аватару/имени
-// в шапке чата, списке участников или на имени автора сообщения.
+// User profile dialog (#22). Opens by clicking the avatar/name
+// in the chat header, the members list, or a message author's name.
 export function UserProfileDialog({
   userId,
   myId,
@@ -28,7 +28,7 @@ export function UserProfileDialog({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
 
-  // Загрузка профиля и заметки.
+  // Load the profile and note.
   useEffect(() => {
     let alive = true;
     Promise.all([getUserProfile(userId), getNote(userId)])
@@ -45,7 +45,7 @@ export function UserProfileDialog({
     };
   }, [userId]);
 
-  // Esc закрывает окно.
+  // Esc closes the dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose();
@@ -54,7 +54,7 @@ export function UserProfileDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Автосохранение заметки с дебаунсом 1с.
+  // Auto-save the note with a 1s debounce.
   const scheduleSave = useCallback(
     (text: string) => {
       dirty.current = true;
@@ -70,7 +70,7 @@ export function UserProfileDialog({
     [userId],
   );
 
-  // Очистка таймера при размонтировании.
+  // Clear the timer on unmount.
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);

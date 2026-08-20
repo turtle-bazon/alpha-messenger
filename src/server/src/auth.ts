@@ -35,7 +35,7 @@ export async function lookupSession(
   return { userId: rows[0].user_id, deviceId: rows[0].device_id };
 }
 
-// preHandler: проверяет bearer-токен, кладёт req.user.
+// preHandler: verifies the bearer token and sets req.user.
 export async function authenticate(
   req: FastifyRequest,
   reply: FastifyReply,

@@ -4,7 +4,7 @@ import { emitEvent } from './events';
 
 type Db = Pool | PoolClient;
 
-// Обновление last_active_at — вызывать при любой активности пользователя.
+// Update last_active_at — call on any user activity.
 export async function touchActivity(userId: string): Promise<void> {
   await pool.query(
     'UPDATE accounts SET last_active_at = now() WHERE user_id = $1',
@@ -12,7 +12,7 @@ export async function touchActivity(userId: string): Promise<void> {
   );
 }
 
-// Получение lastActiveAt для списка пользователей.
+// Get lastActiveAt for a list of users.
 export async function getLastActiveMap(
   userIds: string[],
 ): Promise<Map<string, Date | null>> {
@@ -58,8 +58,8 @@ export async function emitToMembers(
   }
 }
 
-// Двигает маркер прочтения вперёд и эмитит message.read. Общая логика для
-// REST POST /chats/{id}/read и WS-сообщения read.
+// Advances the read marker and emits message.read. Shared logic for
+// REST POST /chats/{id}/read and the WS read message.
 export async function markRead(
   userId: string,
   chatId: string,

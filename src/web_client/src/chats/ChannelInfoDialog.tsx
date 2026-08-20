@@ -8,7 +8,7 @@ import {
 import type { Chat } from '../api/types';
 import { IconX } from '../util/icons';
 
-// Channel info dialog — shown when clicking channel header.
+// Channel info dialog — opened by clicking the channel header.
 interface ChannelInfoDialogProps {
   chat: Chat;
   myId: string | null;
@@ -162,7 +162,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
   );
 }
 
-// Search channels dialog.
+// Channel search dialog.
 interface SearchChannelsDialogProps {
   onClose: () => void;
   onSelect: (chatId: string) => void;

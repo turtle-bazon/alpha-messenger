@@ -7,7 +7,7 @@ export type { BlobStore } from './types';
 
 let store: BlobStore | null = null;
 
-// Ленивый синглтон стора. Драйвер выбирается один раз по config.blobStore.
+// Lazy store singleton. The driver is chosen once based on config.blobStore.
 export function getBlobStore(): BlobStore {
   if (!store) {
     store = config.blobStore === 's3' ? new S3BlobStore() : new FsBlobStore();

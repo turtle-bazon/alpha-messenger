@@ -1,4 +1,4 @@
-// Иконки проекта. Все — из Lucide (ISC License, см. NOTICE).
+// Project icons. All from Lucide (ISC License, see NOTICE).
 
 import {
   Search,
@@ -34,7 +34,7 @@ import {
   Pause,
 } from 'lucide-react';
 
-// Экспортируем Lucide-иконки напрямую.
+// Re-export Lucide icons directly.
 export {
   Search as IconSearch,
   Send as IconSend,

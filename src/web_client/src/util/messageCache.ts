@@ -1,6 +1,6 @@
-// IndexedDB кеш сообщений (#70).
-// Хранит wire-объекты Message по chatId для мгновенного отображения
-// при повторном открытии чата. Лимит — MAX_PER_CHAT сообщений на чат.
+// IndexedDB message cache (#70).
+// Stores wire Message objects by chatId for instant display
+// when reopening a chat. Limit: MAX_PER_CHAT messages per chat.
 
 import type { Message } from '../api/types';
 
@@ -29,7 +29,7 @@ function openDB(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-/** Получить сообщения чата из кеша (отсортированные по messageId asc). */
+/** Get a chat's messages from the cache (sorted by messageId asc). */
 export async function getChatMessages(chatId: string): Promise<Message[]> {
   const db = await openDB();
   return new Promise<Message[]>((resolve, reject) => {
@@ -45,7 +45,7 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
   });
 }
 
-/** Сохранить/обновить сообщения в кеше (upsert по messageId). */
+/** Save/update messages in the cache (upsert by messageId). */
 export async function putMessages(chatId: string, messages: Message[]): Promise<void> {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
@@ -61,7 +61,7 @@ export async function putMessages(chatId: string, messages: Message[]): Promise<
   });
 }
 
-/** Обновить одно сообщение в кеше (вызывать при edit/delete/reaction). */
+/** Update a single message in the cache (call on edit/delete/reaction). */
 export async function patchMessage(
   chatId: string,
   messageId: string,
@@ -83,7 +83,7 @@ export async function patchMessage(
   });
 }
 
-/** Удалить одно сообщение из кеша. */
+/** Remove a single message from the cache. */
 export async function removeMessage(messageId: string): Promise<void> {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
@@ -94,7 +94,7 @@ export async function removeMessage(messageId: string): Promise<void> {
   });
 }
 
-/** Очистить кеш одного чата. */
+/** Clear one chat's cache. */
 export async function clearChat(chatId: string): Promise<void> {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
@@ -113,7 +113,7 @@ export async function clearChat(chatId: string): Promise<void> {
   });
 }
 
-/** Очистить весь кеш (при логауте). */
+/** Clear the entire cache (on logout). */
 export async function clearAll(): Promise<void> {
   const db = await openDB();
   return new Promise<void>((resolve, reject) => {
@@ -124,7 +124,7 @@ export async function clearAll(): Promise<void> {
   });
 }
 
-/** Оставить не более MAX_PER_CHAT сообщений в чате (удалить старейшие). */
+/** Keep at most MAX_PER_CHAT messages in a chat (drop the oldest). */
 async function trimChat(db: IDBDatabase, chatId: string): Promise<void> {
   const msgs = await new Promise<(Message & { chatId: string })[]>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readonly');

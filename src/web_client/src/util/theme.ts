@@ -1,6 +1,6 @@
-// Тема оформления: light/dark. Значение хранится в localStorage; при отсутствии
-// сохранённого — берётся системное предпочтение (prefers-color-scheme).
-// Применяется через data-theme на <html> (палитру переопределяет CSS).
+// Color theme: light/dark. The value is stored in localStorage; if nothing is
+// saved, the system preference is used (prefers-color-scheme).
+// Applied via data-theme on <html> (the palette is overridden in CSS).
 
 export type Theme = 'light' | 'dark';
 
@@ -23,6 +23,6 @@ export function setTheme(theme: Theme): void {
   applyTheme(theme);
 }
 
-// Применяем начальную тему сразу при импорте модуля — до первого рендера,
-// чтобы не было вспышки светлой темы у пользователей с тёмной.
+// Apply the initial theme right at module import — before the first render,
+// so dark-theme users don't get a light flash.
 applyTheme(getTheme());

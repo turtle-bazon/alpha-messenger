@@ -8,11 +8,11 @@ import { getReactions, ReactionGroup } from './reactions';
 interface SendBody {
   clientMessageId?: string;
   ciphertext?: string;
-  // Открытые ссылки на загруженные блобы (вложения). Серверу нужны явно: из
-  // зашифрованного ciphertext он их прочесть не может. Ключи расшифровки
-  // остаются внутри ciphertext — здесь только идентификаторы.
+  // Plaintext references to uploaded blobs (attachments). The server needs them
+  // explicitly: it cannot read them from the encrypted ciphertext. Decryption keys
+  // stay inside the ciphertext — only identifiers here.
   blobIds?: string[];
-  // Ответ на сообщение: ID сообщения, на которое отвечаем.
+  // Reply: ID of the message being replied to.
   replyToMessageId?: string;
 }
 
@@ -32,7 +32,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: 'missing fields' });
       }
 
-      // Валидация вложений: формат хэшей, лимит количества, существование.
+      // Validate attachments: hash format, count limit, existence.
       let attachIds: string[] = [];
       if (blobIds !== undefined) {
         if (
@@ -71,7 +71,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(403).send({ error: 'channel subscribers cannot post' });
       }
 
-      // Validate replyToMessageId: should be numeric message ID in this chat.
+      // Validate replyToMessageId: numeric message ID from this chat.
       let replyToId: string | null = null;
       if (replyToMessageId !== undefined) {
         if (!/^\d+$/.test(replyToMessageId)) {
@@ -98,7 +98,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           [chatId, userId, clientMessageId, Buffer.from(ciphertext, 'base64'), replyToId],
         );
 
-        // идемпотентность: повтор с тем же clientMessageId не создаёт дубль
+        // idempotency: a repeat with the same clientMessageId does not create a duplicate
         if (ins.rowCount === 0) {
           await client.query('ROLLBACK');
           const ex = await pool.query(
@@ -202,7 +202,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         reactions: [] as ReactionGroup[],
       }));
 
-      // Подтягиваем реакции для всех сообщений одним запросом
+      // Fetch reactions for all messages in a single query
       if (messages.length > 0) {
         const msgIds = messages.map((m) => m.messageId);
         const rxRes = await pool.query(
@@ -302,19 +302,19 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(404).send({ error: 'not found' });
       }
       const row = msg.rows[0];
-      // Удаление разрешено: автору сообщения ИЛИ владельцу группы
+      // Deletion allowed: message author OR group owner
       const isOwner = row.type === 'group' && row.created_by === userId;
       if (row.sender_id !== userId && !isOwner) {
         return reply.code(403).send({ error: 'forbidden' });
       }
       if (row.deleted) {
-        return reply.send({ messageId }); // идемпотентно
+        return reply.send({ messageId }); // idempotent
       }
 
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        // содержимое стирается, метка deleted ставится
+        // content is wiped, deleted flag is set
         await client.query(
           "UPDATE messages SET deleted = true, ciphertext = ''::bytea WHERE message_id = $1",
           [messageId],
@@ -351,7 +351,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Record views for channel messages (batch).
+  // Channel message view counting (batched).
   app.post(
     '/chats/:chatId/view',
     { preHandler: authenticate },

@@ -1,13 +1,13 @@
-// Локальное состояние сессии: accessToken и стабильный deviceId устройства.
-// deviceId генерится один раз и переживает перезагрузки (одно «устройство» = один
-// браузерный профиль). Постоянного кэша сообщений в v1 нет (см. architecture.md).
+// Local session state: accessToken and a stable device deviceId.
+// deviceId is generated once and survives reloads (one "device" = one browser
+// profile). No persistent message cache in v1 (see architecture.md).
 
 import { clearAll as clearMessageCache } from '../util/messageCache';
 
 const TOKEN_KEY = 'alpha.token';
 const DEVICE_KEY = 'alpha.deviceId';
 const USER_KEY = 'alpha.userId';
-const SEQ_KEY = 'alpha.lastSeq'; // префикс; ключ — per-account (SEQ_KEY.<userId>)
+const SEQ_KEY = 'alpha.lastSeq'; // prefix; key is per-account (SEQ_KEY.<userId>)
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -30,10 +30,10 @@ export function clearSession(): void {
   clearMessageCache().catch(() => undefined);
 }
 
-// Курсор потока событий (последний виденный seq из outbox), сохранённый между
-// сессиями. При hello клиент передаёт его серверу — реплеится только пропущенное,
-// а не вся история с нуля (см. WsClient, doc/architecture.md). Ключ — per-account,
-// чтобы разные аккаунты в одном профиле не делили курсор.
+// Event stream cursor (last seen seq from the outbox), persisted across sessions.
+// On hello the client sends it to the server — only missed events are replayed,
+// not the whole history from scratch (see WsClient, doc/architecture.md). The key
+// is per-account so different accounts in one profile don't share the cursor.
 export function getLastSeq(): number {
   const uid = getUserId();
   if (!uid) return 0;

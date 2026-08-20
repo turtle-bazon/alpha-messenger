@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-// Injected by vite.config.ts define option — git hash at build time.
+// Injected via define in vite.config.ts — git hash at build time.
 declare const __BUILD_HASH__: string;
 
 interface ImportMetaEnv {

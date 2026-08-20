@@ -1,15 +1,15 @@
-// Базовый адрес сервера. Вычисляется динамически.
-// На Android используется addJavascriptInterface (window.AlphaConfig.getServerUrl()) —
-// синхронный мост, доступен ДО загрузки任何 скриптов.
-// Дополнительно settings.js ставит window.__ALPHA_CONFIG__ для cached клиента.
+// Base server address. Computed dynamically.
+// On Android, addJavascriptInterface is used (window.AlphaConfig.getServerUrl()) —
+// a synchronous bridge available BEFORE any scripts load.
+// Additionally, settings.js sets window.__ALPHA_CONFIG__ for the cached client.
 function getApiUrl(): string {
   if (typeof window === 'undefined') return 'http://localhost:3000';
 
-  // 1. addJavascriptInterface (Android native bridge) — самый надёжный, работает всегда
+  // 1. addJavascriptInterface (Android native bridge) — most reliable, always works
   const native = (window as any).AlphaConfig?.getServerUrl();
   if (native) return native;
 
-  // 2. settings.js (Android cached client — файл в той же директории)
+  // 2. settings.js (Android cached client — file in the same directory)
   const cached = (window as any).__ALPHA_CONFIG__?.serverUrl;
   if (cached) return cached;
 
@@ -17,11 +17,11 @@ function getApiUrl(): string {
   const saved = localStorage.getItem('alpha.serverUrl');
   if (saved) return saved;
 
-  // 4. Явно заданный адрес (для dev или нестандартных портов)
+  // 4. Explicitly set address (for dev or non-standard ports)
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
 
-  // 5. Тот же origin (Apache/nginx reverse proxy).
-  // На file:// протоколе origin = 'null' — фолбэк на localhost.
+  // 5. Same origin (Apache/nginx reverse proxy).
+  // Under the file:// protocol origin = 'null' — fall back to localhost.
   if (window.location.origin && window.location.origin !== 'null') {
     return window.location.origin;
   }
@@ -29,13 +29,13 @@ function getApiUrl(): string {
   return 'http://localhost:3000';
 }
 
-// Все REST-эндпоинты живут под /api/ (см. app.ts). Префикс держим здесь —
-// единый источник, чтобы пути в rest.ts оставались короткими (/auth/..., /chats).
+// All REST endpoints live under /api/ (see app.ts). The prefix lives here —
+// single source of truth, keeping paths in rest.ts short (/auth/..., /chats).
 export function apiUrl(path: string): string {
   return `${getApiUrl()}/api${path}`;
 }
 
-// ws:// (или wss://) для потока событий.
+// ws:// (or wss://) for the event stream.
 export function wsUrl(): string {
   const api = getApiUrl();
   if (api) return `${api.replace(/^http/, 'ws')}/ws`;

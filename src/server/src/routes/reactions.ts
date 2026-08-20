@@ -8,9 +8,9 @@ interface ReactionBody {
 }
 
 export async function reactionRoutes(app: FastifyInstance): Promise<void> {
-  // PUT /messages/:messageId/reactions — toggle реакции.
-  // Если у пользователя уже стоит такая же реакция (message_id, user_id, emoji) — удаляем.
-  // Если нет — добавляем. Один пользователь может ставить несколько разных реакций.
+  // PUT /messages/:messageId/reactions — toggle a reaction.
+  // If the user already has the same reaction (message_id, user_id, emoji) — remove it.
+  // Otherwise add it. One user can set several different reactions.
   app.put(
     '/messages/:messageId/reactions',
     { preHandler: authenticate },
@@ -23,7 +23,7 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(400).send({ error: 'invalid emoji' });
       }
 
-      // Проверяем существование сообщения и получаем chat_id
+      // Check the message exists and get its chat_id
       const msg = await pool.query(
         'SELECT chat_id FROM messages WHERE message_id = $1',
         [messageId],
@@ -41,7 +41,7 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
       try {
         await client.query('BEGIN');
 
-        // Проверяем, есть ли уже такая exact реакция
+        // Check whether this exact reaction already exists
         const existing = await client.query(
           'SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3',
           [messageId, userId, emoji],
@@ -50,14 +50,14 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
         let action: 'added' | 'removed';
 
         if (existing.rowCount === 0) {
-          // Нет такой реакции — добавляем
+          // No such reaction — add it
           await client.query(
             'INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)',
             [messageId, userId, emoji],
           );
           action = 'added';
         } else {
-          // Есть — удаляем (toggle off)
+          // Exists — remove it (toggle off)
           await client.query(
             'DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3',
             [messageId, userId, emoji],
@@ -65,7 +65,7 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
           action = 'removed';
         }
 
-        // Получаем обновлённый набор реакций
+        // Fetch the updated reaction set
         const reactions = await getReactions(client, messageId);
 
         await emitToMembers(client, chatId, 'message.reaction', {
@@ -88,7 +88,7 @@ export async function reactionRoutes(app: FastifyInstance): Promise<void> {
   );
 }
 
-/** Получить все реакции на сообщение, сгруппированные по эмодзи. */
+/** Get all reactions on a message, grouped by emoji. */
 export async function getReactions(
   db: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> },
   messageId: string,

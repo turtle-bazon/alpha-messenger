@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import type { WsClient } from '../api/ws';
 import type { ServerEvent } from '../api/types';
 
-// Сколько держать индикатор «печатает» после последнего события typing (как в
-// Conversation): источник транзиентный, без явного «перестал печатать».
+// How long to keep the "typing" indicator after the last typing event (as in
+// Conversation): the source is transient, with no explicit "stopped typing".
 const TYPING_HIDE_MS = 6000;
 
-// Кто сейчас печатает, по чатам: chatId → Map<userId, draft>. Источник —
-// транзиентные события 'typing' из WS (без seq, не из outbox). Один источник на
-// всё приложение (задача #27): и список чатов, и заголовок переписки, и окно
-// участников читают отсюда. Себя не учитываем (своё «печатает» не показываем).
+// Who is currently typing, per chat: chatId → Map<userId, draft>. Source:
+// transient 'typing' events from WS (no seq, not from outbox). A single source
+// for the whole app (#27): the chat list, the conversation header, and the
+// members dialog all read from here. Self is excluded (we don't show our own typing).
 export function useTyping(
   ws: WsClient,
   myId: string | null,
@@ -52,7 +52,7 @@ export function useTyping(
       const existing = timers.current.get(key);
       if (existing) clearTimeout(existing);
 
-      // Если draft пустой — это сигнал «прекратил набор»
+      // Empty draft means the user stopped typing
       if (!draft) {
         timers.current.delete(key);
         drop(chatId, userId);
@@ -75,8 +75,8 @@ export function useTyping(
       });
     });
 
-    // Прислал сообщение — набор завершён: гасим «печатает» немедленно, не ждём
-    // таймаута (как в Telegram: пришло сообщение — индикатор пропал).
+    // Message sent — typing is over: hide the indicator immediately instead of
+    // waiting for the timeout (like Telegram: message arrives, indicator disappears).
     const offMessage = ws.on('message.new', (ev: ServerEvent) => {
       const chatId = ev.chatId;
       const senderId = (ev.payload as { senderId?: string }).senderId;
@@ -84,8 +84,8 @@ export function useTyping(
       clear(chatId, senderId);
     });
 
-    // Ушёл офлайн — печатать уже не может: гасим индикатор сразу, не дожидаясь
-    // 6-секундного таймера (иначе «печатает» зависнет после закрытия вкладки).
+    // Went offline — can't be typing anymore: hide the indicator right away instead
+    // of waiting for the 6-second timer (otherwise "typing" would hang after tab close).
     const offPresence = ws.on('presence', (ev: ServerEvent) => {
       const p = ev.payload as { userId?: string; online?: boolean };
       if (p.online || !p.userId) return;

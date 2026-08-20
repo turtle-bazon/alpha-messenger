@@ -2,10 +2,10 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pool } from './db';
 
-// migrations/ лежит рядом с src/ и dist/ (см. Dockerfile: COPY migrations ./migrations)
+// migrations/ sits next to src/ and dist/ (see Dockerfile: COPY migrations ./migrations)
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
 
-// Произвольный фиксированный ключ advisory-блокировки миграций.
+// Arbitrary fixed advisory-lock key for migrations.
 const MIGRATION_LOCK_KEY = 776655;
 
 export async function runMigrations(): Promise<void> {
@@ -15,9 +15,9 @@ export async function runMigrations(): Promise<void> {
     .filter((f) => f.endsWith('.sql'))
     .sort();
 
-  // Сессионный advisory-lock сериализует конкурентные прогоны (несколько
-  // тестовых файлов / реплик сервера стартуют миграции одновременно).
-  // Лок берётся и снимается на одном и том же соединении.
+  // Session-level advisory lock serializes concurrent runs (several test
+  // files / server replicas may start migrations simultaneously).
+  // The lock is taken and released on the same connection.
   const client = await pool.connect();
   try {
     await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);

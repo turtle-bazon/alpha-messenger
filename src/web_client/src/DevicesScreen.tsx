@@ -67,8 +67,8 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
     if (deviceId === currentDeviceId) {
       return <IconMonitor />;
     }
-    // Простая эвристика для определения типа устройства
-    // В будущем можно добавить информацию о типе устройства от сервера
+    // Simple heuristic to determine device type
+    // Device type info from the server could be added later
     return <IconSmartphone />;
   }
 

@@ -9,7 +9,7 @@ interface DraftBody {
 }
 
 export async function draftRoutes(app: FastifyInstance): Promise<void> {
-  // GET /chats/:chatId/draft — получить черновик
+  // GET /chats/:chatId/draft — get draft
   app.get(
     '/chats/:chatId/draft',
     { preHandler: authenticate },
@@ -34,7 +34,7 @@ export async function draftRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // PUT /chats/:chatId/draft — сохранить черновик
+  // PUT /chats/:chatId/draft — save draft
   app.put(
     '/chats/:chatId/draft',
     { preHandler: authenticate },
@@ -59,7 +59,7 @@ export async function draftRoutes(app: FastifyInstance): Promise<void> {
         [chatId, userId, ciphertext],
       );
 
-      // Уведомляем другие устройства пользователя о обновлении черновика
+      // Notify the user's other devices about the draft update
       sendTransient(userId, {
         type: 'draft.updated',
         chatId,
@@ -70,7 +70,7 @@ export async function draftRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // DELETE /chats/:chatId/draft — удалить черновик
+  // DELETE /chats/:chatId/draft — delete draft
   app.delete(
     '/chats/:chatId/draft',
     { preHandler: authenticate },
@@ -87,7 +87,7 @@ export async function draftRoutes(app: FastifyInstance): Promise<void> {
         [chatId, userId],
       );
 
-      // Уведомляем другие устройства пользователя об удалении черновика
+      // Notify the user's other devices about the draft deletion
       sendTransient(userId, {
         type: 'draft.deleted',
         chatId,

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Модалка записи видео (#34): зеркальный preview камеры, запись стартует сразу
-// по открытию, таймер, автостоп по лимиту 60с. После остановки — превью
-// записанного с кнопками «Отправить» / «Перезаписать». Поток освобождается
-// при закрытии/перезаписи.
+// Video recording modal (#34): mirrored camera preview, recording starts
+// immediately on open, timer, auto-stop at the 60s limit. After stopping —
+// a preview of the recording with Send / Re-record buttons. The stream is
+// released on close/re-record.
 
 export const VIDEO_MAX_SECONDS = 60;
 
@@ -96,8 +96,8 @@ export function VideoRecorderModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Стоп записи: собирает блоб и переключает в превью. Компонентный уровень
-  // (не внутри эффекта) — доступен кнопке «Стоп» и автостопу по лимиту.
+  // Stop recording: assembles the blob and switches to preview. Lives at the
+  // component level (not inside an effect) — available to the Stop button and the limit auto-stop.
   function stopRecording(): void {
     const r = recRef.current;
     if (!r || r.state === 'inactive') return;
@@ -121,8 +121,8 @@ export function VideoRecorderModal({
     r.stop();
   }
 
-  // Перезапись: сброс результата; родитель перемонтирует модалку (key++) —
-  // запись начнётся заново.
+  // Re-record: reset the result; the parent remounts the modal (key++) —
+  // recording starts over.
   function reRecord(): void {
     if (result) URL.revokeObjectURL(result.url);
     onReRecord();

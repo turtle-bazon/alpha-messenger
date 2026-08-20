@@ -1,10 +1,10 @@
-// Кеш object-URL для полноразмерных блобов. <img src> не умеет слать заголовок
-// Authorization, поэтому файл тянется через fetch (с токеном) в Blob, а затем
-// оборачивается в URL.createObjectURL. Кешируем по blobId, чтобы повторный показ
-// одной картинки не дёргал сеть. blobId — content-hash, так что кеш всегда валиден.
+// Object-URL cache for full-size blobs. <img src> can't send an Authorization
+// header, so the file is fetched (with the token) into a Blob and then wrapped
+// in URL.createObjectURL. Cached by blobId so showing the same image again
+// doesn't hit the network. blobId is a content hash, so the cache is always valid.
 //
-// v1: object-URL живут до конца сессии (без revoke). Для долгих сессий с тысячами
-// картинок понадобится LRU с revoke — отмечено как follow-up (см. план).
+// v1: object URLs live until the end of the session (no revoke). Long sessions
+// with thousands of images will need an LRU with revoke — noted as a follow-up (see plan).
 
 import { fetchBlob } from '../api/rest';
 
@@ -16,7 +16,7 @@ export function blobObjectUrl(blobId: string): Promise<string> {
     p = fetchBlob(blobId)
       .then((b) => URL.createObjectURL(b))
       .catch((err) => {
-        cache.delete(blobId); // не кешируем неудачу — дать повтор
+        cache.delete(blobId); // don't cache failure — allow retry
         throw err;
       });
     cache.set(blobId, p);

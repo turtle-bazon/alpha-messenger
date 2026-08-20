@@ -1,9 +1,9 @@
-// Типы контракта сервера (см. doc/api.md). Здесь — минимум, нужный клиенту;
-// расширяется по мере появления экранов.
+// Server contract types (see doc/api.md). Only the minimum the client needs;
+// extended as new screens appear.
 
 export interface AuthResult {
   userId: string;
-  username?: string; // приходит при регистрации; при логине — нет
+  username?: string; // present on registration; absent on login
   accessToken: string;
 }
 
@@ -26,7 +26,7 @@ export interface Participant {
   lastActiveAt?: string;
 }
 
-// Участник в окне списка: к username добавлен признак онлайн на момент запроса.
+// Member in the list dialog: username plus online status at request time.
 export interface ChatMember {
   userId: string;
   username: string;
@@ -82,8 +82,8 @@ export interface ReactionGroup {
   count: number;
 }
 
-// Конверт события из потока WS. payload зависит от type (см. doc/api.md).
-// seq есть у событий из outbox; у транзиентных (typing) его нет.
+// Event envelope from the WS stream. payload depends on type (see doc/api.md).
+// Outbox events carry seq; transient ones (typing) don't.
 export interface ServerEvent {
   type: string;
   seq?: number;
@@ -92,7 +92,7 @@ export interface ServerEvent {
   payload: Record<string, unknown>;
 }
 
-// ---- Профили пользователей (#22) ----
+// ---- User profiles (#22) ----
 
 export interface UserProfile {
   userId: string;
@@ -107,7 +107,7 @@ export interface UserNote {
   updatedAt: string;
 }
 
-// ---- Стикеры (#63) ----
+// ---- Stickers (#63) ----
 
 export interface StickerPack {
   packId: string;

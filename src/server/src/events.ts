@@ -1,7 +1,7 @@
 import { Pool, PoolClient } from 'pg';
 
-// Кладёт событие в outbox (таблица events). Доставкой по WS занимается /ws (см. план).
-// db — пул или клиент в открытой транзакции.
+// Puts an event into the outbox (events table). Delivery over WS is handled by /ws.
+// db — pool or client inside an open transaction.
 export async function emitEvent(
   db: Pool | PoolClient,
   userId: string,
@@ -13,8 +13,8 @@ export async function emitEvent(
     'INSERT INTO events(user_id, type, chat_id, payload) VALUES ($1, $2, $3, $4)',
     [userId, type, chatId, JSON.stringify(payload)],
   );
-  // будит WS-доставку для получателя; в транзакции доставится на commit
-  // payload: { userId, chatId? } — chatId нужен для per-chat уведомлений на клиенте
+  // wakes WS delivery for the recipient; inside a transaction it fires on commit
+  // payload: { userId, chatId? } — chatId needed for per-chat notifications on the client
   await db.query("SELECT pg_notify('alpha_events', $1)", [
     JSON.stringify({ userId, ...(chatId ? { chatId } : {}) }),
   ]);

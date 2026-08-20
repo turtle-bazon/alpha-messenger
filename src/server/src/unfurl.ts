@@ -2,10 +2,10 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { config } from './config';
 
-// Разворачивание ссылок (#32). Сервер сам тянет страницу (браузер не может —
-// CORS) и отдаёт метаданные OpenGraph + байты картинки превью. Всё под жёсткой
-// SSRF-защитой: только http/https, отказ на приватные адреса, перепроверка хоста
-// на каждом редиректе, таймаут и потолки размера.
+// Link unfurling (#32). The server fetches the page itself (the browser can't —
+// CORS) and returns OpenGraph metadata + preview image bytes. All under strict
+// SSRF protection: http/https only, private addresses rejected, host re-checked
+// on every redirect, plus timeout and size caps.
 
 export interface UnfurlImage {
   mime: string;
@@ -29,11 +29,11 @@ function ipv4Blocked(ip: string): boolean {
   }
   const [a, b, c] = p;
   if (a === 0) return true; // 0.0.0.0/8
-  if (a === 10) return true; // частная 10/8
+  if (a === 10) return true; // private 10/8
   if (a === 127) return true; // loopback
   if (a === 169 && b === 254) return true; // link-local
-  if (a === 172 && b >= 16 && b <= 31) return true; // частная 172.16/12
-  if (a === 192 && b === 168) return true; // частная 192.168/16
+  if (a === 172 && b >= 16 && b <= 31) return true; // private 172.16/12
+  if (a === 192 && b === 168) return true; // private 192.168/16
   if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64/10
   if (a === 192 && b === 0 && c === 0) return true; // 192.0.0.0/24
   if (a >= 224) return true; // multicast (224/4) + reserved (240/4)
@@ -54,11 +54,11 @@ function ipBlocked(ip: string): boolean {
   const v = isIP(ip);
   if (v === 4) return ipv4Blocked(ip);
   if (v === 6) return ipv6Blocked(ip);
-  return true; // не распознали — блокируем
+  return true; // unrecognized — block
 }
 
-// Резолвим хост и блокируем, если ХОТЬ ОДИН адрес приватный (защита от того, что
-// домен резолвится сразу в публичный и приватный IP). Нерезолвимый — тоже блок.
+// Resolve the host and block if EVEN ONE address is private (protection against
+// a domain resolving to both public and private IPs). Unresolvable — block too.
 async function hostBlocked(hostname: string): Promise<boolean> {
   if (config.unfurl.allowPrivate) return false;
   let ips: string[];
@@ -88,8 +88,8 @@ interface Fetched {
   finalUrl: string;
 }
 
-// Фетч с ручным обходом редиректов: каждый хоп заново проверяем на приватность
-// (защита от редиректа во внутреннюю сеть), считаем хопы, ставим таймаут.
+// Fetch with manual redirect handling: each hop is re-checked for privacy
+// (protects against redirects into the internal network), hops counted, timeout set.
 async function fetchGuarded(raw: string, accept: string): Promise<Fetched | null> {
   let current = raw;
   for (let hop = 0; hop <= config.unfurl.maxRedirects; hop++) {
@@ -129,11 +129,11 @@ async function fetchGuarded(raw: string, accept: string): Promise<Fetched | null
     }
     return { res, finalUrl: u.toString() };
   }
-  return null; // слишком много редиректов
+  return null; // too many redirects
 }
 
-// Вычитываем тело не больше maxBytes; сообщаем, обрезали ли (для картинок
-// обрезанный результат бракуем, для HTML — парсим что есть).
+// Read at most maxBytes of the body; report whether truncated (truncated images
+// are rejected; for HTML we parse whatever we got).
 async function readCapped(
   res: Response,
   maxBytes: number,
@@ -162,7 +162,7 @@ function decodeEntities(s: string): string {
     .replace(/&(?:#39|apos);/g, "'")
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&'); // amp последним, чтобы не раскрыть дважды
+    .replace(/&amp;/g, '&'); // amp last so it isn't decoded twice
 }
 
 function metaAttr(tag: string, name: string): string | undefined {
@@ -221,13 +221,12 @@ async function fetchImage(rawUrl: string): Promise<UnfurlImage | undefined> {
     return undefined;
   }
   const { buf, truncated } = await readCapped(got.res, config.unfurl.maxImageBytes);
-  if (truncated || buf.length === 0) return undefined; // обрезанная картинка битая
+  if (truncated || buf.length === 0) return undefined; // truncated image is broken
   return { mime, dataBase64: buf.toString('base64') };
 }
 
-// Главная функция: вернуть превью или null (страница недоступна/заблокирована/
-// без заголовка). Бросает только на заведомо неверном URL (не http/https) —
-// роут отвечает на это 400.
+// Main function: return a preview or null (page unavailable/blocked/no title).
+// Throws only on a clearly invalid URL (not http/https) — the route answers 400.
 export async function unfurl(rawUrl: string): Promise<UnfurlResult | null> {
   const u = parseHttpUrl(rawUrl);
   if (!u) throw new Error('invalid url');
@@ -244,11 +243,11 @@ export async function unfurl(rawUrl: string): Promise<UnfurlResult | null> {
   const { buf } = await readCapped(page.res, config.unfurl.maxHtmlBytes);
   const meta = extractMeta(buf.toString('utf8'), page.finalUrl);
   const title = meta.title;
-  if (!title) return null; // без заголовка карточка бессмысленна
+  if (!title) return null; // without a title the card is pointless
 
   const image = meta.imageUrl ? await fetchImage(meta.imageUrl) : undefined;
   return {
-    url: rawUrl, // ссылка ведёт на то, что набрал пользователь
+    url: rawUrl, // link points to what the user typed
     title,
     description: meta.description,
     siteName: meta.siteName,

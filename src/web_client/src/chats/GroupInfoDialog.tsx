@@ -3,8 +3,8 @@ import { updateChat, ApiError } from '../api/rest';
 import type { Chat } from '../api/types';
 import { IconX } from '../util/icons';
 
-// Информация о группе: название, описание, кнопка «Участники».
-// Owner может редактировать; участник — только просматривать.
+// Group info: title, description, "Members" button.
+// Owner can edit; members can only view.
 export function GroupInfoDialog({
   chat,
   myId,

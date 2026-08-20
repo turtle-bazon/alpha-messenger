@@ -4,13 +4,13 @@ import type { ServerEvent } from '../api/types';
 import { WsClient } from '../api/ws';
 import { IconX } from '../util/icons';
 
-// Уведомления уровня аккаунта (безопасность): новый вход / новое устройство.
-// Источник — общий поток событий (auth.attempt, device.added из outbox).
+// Account-level (security) notifications: new sign-in / new device.
+// Source: the shared event stream (auth.attempt, device.added from the outbox).
 //
-// Тонкость реплея: при hello сервер сперва выгружает историю outbox, и только
-// потом шлёт маркер 'synced'. До маркера события — это «уже было» (история),
-// после — живые. Сигналим только о живых (ws.isLive()), плюс свои собственные
-// события отсекаем по deviceId.
+// Replay subtlety: on hello the server first flushes the outbox history and only
+// then sends the 'synced' marker. Events before the marker are "already happened"
+// (history), after it — live. We notify only about live ones (ws.isLive()), and
+// filter out our own events by deviceId.
 
 interface Notice {
   id: number;
@@ -38,8 +38,8 @@ export function AccountNotifications({ ws }: { ws: WsClient }): JSX.Element {
       timers.current.push(t);
     };
 
-    // device.added приходит раньше auth.attempt (эмитятся в этом порядке) —
-    // запоминаем новое устройство, чтобы обогатить текст входа.
+    // device.added arrives before auth.attempt (they're emitted in that order) —
+    // remember the new device to enrich the sign-in text.
     const offDevice = ws.on('device.added', (ev: ServerEvent) => {
       if (!ws.isLive()) return;
       const deviceId = (ev.payload as { deviceId?: string }).deviceId;

@@ -24,7 +24,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // POST /me/activity — пинг активности клиента (throttle ~30с на клиенте).
+  // POST /me/activity — client activity ping (throttled ~30s on the client).
   app.post(
     '/me/activity',
     { preHandler: authenticate },

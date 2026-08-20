@@ -16,7 +16,7 @@ export function LinkDialog({
   const urlRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Фокус на поле URL при открытии
+    // Focus the URL field on open
     urlRef.current?.focus();
   }, []);
 

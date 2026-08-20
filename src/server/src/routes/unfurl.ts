@@ -3,9 +3,10 @@ import { authenticate } from '../auth';
 import { unfurl } from '../unfurl';
 
 export async function unfurlRoutes(app: FastifyInstance): Promise<void> {
-  // Превью ссылки (#32). Клиент отправителя шлёт URL, сервер сам тянет страницу
-  // (браузеру мешает CORS) и возвращает метаданные OpenGraph + байты картинки.
-  // Клиент вшивает превью в сообщение вложением kind:'link' (E2EE-совместимо).
+  // Link preview (#32). The sender's client sends a URL, the server fetches the
+  // page itself (the browser is blocked by CORS) and returns OpenGraph metadata
+  // + image bytes. The client embeds the preview into the message as a
+  // kind:'link' attachment (E2EE-compatible).
   app.post('/unfurl', { preHandler: authenticate }, async (req, reply) => {
     const body = req.body as { url?: unknown } | undefined;
     const url = body?.url;
@@ -14,9 +15,9 @@ export async function unfurlRoutes(app: FastifyInstance): Promise<void> {
     }
     try {
       const preview = await unfurl(url);
-      return reply.send({ preview }); // preview=null — страница без превью/недоступна
+      return reply.send({ preview }); // preview=null — page has no preview/is unavailable
     } catch {
-      // unfurl бросает только на не-http/https URL
+      // unfurl throws only on non-http/https URLs
       return reply.code(400).send({ error: 'invalid url' });
     }
   });

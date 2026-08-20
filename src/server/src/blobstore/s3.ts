@@ -22,8 +22,8 @@ function isNotFound(err: unknown): boolean {
   );
 }
 
-// S3-совместимый объектный стор (MinIO в prod/deploy, готовое облако — позже).
-// Ключ объекта = content-hash блоба. forcePathStyle — для MinIO/локального S3.
+// S3-compatible object store (MinIO in prod/deploy, managed cloud later).
+// Object key = blob content-hash. forcePathStyle — for MinIO/local S3.
 export class S3BlobStore implements BlobStore {
   private bucket = config.s3.bucket;
   private client = new S3Client({
@@ -37,8 +37,8 @@ export class S3BlobStore implements BlobStore {
   });
 
   async init(): Promise<void> {
-    // MinIO может стартовать чуть позже сервера — ретраим связь, затем
-    // обеспечиваем наличие бакета (HeadBucket → CreateBucket).
+    // MinIO may start slightly later than the server — retry the connection, then
+    // ensure the bucket exists (HeadBucket → CreateBucket).
     let lastErr: unknown;
     for (let attempt = 0; attempt < 15; attempt++) {
       try {

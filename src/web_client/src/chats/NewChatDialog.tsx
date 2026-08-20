@@ -25,7 +25,7 @@ export function NewChatDialog({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Esc закрывает модалку.
+  // Esc closes the dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose();
@@ -34,8 +34,8 @@ export function NewChatDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Доступные кандидаты: знакомые пользователи, ещё не выбранные, отфильтрованные
-  // по строке поиска (подстрока, регистр не важен).
+  // Available candidates: known users not already selected, filtered
+  // by the search string (substring match, case-insensitive).
   const candidates = useMemo(() => {
     const q = search.trim().toLowerCase();
     return knownUsers.filter(

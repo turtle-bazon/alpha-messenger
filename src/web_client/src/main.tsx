@@ -1,12 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import './util/theme'; // применяет начальную тему до первого рендера
+import './util/theme'; // applies the initial theme before the first render
 import './index.css';
 
-// Android-инициализация: если запущено в Capacitor, регистрируем
-// нативные модули (push, lifecycle) ДО рендера React.
-// Импорт происходит только на android платформе.
+// Android initialization: when running under Capacitor, register
+// native modules (push, lifecycle) BEFORE React renders.
+// The import happens only on the android platform.
 if (
   typeof window !== 'undefined' &&
   (window as any).Capacitor?.isNativePlatform()

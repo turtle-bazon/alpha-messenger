@@ -1,15 +1,15 @@
 import { Readable } from 'node:stream';
 
-// Хранилище непрозрачных блобов, адресуемых по content-hash (sha256 hex).
-// Сервер не интерпретирует содержимое: только кладёт по ключу и отдаёт по ключу.
+// Store of opaque blobs addressed by content-hash (sha256 hex).
+// The server does not interpret contents: it only puts by key and serves by key.
 export interface BlobStore {
-  // Подготовка драйвера: каталог для fs, бакет для s3. Идемпотентно.
+  // Driver setup: directory for fs, bucket for s3. Idempotent.
   init(): Promise<void>;
-  // Есть ли блоб с таким id (для дедупликации — не перезаписываем существующий).
+  // Whether a blob with this id exists (for dedup — never overwrite an existing one).
   has(id: string): Promise<boolean>;
-  // Финализирует уже подготовленный временный файл под ключ id. Реализация
-  // вправе забрать (move) srcPath; после вызова он может не существовать.
+  // Finalizes an already staged temp file under key id. Implementations may
+  // take over (move) srcPath; after the call it may no longer exist.
   putFile(id: string, srcPath: string, size: number): Promise<void>;
-  // Поток содержимого либо null, если блоба нет.
+  // Content stream, or null if the blob doesn't exist.
   get(id: string): Promise<Readable | null>;
 }

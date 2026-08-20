@@ -7,7 +7,7 @@ import { startEventListener } from './ws';
 
 async function main(): Promise<void> {
   await runMigrations();
-  // Подготовка хранилища блобов: каталог для fs, бакет (с ожиданием) для s3.
+  // Prepare blob storage: directory for fs, bucket (with waiting) for s3.
   await getBlobStore().init();
 
   const listener = startEventListener();

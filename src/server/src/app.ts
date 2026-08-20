@@ -23,16 +23,16 @@ import { wsRoutes } from './ws';
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: true });
 
-  // Клиент ходит cross-origin: web из dev-origin :5173, а desktop/android-обёртки
-  // — со своих origin (file://, capacitor:// и т.п.). Аутентификация на
-  // bearer-токене (не куки), поэтому разрешаем любой origin без credentials.
-  // Явно разрешаем null origin — он приходит с file:// протокола (Android WebView).
+  // Clients are cross-origin: web from dev origin :5173, desktop/android wrappers
+  // from their own origins (file://, capacitor:// etc.). Auth uses a bearer token
+  // (not cookies), so any origin is allowed without credentials.
+  // Explicitly allow null origin — it comes from the file:// protocol (Android WebView).
   app.register(cors, {
     origin: (_origin, cb) => cb(null, true),
   });
 
-  // Все REST-эндпоинты — под общим префиксом /api/ (упрощает обратный прокси:
-  // одно правило ProxyPass /api/ вместо правила на каждую группу).
+  // All REST endpoints share the /api/ prefix (simplifies the reverse proxy:
+  // a single ProxyPass /api/ rule instead of one per group).
   app.register(
     async (api) => {
       api.register(healthRoutes);
@@ -53,11 +53,11 @@ export function buildApp(): FastifyInstance {
     },
     { prefix: '/api' },
   );
-  // WebSocket остаётся в корне (/ws) — у прокси для него своё правило (upgrade).
+  // WebSocket stays at the root (/ws) — the proxy has its own rule for it (upgrade).
   app.register(wsRoutes);
-  // version.json в корне — клиент проверяет авто-обновление.
+  // version.json at the root — the client checks for auto-update.
   app.register(versionRoutes);
-  // Файлы веб-клиента для Android-обновлений (/mobile-client/manifest.json, /mobile-client/assets/...).
+  // Web client files for Android updates (/mobile-client/manifest.json, /mobile-client/assets/...).
   app.register(clientRoutes);
   // Public channel pages: /channel/:username/
   app.register(channelWebRoutes);

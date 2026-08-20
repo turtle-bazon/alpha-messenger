@@ -27,12 +27,12 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Загрузка моих паков
+  // Load my packs
   useEffect(() => {
     getMyStickerPacks().then((res) => setPacks(res.packs)).catch(() => {});
   }, []);
 
-  // Закрытие при клике вне
+  // Close on outside click
   useEffect(() => {
     if (!standalone) return;
     function handleClick(e: MouseEvent): void {
@@ -55,7 +55,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
     };
   }, [onClose, textareaRef, standalone]);
 
-  // Загрузка стикеров выбранного пака
+  // Load stickers of the selected pack
   useEffect(() => {
     if (selectedPack) {
       setLoading(true);
@@ -66,7 +66,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
     }
   }, [selectedPack]);
 
-  // Поиск паков
+  // Pack search
   useEffect(() => {
     if (search.trim().length > 0) {
       const timer = setTimeout(() => {
@@ -218,7 +218,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
   );
 }
 
-// Превью стикера по blobId
+// Sticker preview by blobId
 function StickerThumb({ blobId }: { blobId: string }): JSX.Element {
   const [url, setUrl] = useState<string | null>(null);
 

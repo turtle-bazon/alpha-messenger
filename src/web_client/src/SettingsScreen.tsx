@@ -48,7 +48,7 @@ export function SettingsScreen({
       setPrefs((p: NotifPrefs) => ({ ...p, browser: false }));
       return;
     }
-    // На Android push идут через нативный UnifiedPush/FCM, разрешение браузера не нужно
+    // On Android push goes through native UnifiedPush/FCM; browser permission not needed
     if (isAndroid) {
       setNotifBrowser(true);
       setPrefs((p: NotifPrefs) => ({ ...p, browser: true }));
@@ -143,7 +143,7 @@ export function SettingsScreen({
     return <DevicesScreen onBack={() => setView('main')} />;
   }
 
-  // Main settings view
+  // Main settings screen
   return (
     <div className="settings-screen" data-testid="settings-screen">
       <header className="settings-header">

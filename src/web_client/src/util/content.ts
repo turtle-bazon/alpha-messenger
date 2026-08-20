@@ -1,42 +1,42 @@
-// Конверт содержимого сообщения. Тело (шифр-)сообщения — это сериализованный
-// объект: текст + массив вложений (attachments). Каждое вложение ссылается на
-// блоб по content-hash (blobId) и несёт тонкий thumbnail для мгновенного превью
-// в пузыре; полный файл тянется из блоба по требованию (см. doc/api.md — «Блобы»
-// и status/plans/blob-client-images.md).
+// Message content envelope. The (cipher-)message body is a serialized object:
+// text + attachments array. Each attachment references a blob by content-hash
+// (blobId) and carries a thin thumbnail for instant preview in the bubble; the
+// full file is fetched from the blob on demand (see doc/api.md — "Blobs" and
+// status/plans/blob-client-images.md).
 //
-// Поверх encodeText/decodeText: в v1 шифрования нет (base64 от UTF-8 JSON),
-// реальное шифрование позже встанет тем же интерфейсом без смены вызовов. Поле
-// key у вложения зарезервировано под будущий ключ расшифровки блоба.
+// On top of encodeText/decodeText: v1 has no encryption (base64 of UTF-8 JSON);
+// real encryption will later plug into the same interface without changing call
+// sites. The attachment key field is reserved for a future blob decryption key.
 //
-// Легаси: ранние сообщения кодировались как t:'text' либо t:'image' (картинка
-// inline целиком в теле). decodeContent продолжает их читать (read-only);
-// inline-данные легаси-картинки используются как thumbnail, blobId пустой.
+// Legacy: early messages were encoded as t:'text' or t:'image' (image inline
+// entirely in the body). decodeContent still reads them (read-only); legacy
+// image inline data is used as thumbnail, blobId empty.
 
 import { decodeText, encodeText } from './text';
 
 export interface ImageAttachment {
   kind: 'image';
-  blobId: string; // sha256 блоба; '' у оптимистичного сообщения до загрузки
+  blobId: string; // sha256 of the blob; '' on optimistic messages before upload
   mime: string;
   width: number;
   height: number;
-  size: number; // байт полного блоба
-  thumb: string; // base64 крошечного JPEG для inline-превью (без data: префикса)
+  size: number; // bytes of the full blob
+  thumb: string; // base64 tiny JPEG for inline preview (without data: prefix)
   caption: string;
-  key?: string; // зарезервировано: ключ расшифровки блоба (будущий E2EE)
+  key?: string; // reserved: blob decryption key (future E2EE)
 }
 
-// Превью ссылки (#32). Метаданные OpenGraph целиком в теле сообщения (ciphertext):
-// сервер развернул ссылку один раз для отправителя, получатель только рендерит
-// карточку — без повторного фетча и без утечки своего IP стороннему сайту. thumb —
-// маленький inline-JPEG картинки превью (или '' если её нет), блоба тут нет.
+// Link preview (#32). OpenGraph metadata lives entirely in the message body
+// (ciphertext): the server expanded the link once for the sender, the receiver
+// just renders the card — no refetch and no IP leak to the third-party site.
+// thumb is a small inline JPEG of the preview image (or '' if none); no blob here.
 export interface LinkAttachment {
   kind: 'link';
   url: string;
   title: string;
   description: string;
   siteName: string;
-  thumb: string; // base64 крошечного JPEG (без data: префикса), '' если нет
+  thumb: string; // base64 tiny JPEG (without data: prefix), '' if none
 }
 
 export interface StickerAttachment {
@@ -44,9 +44,9 @@ export interface StickerAttachment {
   blobId: string;
 }
 
-// Голосовое сообщение (#34). wave — пики громкости 0..1, снятые при записи
-// (AnalyserNode); хранятся в теле сообщения, чтобы рендерить waveform без
-// декодирования аудио. duration в секундах (дробное).
+// Voice message (#34). wave — loudness peaks 0..1 sampled during recording
+// (AnalyserNode); stored in the message body so the waveform renders without
+// decoding audio. duration in seconds (fractional).
 export interface AudioAttachment {
   kind: 'audio';
   blobId: string;
@@ -56,7 +56,7 @@ export interface AudioAttachment {
   size: number;
 }
 
-// Видеосообщение (#34). thumb — крошечный inline JPEG постер-кадра.
+// Video message (#34). thumb — tiny inline JPEG poster frame.
 export interface VideoAttachment {
   kind: 'video';
   blobId: string;
@@ -65,7 +65,7 @@ export interface VideoAttachment {
   width: number;
   height: number;
   size: number;
-  thumb: string; // base64 JPEG без data: префикса
+  thumb: string; // base64 JPEG without data: prefix
 }
 
 export type Attachment =
@@ -75,8 +75,8 @@ export type Attachment =
   | AudioAttachment
   | VideoAttachment;
 
-// Сообщение — текст и/или вложения. Текст без вложений — обычное текстовое
-// сообщение; вложения без текста — медиа; возможна и комбинация.
+// Message — text and/or attachments. Text without attachments is a plain text
+// message; attachments without text are media; a combination is possible too.
 export interface MessageContent {
   text: string;
   attachments: Attachment[];
@@ -203,7 +203,7 @@ export function decodeContent(b64: string): MessageContent {
   const raw = decodeText(b64);
   try {
     const o = JSON.parse(raw) as Record<string, unknown>;
-    // Новый формат: текст + вложения.
+    // New format: text + attachments.
     if (o && o.t === 'msg') {
       const atts = Array.isArray(o.atts)
         ? (o.atts as Record<string, unknown>[])
@@ -212,7 +212,7 @@ export function decodeContent(b64: string): MessageContent {
         : [];
       return { text: typeof o.text === 'string' ? o.text : '', attachments: atts };
     }
-    // Легаси: картинка inline целиком — данные становятся thumbnail, blobId пуст.
+    // Legacy: image inline entirely — data becomes the thumbnail, blobId empty.
     if (o && o.t === 'image' && typeof o.data === 'string') {
       return {
         text: '',
@@ -230,28 +230,28 @@ export function decodeContent(b64: string): MessageContent {
         ],
       };
     }
-    // Легаси: обычный текст.
+    // Legacy: plain text.
     if (o && o.t === 'text' && typeof o.text === 'string') {
       return { text: o.text, attachments: [] };
     }
   } catch {
-    /* не JSON — это легаси/обычный текст */
+    /* not JSON — legacy/plain text */
   }
   return { text: raw, attachments: [] };
 }
 
-// data-URL для inline-превью вложения (thumbnail).
+// data-URL for the attachment inline preview (thumbnail).
 export function thumbUrl(a: ImageAttachment): string {
   return `data:${a.mime};base64,${a.thumb}`;
 }
 
-// data-URL для картинки превью ссылки (всегда JPEG).
+// data-URL for the link preview image (always JPEG).
 export function linkThumbUrl(a: LinkAttachment): string {
   return `data:image/jpeg;base64,${a.thumb}`;
 }
 
-// Краткое превью для списка чатов: для медиа — без раскодирования блоба. У превью
-// ссылки текст (сам URL) есть в сообщении — показываем его как обычный текст.
+// Short preview for the chat list: media without decoding the blob. For link
+// previews the text (the URL itself) is in the message — shown as plain text.
 export function previewText(c: MessageContent): string {
   const sticker = c.attachments.find((a): a is StickerAttachment => a.kind === 'sticker');
   if (sticker) return '🎯 Стикер';

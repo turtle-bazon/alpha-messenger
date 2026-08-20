@@ -14,9 +14,9 @@ interface ContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
-  /** Панель быстрых реакций — рендерится над пунктами меню в одном контейнере. */
+  /** Quick-reaction bar — rendered above menu items in one container. */
   reactionBar?: ReactNode;
-  /** Отдаёт скорректированную позицию после измерения (для позиционирования EmojiPicker). */
+  /** Returns the adjusted position after measuring (for EmojiPicker placement). */
   onPositioned?: (pos: { left: number; top: number; width: number; height: number }) => void;
 }
 

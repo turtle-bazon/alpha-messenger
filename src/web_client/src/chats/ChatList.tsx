@@ -9,9 +9,9 @@ import { colorFor, initialFor } from './avatar';
 import { AvatarBadges } from './AvatarBadges';
 import { NewChatDialog } from './NewChatDialog';
 
-// Левая колонка (раскладка Telegram): заголовок с кнопкой «новый чат» (синяя «+»,
-// открывает модалку выбора чат/группа) + список чатов.
-// Состоянием списка владеет HomeScreen — сюда оно приходит готовым.
+// Left column (Telegram layout): header with a "new chat" button (blue "+",
+// opens the chat/group picker modal) + the chat list.
+// List state is owned by HomeScreen — it arrives here ready-made.
 export function ChatList({
   chats,
   loading,
@@ -44,16 +44,16 @@ export function ChatList({
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState('');
 
-  // Фильтрация списка по названию чата (как поиск в Telegram, локально).
+  // Filter the list by chat title (like Telegram search, local only).
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return chats;
     return chats.filter((c) => chatTitle(c, myId).toLowerCase().includes(q));
   }, [chats, query, myId]);
 
-  // Кандидаты в участники группы — собеседники из существующих личных чатов
-  // (с кем уже есть переписка). Себя исключаем: создатель входит в группу
-  // автоматически на сервере (известная проблема №4). Уникальны по userId.
+  // Group member candidates — counterparts from existing direct chats
+  // (people you already have conversations with). Self is excluded: the creator
+  // joins the group automatically on the server (known issue #4). Unique by userId.
   const knownUsers = useMemo<Participant[]>(() => {
     const map = new Map<string, string>();
     for (const c of chats) {
@@ -73,7 +73,7 @@ export function ChatList({
       className="chat-list"
       data-testid="chat-list"
       onClick={(e) => {
-        // Фокус на поле ввода при клике в пустое место (задача #40).
+        // Focus the input when clicking empty space (#40).
         const tag = (e.target as HTMLElement).tagName;
         if (tag !== 'BUTTON' && tag !== 'INPUT') onFocusInput();
       }}
@@ -111,9 +111,9 @@ export function ChatList({
         ) : (
           filtered.map((chat) => {
             const title = chatTitle(chat, myId);
-            // Присутствие показываем только в личных чатах (для группы кружок не
-            // нужен). Тайпинг — в любом чате: для direct это собеседник, для
-            // группы — любой печатающий участник (#27).
+            // Presence is shown only in direct chats (groups don't need the dot).
+            // Typing — in any chat: for direct it's the counterpart, for a
+            // group — any typing member (#27).
             const other =
               chat.type === 'direct'
                 ? chat.participants.find((p) => p.userId !== myId)

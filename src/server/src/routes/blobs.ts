@@ -13,16 +13,16 @@ import { getBlobStore } from '../blobstore';
 export const HEX64 = /^[0-9a-f]{64}$/;
 
 export async function blobRoutes(app: FastifyInstance): Promise<void> {
-  // Сырое тело: блоб льётся потоком и не буферизуется JSON-парсером. Парсер
-  // отдаёт исходный поток как req.body. Скоуп — только этот плагин (/api/blobs).
+  // Raw body: the blob streams through and is not buffered by the JSON parser. The
+  // parser exposes the raw stream as req.body. Scope is this plugin only (/api/blobs).
   app.addContentTypeParser(
     'application/octet-stream',
     (_req, payload, done) => done(null, payload),
   );
 
-  // Загрузка блоба. Тело — сырые байты (application/octet-stream). Сервер
-  // считает sha256 на лету (он же blob_id), режет превышение лимита, кладёт в
-  // стор по хэшу (дедуп: существующий не перезаписывается) и пишет метаданные.
+  // Blob upload. Body is raw bytes (application/octet-stream). The server
+  // computes sha256 on the fly (= blob_id), cuts off over-limit data, stores by
+  // hash (dedup: existing blobs are not overwritten) and writes metadata.
   app.post('/blobs', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const store = getBlobStore();
@@ -32,8 +32,8 @@ export async function blobRoutes(app: FastifyInstance): Promise<void> {
     const hash = createHash('sha256');
     let size = 0;
     let tooLarge = false;
-    // При превышении лимита поток не рвём ошибкой (это подвешивает запрос),
-    // а дочитываем до конца, перестав писать и хешировать, и затем отвечаем 413.
+    // On over-limit we don't break the stream with an error (that hangs the request);
+    // instead we drain it to the end, stop writing/hashing, then respond 413.
     const meter = new Transform({
       transform(chunk: Buffer, _enc, cb) {
         if (tooLarge) {
@@ -81,8 +81,8 @@ export async function blobRoutes(app: FastifyInstance): Promise<void> {
          ON CONFLICT (blob_id) DO NOTHING`,
         [blobId, size],
       );
-      // содержимое могли загрузить разные пользователи (дедуп) — фиксируем
-      // каждого, чтобы загрузчик мог скачать свой блоб до привязки к сообщению
+      // different users may have uploaded the same content (dedup) — record each
+      // uploader so they can download their blob before it's attached to a message
       await pool.query(
         `INSERT INTO blob_owners(blob_id, user_id) VALUES ($1, $2)
          ON CONFLICT DO NOTHING`,
@@ -95,8 +95,8 @@ export async function blobRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({ blobId, size });
   });
 
-  // Скачивание блоба. Доступ: загрузивший его, либо участник чата, где есть
-  // неудалённое сообщение, ссылающееся на этот блоб.
+  // Blob download. Access: the uploader, or a member of a chat containing a
+  // non-deleted message referencing this blob.
   app.get('/blobs/:id', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { id } = req.params as { id: string };

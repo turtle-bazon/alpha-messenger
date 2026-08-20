@@ -35,7 +35,7 @@ export function MentionPopup({
     el?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
 
-  // Закрытие по Escape
+  // Close on Escape
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') { e.preventDefault(); onClose(); }
@@ -70,7 +70,7 @@ export function MentionPopup({
   );
 }
 
-// Возвращает отфильтрованный список для использования снаружи.
+// Returns the filtered list for external use.
 export function getFilteredParticipants(
   participants: Participant[],
   filter: string,

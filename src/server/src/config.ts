@@ -9,23 +9,23 @@ export const config = {
   databaseUrl:
     process.env.DATABASE_URL ?? 'postgres://alpha:alpha@localhost:5432/alpha',
 
-  // Хранилище блобов (крупных вложений). 'fs' — локальная content-addressed
-  // ФС (дефолт для dev/тестов, нового сервиса не нужно), 's3' — объектный стор
-  // (MinIO в prod/deploy). Выбор драйвера — см. blobstore/index.ts.
+  // Blob storage (large attachments). 'fs' — local content-addressed
+  // filesystem (default for dev/tests, no extra service needed), 's3' — object
+  // store (MinIO in prod/deploy). Driver selection — see blobstore/index.ts.
   blobStore: process.env.BLOB_STORE ?? 'fs',
-  // Потолок размера одного блоба в байтах (сервер режет превышение на потоке).
+  // Max size of a single blob in bytes (the server cuts off excess on the stream).
   maxBlobSize: Number(process.env.MAX_BLOB_SIZE ?? 100 * 1024 * 1024),
-  // Каталог fs-драйвера и каталог временных файлов загрузки (туда блоб льётся,
-  // пока считается его хэш; затем атомарно финализируется). tmp держим внутри
-  // корня, чтобы финализация была переименованием в пределах одной ФС.
+  // fs driver directory and upload temp directory (the blob streams there while
+  // its hash is computed; then finalized atomically). tmp lives inside the root
+  // so finalization is a rename within one filesystem.
   fsBlobDir,
   blobTmpDir: process.env.BLOB_TMP_DIR ?? resolve(fsBlobDir, '.tmp'),
 
-  // Превью ссылок (#32): сервер сам тянет страницу/картинку (клиент не может —
-  // CORS), поэтому строгие лимиты и SSRF-защита. allowPrivate разрешает фетч
-  // приватных/loopback адресов — только для dev/тестов (фикстура на localhost).
+  // Link previews (#32): the server fetches pages/images itself (the client can't —
+  // CORS), hence strict limits and SSRF protection. allowPrivate allows fetching
+  // private/loopback addresses — dev/tests only (fixture on localhost).
   unfurl: {
-    // геттер — читаем env живьём (тесты переключают флаг в рантайме)
+    // getter — read env live (tests flip the flag at runtime)
     get allowPrivate(): boolean {
       return process.env.UNFURL_ALLOW_PRIVATE === '1';
     },
@@ -36,13 +36,13 @@ export const config = {
   },
 
   s3: {
-    endpoint: process.env.S3_ENDPOINT, // напр. http://minio:9000
+    endpoint: process.env.S3_ENDPOINT, // e.g. http://minio:9000
     region: process.env.S3_REGION ?? 'us-east-1',
     bucket: process.env.S3_BUCKET ?? 'alpha-blobs',
     accessKeyId: process.env.S3_ACCESS_KEY ?? '',
     secretAccessKey: process.env.S3_SECRET_KEY ?? '',
   },
 
-  // Tenor GIF API (бесплатный план, client_key = имя приложения).
+  // Tenor GIF API (free plan, client_key = app name).
   tenorApiKey: process.env.TENOR_API_KEY ?? '',
 };

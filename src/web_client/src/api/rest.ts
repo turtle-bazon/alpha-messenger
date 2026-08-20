@@ -5,7 +5,7 @@ import type {
   UserProfile, UserNote, StickerPack, StickerItem,
 } from './types';
 
-// Ошибка с HTTP-статусом и распарсенным телом — экраны различают 400/404/409 и т.п.
+// Error with HTTP status and parsed body — screens distinguish 400/404/409 etc.
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -18,7 +18,7 @@ export class ApiError extends Error {
 
 interface RequestOptions {
   body?: unknown;
-  auth?: boolean; // подставить Authorization: Bearer <token>
+  auth?: boolean; // add Authorization: Bearer <token>
 }
 
 async function request<T>(
@@ -54,7 +54,7 @@ export const rest = {
   del: <T>(path: string, auth = true) => request<T>('DELETE', path, { auth }),
 };
 
-// ---- Аутентификация ----
+// ---- Authentication ----
 
 export function register(input: {
   username: string;
@@ -77,21 +77,21 @@ export function getMe(): Promise<Me> {
   return rest.get<Me>('/me');
 }
 
-// ---- Чаты ----
+// ---- Chats ----
 
 export async function getChats(): Promise<Chat[]> {
   const res = await rest.get<{ chats: Chat[] }>('/chats');
   return res.chats;
 }
 
-// Создание direct-чата по username собеседника. Сервер дедуплицирует: вернёт
-// существующий чат (200) либо создаст новый (201) — клиенту приходит объект чата.
+// Create a direct chat by the peer's username. The server deduplicates: returns
+// the existing chat (200) or creates a new one (201) — the client receives the chat object.
 export function createDirect(username: string): Promise<Chat> {
   return rest.post<Chat>('/chats', { type: 'direct', username });
 }
 
-// Создание группы: название + список участников по username (себя добавлять не
-// нужно — сервер включит создателя сам). Возвращает объект чата.
+// Create a group: title + member list by username (no need to include yourself
+// — the server adds the creator automatically). Returns the chat object.
 export function createGroup(title: string, members: string[]): Promise<Chat> {
   return rest.post<Chat>('/chats', { type: 'group', title, members });
 }
@@ -107,12 +107,12 @@ export function updateChat(
   return rest.patch<Chat>(`/chats/${chatId}`, data);
 }
 
-// Список участников чата с признаком онлайн и указанием создателя.
+// Chat member list with online flags and creator indication.
 export function getMembers(chatId: string): Promise<ChatMembers> {
   return rest.get<ChatMembers>(`/chats/${chatId}/members`);
 }
 
-// Добавление участника в группу по username (право — у создателя чата).
+// Add a member to a group by username (only the chat creator may do this).
 export function addMember(
   chatId: string,
   username: string,
@@ -120,7 +120,7 @@ export function addMember(
   return rest.post(`/chats/${chatId}/members`, { username });
 }
 
-// Удаление участника из группы (право — у создателя чата).
+// Remove a member from a group (only the chat creator may do this).
 export function removeMember(
   chatId: string,
   userId: string,
@@ -128,7 +128,7 @@ export function removeMember(
   return rest.del(`/chats/${chatId}/members/${userId}`);
 }
 
-// Снимок онлайна со-участников для сидирования presence после коннекта.
+// Snapshot of members' online state for seeding presence after connect.
 export interface PresenceInfo {
   online: boolean;
   away: boolean;
@@ -139,10 +139,10 @@ export function getPresence(): Promise<{ presence: Record<string, PresenceInfo> 
   return rest.get<{ presence: Record<string, PresenceInfo> }>('/presence');
 }
 
-// ---- Сообщения ----
+// ---- Messages ----
 
 export interface MessagesPage {
-  messages: Message[]; // от новых к старым (DESC)
+  messages: Message[]; // newest first (DESC)
   hasMore: boolean;
   nextBefore: string | null;
 }
@@ -180,16 +180,16 @@ export function sendMessage(
   });
 }
 
-// ---- Блобы (вложения) ----
+// ---- Blobs (attachments) ----
 
 export interface BlobUploadResult {
   blobId: string;
   size: number;
 }
 
-// Загрузка блоба сырыми байтами (octet-stream, без JSON/base64). Сервер считает
-// sha256 на лету, дедуплицирует и возвращает blobId. Идёт мимо JSON-обёртки
-// request(): тело — поток байтов, а не сериализованный объект.
+// Upload a blob as raw bytes (octet-stream, no JSON/base64). The server computes
+// sha256 on the fly, deduplicates and returns blobId. Bypasses the request()
+// JSON wrapper: the body is a byte stream, not a serialized object.
 export async function uploadBlob(bytes: Blob): Promise<BlobUploadResult> {
   const headers: Record<string, string> = {
     'content-type': 'application/octet-stream',
@@ -207,8 +207,8 @@ export async function uploadBlob(bytes: Blob): Promise<BlobUploadResult> {
   return data as BlobUploadResult;
 }
 
-// Скачивание блоба потоком. Заголовок Authorization нельзя навесить на <img src>,
-// поэтому тянем через fetch и отдаём Blob (вызывающий делает object URL).
+// Download a blob as a stream. An Authorization header cannot be attached to
+// <img src>, so we fetch it and return a Blob (the caller creates an object URL).
 export async function fetchBlob(blobId: string): Promise<Blob> {
   const headers: Record<string, string> = {};
   const token = getToken();
@@ -218,7 +218,7 @@ export async function fetchBlob(blobId: string): Promise<Blob> {
   return res.blob();
 }
 
-// ---- Превью ссылок (#32) ----
+// ---- Link previews (#32) ----
 
 export interface UnfurlPreview {
   url: string;
@@ -228,8 +228,8 @@ export interface UnfurlPreview {
   image?: { mime: string; dataBase64: string };
 }
 
-// Развернуть ссылку: сервер сам тянет страницу (браузеру мешает CORS) и отдаёт
-// метаданные OpenGraph + байты картинки превью. preview=null — превью нет.
+// Unfurl a link: the server fetches the page itself (CORS blocks the browser)
+// and returns OpenGraph metadata + preview image bytes. preview=null means no preview.
 export function unfurl(url: string): Promise<{ preview: UnfurlPreview | null }> {
   return rest.post<{ preview: UnfurlPreview | null }>('/unfurl', { url });
 }
@@ -247,7 +247,7 @@ export function deleteMessage(
   return rest.del(`/messages/${messageId}`);
 }
 
-// ---- Реакции (#23) ----
+// ---- Reactions (#23) ----
 
 export interface ReactionResult {
   reactions: ReactionGroup[];
@@ -261,7 +261,7 @@ export function toggleReaction(
   return rest.put<ReactionResult>(`/messages/${messageId}/reactions`, { emoji });
 }
 
-// ---- Черновики (#41) ----
+// ---- Drafts (#41) ----
 
 export function getDraft(chatId: string): Promise<{ ciphertext: string }> {
   return rest.get(`/chats/${chatId}/draft`);
@@ -275,13 +275,13 @@ export function deleteDraft(chatId: string): Promise<{ ok: boolean }> {
   return rest.del(`/chats/${chatId}/draft`);
 }
 
-// ---- Активность (#36) ----
+// ---- Activity (#36) ----
 
 export function reportActivity(): Promise<{ ok: boolean }> {
   return rest.post('/me/activity');
 }
 
-// ---- Push-уведомления (#74) ----
+// ---- Push notifications (#74) ----
 
 export function subscribePush(input: {
   deviceId: string;
@@ -295,7 +295,7 @@ export function unsubscribePush(subscriptionId: string): Promise<{ ok: boolean }
   return rest.del<{ ok: boolean }>(`/push/subscriptions/${subscriptionId}`);
 }
 
-// ---- Управление устройствами (#77) ----
+// ---- Device management (#77) ----
 
 export interface DeviceInfo {
   deviceId: string;
@@ -315,7 +315,7 @@ export function deleteAllDevices(): Promise<{ ok: boolean }> {
   return rest.del<{ ok: boolean }>('/devices');
 }
 
-// ---- Профили и заметки (#22) ----
+// ---- Profiles and notes (#22) ----
 
 export function getUserProfile(userId: string): Promise<UserProfile> {
   return rest.get<UserProfile>(`/users/${userId}`);
@@ -333,7 +333,7 @@ export function saveNote(targetId: string, text: string): Promise<{ note: UserNo
   return rest.put<{ note: UserNote | null }>(`/me/notes/${targetId}`, { text });
 }
 
-// ---- Стикеры (#63) ----
+// ---- Stickers (#63) ----
 
 export function createStickerPack(title: string): Promise<StickerPack> {
   return rest.post<StickerPack>('/sticker-packs', { title });

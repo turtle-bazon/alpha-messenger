@@ -1,23 +1,23 @@
-// Подготовка изображения к отправке через блоб: поворот + два варианта рендера —
-// полноразмерный JPEG (уходит в блоб, тянется по требованию) и крошечный
-// thumbnail (лежит inline в теле сообщения для мгновенного превью в пузыре).
-// См. status/plans/blob-client-images.md.
+// Prepare an image for sending via blob: rotation + two render variants —
+// full-size JPEG (goes to the blob store, fetched on demand) and a tiny
+// thumbnail (stored inline in the message body for instant preview in the
+// bubble). See status/plans/blob-client-images.md.
 
-const FULL_MAX_DIM = 2560; // потолок большей стороны полноразмерного варианта
+const FULL_MAX_DIM = 2560; // cap for the longer side of the full-size variant
 const FULL_QUALITY = 0.85;
-const THUMB_MAX_DIM = 320; // потолок большей стороны thumbnail
+const THUMB_MAX_DIM = 320; // cap for the thumbnail's longer side
 const THUMB_QUALITY = 0.5;
 
 export interface PreparedImage {
-  full: Blob; // полноразмерный JPEG для загрузки в блоб
-  thumb: string; // base64 крошечного JPEG (без data: префикса)
+  full: Blob; // full-size JPEG for blob upload
+  thumb: string; // base64 of the tiny JPEG (without the data: prefix)
   mime: string;
-  width: number; // размеры полноразмерного варианта
+  width: number; // dimensions of the full-size variant
   height: number;
 }
 
-// Рисует изображение в canvas с поворотом (0/90/180/270) и масштабом так,
-// чтобы большая сторона не превышала maxDim.
+// Draws the image onto a canvas with rotation (0/90/180/270) and scaling so
+// the longer side doesn't exceed maxDim.
 function renderCanvas(
   img: HTMLImageElement,
   rotation: number,
@@ -54,7 +54,7 @@ function toJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   });
 }
 
-const LINK_THUMB_MAX_DIM = 320; // потолок картинки превью ссылки (#32)
+const LINK_THUMB_MAX_DIM = 320; // cap for the link preview image (#32)
 const LINK_THUMB_QUALITY = 0.6;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -66,9 +66,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Из байтов картинки превью ссылки (base64 + mime, как их отдал сервер) делает
-// крошечный inline-JPEG thumbnail. data-URL не «портит» canvas (свой источник),
-// поэтому toDataURL доступен. При любом сбое — '' (карточка покажется без картинки).
+// Turns link preview image bytes (base64 + mime, as returned by the server)
+// into a tiny inline-JPEG thumbnail. A data-URL doesn't "taint" the canvas
+// (own origin), so toDataURL is available. On any failure — '' (the card
+// renders without an image).
 export async function imageBytesToThumb(
   dataBase64: string,
   mime: string,
@@ -83,7 +84,7 @@ export async function imageBytesToThumb(
   }
 }
 
-// Готовит полноразмерный блоб и thumbnail из отрисованного <img> с учётом поворота.
+// Prepares the full-size blob and thumbnail from a rendered <img>, honoring rotation.
 export async function prepareImage(
   img: HTMLImageElement,
   rotation: number,
@@ -104,10 +105,10 @@ export async function prepareImage(
   };
 }
 
-// Постер-кадр видеосообщения (#34): из блоба видео — крошечный inline-JPEG
-// (base64 без префикса) + реальные размеры. Видео грузится в offscreen <video>,
-// кадр берётся на ~0.1с. При любом сбое — thumb '' и нулевые размеры
-// (пузырь покажет плейсхолдер).
+// Poster frame for video messages (#34): from a video blob — a tiny inline
+// JPEG (base64 without prefix) + real dimensions. The video loads into an
+// offscreen <video>, the frame is taken at ~0.1s. On any failure — thumb ''
+// and zero dimensions (the bubble shows a placeholder).
 export async function videoPosterFrame(
   blob: Blob,
 ): Promise<{ thumb: string; width: number; height: number }> {

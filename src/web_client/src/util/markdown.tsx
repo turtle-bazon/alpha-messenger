@@ -1,6 +1,6 @@
 import React from 'react';
 
-// ─── Типы ────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────
 
 interface Token {
   type: 'text' | 'code' | 'bold' | 'italic' | 'strike' | 'link' | 'url' | 'mention';
@@ -8,7 +8,7 @@ interface Token {
   url?: string;
 }
 
-// ─── Pass 1: Извлечение code-spans ───────────────────────────────────
+// ─── Pass 1: Extract code-spans ───────────────────────────────────────
 
 function extractCodeSpans(text: string): { result: string; codes: string[] } {
   const codes: string[] = [];
@@ -20,9 +20,9 @@ function extractCodeSpans(text: string): { result: string; codes: string[] } {
   return { result, codes };
 }
 
-// ─── Pass 2: Токенизация ─────────────────────────────────────────────
+// ─── Pass 2: Tokenization ────────────────────────────────────────────
 
-// Проверяет, что позиция стоит на границе слова (не в середине лексемы).
+// Checks that the position is at a word boundary (not mid-token).
 function isWordBoundary(text: string, pos: number): boolean {
   if (pos === 0) return true;
   if (pos >= text.length) return true;
@@ -34,12 +34,12 @@ function isWordBoundary(text: string, pos: number): boolean {
   return prevIsWord !== nextIsWord;
 }
 
-// Ищет закрывающий маркер, пропуская экранированные символы.
+// Finds the closing marker, skipping escaped characters.
 function findClosing(text: string, start: number, marker: string): number {
   let i = start;
   while (i < text.length) {
     if (text[i] === '\\') {
-      i += 2; // пропускаем экранированный символ
+      i += 2; // skip the escaped character
       continue;
     }
     if (text.startsWith(marker, i)) return i;
@@ -48,18 +48,18 @@ function findClosing(text: string, start: number, marker: string): number {
   return -1;
 }
 
-// Извлекает username после @.
+// Extracts the username after @.
 function matchUsername(text: string, pos: number): string | null {
   const m = text.slice(pos).match(/^@([a-zA-Z0-9_]{1,32})/);
   return m ? m[1] : null;
 }
 
-// Извлекает URL, обрезая конечную пунктуацию.
+// Extracts a URL, trimming trailing punctuation.
 function matchUrl(text: string, pos: number): string | null {
   const m = text.slice(pos).match(/^https?:\/\/[^\s<>"')]+/);
   if (!m) return null;
   let url = m[0];
-  // Обрезаем конечные знаки препинания, которые не часть URL
+  // Trim trailing punctuation that isn't part of the URL
   url = url.replace(/[.,;:!?)]+$/, '');
   return url || null;
 }
@@ -78,11 +78,11 @@ function tokenize(text: string): Token[] {
   let i = 0;
 
   while (i < text.length) {
-    // Code-spans (плейсхолдеры)
+    // Code-spans (placeholders)
     if (text[i] === '\x00') {
       const m = text.slice(i).match(/^\x00C(\d+)\x00/);
       if (m) {
-        tokens.push({ type: 'code', value: m[1] }); // value = индекс в массиве codes
+        tokens.push({ type: 'code', value: m[1] }); // value = index into the codes array
         i += m[0].length;
         continue;
       }
@@ -101,7 +101,7 @@ function tokenize(text: string): Token[] {
       }
     }
 
-    // _italic_ (только на границе слова)
+    // _italic_ (word boundary only)
     if (text[i] === '_' && isWordBoundary(text, i)) {
       const end = findClosing(text, i + 1, '_');
       if (end > i + 1 && isWordBoundary(text, end + 1)) {
@@ -127,7 +127,7 @@ function tokenize(text: string): Token[] {
       }
     }
 
-    // [текст](url) — markdown-ссылка
+    // [text](url) — markdown link
     if (text[i] === '[') {
       const closeBracket = findClosing(text, i + 1, ']');
       if (closeBracket > i + 1 && text[closeBracket + 1] === '(') {
@@ -144,7 +144,7 @@ function tokenize(text: string): Token[] {
       }
     }
 
-    // https://... — автодетект URL
+    // https://... — URL autodetection
     if (text.startsWith('http://', i) || text.startsWith('https://', i)) {
       const url = matchUrl(text, i);
       if (url) {
@@ -159,12 +159,12 @@ function tokenize(text: string): Token[] {
       const username = matchUsername(text, i);
       if (username) {
         tokens.push({ type: 'mention', value: username });
-        i += username.length + 1; // +1 для @
+        i += username.length + 1; // +1 for @
         continue;
       }
     }
 
-    // Plain text — собираем до следующего спецсимвола
+    // Plain text — consume up to the next special character
     let end = i + 1;
     while (end < text.length) {
       const ch = text[end];
@@ -182,7 +182,7 @@ function tokenize(text: string): Token[] {
   return tokens;
 }
 
-// ─── Pass 3: Сборка React elements ───────────────────────────────────
+// ─── Pass 3: Building React elements ─────────────────────────────────
 
 function renderToken(
   t: Token,
@@ -259,7 +259,7 @@ function renderToken(
   }
 }
 
-// ─── Главная функция ─────────────────────────────────────────────────
+// ─── Main function ──────────────────────────────────────────────────
 
 export function renderMarkdown(
   text: string,
@@ -268,13 +268,13 @@ export function renderMarkdown(
 ): React.ReactNode[] {
   if (!text) return [];
 
-  // Pass 1: извлекаем code-spans
+  // Pass 1: extract code-spans
   const { result, codes } = extractCodeSpans(text);
 
-  // Pass 2: токенизируем
+  // Pass 2: tokenize
   const tokens = tokenize(result);
 
-  // Pass 3: собираем React elements
+  // Pass 3: build React elements
   const elements = tokens.map((t) => renderToken(t, codes, usernames, onMentionClick));
 
   return elements.length > 0 ? elements : [text];

@@ -33,8 +33,8 @@ async function createDirect(
     return reply.code(400).send({ error: 'cannot create direct chat with self' });
   }
 
-  // Advisory lock по канонической паре участников (LEAST, GREATEST)
-  // защищает от гонки: два параллельных запроса не создадут дубликат.
+  // Advisory lock on the canonical member pair (LEAST, GREATEST)
+  // protects against a race: two parallel requests won't create a duplicate.
   const lockKey = userId < otherId
     ? Buffer.from(userId + otherId).readInt32BE(0)
     : Buffer.from(otherId + userId).readInt32BE(0);
@@ -44,7 +44,7 @@ async function createDirect(
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
 
-    // дедупликация: если direct-чат с обоими участниками уже есть — вернуть его
+    // deduplication: if a direct chat with both members already exists, return it
     const existing = await client.query(
       `SELECT c.chat_id FROM chats c
        JOIN chat_members a ON a.chat_id = c.chat_id AND a.user_id = $1
@@ -107,7 +107,7 @@ async function createGroup(
   }
   const allIds = [...new Set([userId, ...memberIds])];
 
-  // Validate channel username if provided.
+  // Validate the channel handle if provided.
   if (channelUsername !== undefined) {
     if (!/^[a-zA-Z0-9_]{5,32}$/.test(channelUsername)) {
       return reply.code(400).send({ error: 'invalid channel username: 5-32 chars, a-z, 0-9, _' });
@@ -172,7 +172,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       'SELECT 1 FROM chat_members WHERE chat_id = $1 AND user_id = $2',
       [chatId, userId],
     );
-    // Non-members can view public channels (for subscribe button).
+    // A non-member can view a public channel (for the "Subscribe" button).
     if (member.rowCount === 0) {
       const ch = await pool.query(
         'SELECT username FROM chats WHERE chat_id = $1',
@@ -181,7 +181,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       if (ch.rowCount === 0 || !ch.rows[0].username) {
         return reply.code(404).send({ error: 'not found' });
       }
-      // Return minimal channel info for non-member.
+      // Non-members get minimal channel info.
       const full = await loadChat(pool, chatId, userId);
       if (!full) return reply.code(404).send({ error: 'not found' });
       return { ...full, role: 'non_member' };
@@ -189,8 +189,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     return loadChat(pool, chatId, userId);
   });
 
-  // Список участников чата с признаком онлайн и указанием создателя.
-  // Снимок онлайна на момент запроса; живые изменения — события presence из /ws.
+  // Chat member list with online status and creator indication.
+  // Online snapshot at request time; live changes come as presence events from /ws.
   app.get(
     '/chats/:chatId/members',
     { preHandler: authenticate },
@@ -236,9 +236,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Удаление участника из группы. Право — только у создателя чата; нельзя
-  // удалить самого создателя и не-группу. Событие chat.member_removed идёт
-  // оставшимся участникам и самому удалённому (он убирает чат из списка).
+  // Remove a member from a group. Only the chat creator may do this; cannot
+  // remove the creator or from non-groups. The chat.member_removed event goes
+  // to remaining members and to the removed one (so they drop the chat).
   app.delete(
     '/chats/:chatId/members/:userId',
     { preHandler: authenticate },
@@ -280,12 +280,12 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
           'DELETE FROM chat_members WHERE chat_id = $1 AND user_id = $2',
           [chatId, targetId],
         );
-        // оставшимся — обновить список участников; всем им emitToMembers
+        // remaining members — refresh their member list; emitToMembers covers them
         await emitToMembers(client, chatId, 'chat.member_removed', {
           chatId,
           userId: targetId,
         });
-        // и самому удалённому — чтобы он убрал чат из своего списка
+        // and to the removed one, so they drop the chat from their list
         await emitEvent(
           client,
           targetId,
@@ -304,10 +304,10 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Добавление участника в группу. Право — только у создателя чата; добавлять
-  // можно лишь в группу и лишь того, кого ещё нет в чате. Новому участнику идёт
-  // chat.created (он подтягивает чат в список), уже состоящим — chat.member_added
-  // (обновляют состав/счётчик участников).
+  // Add a member to a group. Only the chat creator may do this; only into a
+  // group and only someone not yet in the chat. The new member gets chat.created
+  // (pulls the chat into their list), existing members get chat.member_added
+  // (refresh roster/member count).
   app.post(
     '/chats/:chatId/members',
     { preHandler: authenticate },
@@ -351,7 +351,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        // Состав ДО вставки — им шлём member_added, новому — chat.created.
+        // Roster BEFORE the insert: existing members get member_added, the new one gets chat.created.
         const existingIds = await getMemberIds(client, chatId);
         await client.query(
           'INSERT INTO chat_members(chat_id, user_id, role) VALUES ($1, $2, $3)',
@@ -384,7 +384,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // PATCH /chats/:chatId — обновление title/description (только владелец).
+  // PATCH /chats/:chatId — update title/description (owner only).
   app.patch('/chats/:chatId', { preHandler: authenticate }, async (req, reply) => {
     const callerId = req.user!.userId;
     const { chatId } = req.params as { chatId: string };
@@ -440,7 +440,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(400).send({ error: 'invalid type' });
   });
 
-  // Search public channels by username or title.
+  // Search public channels by handle or title.
   app.get('/chats/search', { preHandler: authenticate }, async (req) => {
     const { q } = req.query as { q?: string };
     if (!q || q.trim().length === 0) {
@@ -467,7 +467,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  // Subscribe to a channel (by chatId or channelUsername).
+  // Subscribe to a channel (by chatId or handle).
   app.post('/chats/:chatId/subscribe', { preHandler: authenticate }, async (req, reply) => {
     const userId = req.user!.userId;
     const { chatId } = req.params as { chatId: string };

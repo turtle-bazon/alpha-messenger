@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Запись голосового сообщения (#34). MediaRecorder (webm/opus) + AnalyserNode
-// для съёма пиков громкости: ~20 замеров/сек, агрегируются в волну из WAVE_BARS
-// значений 0..1 (усреднение по сегменту) — она сохраняется в сообщении и
-// рендерится без декодирования аудио.
+// Voice message recording (#34). MediaRecorder (webm/opus) + AnalyserNode
+// to sample loudness peaks: ~20 samples/sec, aggregated into a wave of WAVE_BARS
+// values 0..1 (averaged per segment) — the wave is stored with the message and
+// rendered without decoding audio.
 //
-// Автостоп по лимиту MAX_SECONDS. stop() завершает запись и отдаёт Blob;
-// cancel() тихо выбрасывает результат. Поток микрофона освобождается всегда.
+// Auto-stop at the MAX_SECONDS limit. stop() finishes recording and returns a Blob;
+// cancel() silently discards the result. The microphone stream is always released.
 
 export const WAVE_BARS = 48;
-export const MAX_SECONDS = 300; // лимит голосового — 5 минут
+export const MAX_SECONDS = 300; // voice limit — 5 minutes
 
 export interface VoiceRecording {
   blob: Blob;
@@ -23,7 +23,7 @@ type RecorderState = 'idle' | 'starting' | 'recording';
 export function useVoiceRecorder(onAutoStop?: () => void): {
   state: RecorderState;
   seconds: number;
-  levels: number[]; // живые полоски во время записи
+  levels: number[]; // live bars while recording
   start: () => Promise<void>;
   stop: () => Promise<VoiceRecording | null>;
   cancel: () => void;
@@ -43,7 +43,7 @@ export function useVoiceRecorder(onAutoStop?: () => void): {
   const rafRef = useRef(0);
   const startedAtRef = useRef(0);
   const autoStoppedRef = useRef(false);
-  // Свежий onAutoStop без перезапуска эффектов.
+  // Fresh onAutoStop without restarting effects.
   const autoStopCbRef = useRef(onAutoStop);
   autoStopCbRef.current = onAutoStop;
 
@@ -68,7 +68,7 @@ export function useVoiceRecorder(onAutoStop?: () => void): {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Анализатор громкости: замеры в requestAnimationFrame, агрегация по ~50мс.
+      // Loudness analyser: sampled in requestAnimationFrame, aggregated per ~50ms.
       const Ctx = window.AudioContext;
       const ctx = new Ctx();
       ctxRef.current = ctx;
@@ -89,7 +89,7 @@ export function useVoiceRecorder(onAutoStop?: () => void): {
       let lastSeg = performance.now();
       const tick = (): void => {
         analyser.getByteTimeDomainData(buf);
-        // RMS текущего окна → нормировка 0..1 (с небольшим усилением).
+        // RMS of the current window → normalized to 0..1 (with slight gain).
         let sum = 0;
         for (let i = 0; i < buf.length; i++) {
           const v = (buf[i] - 128) / 128;
@@ -134,7 +134,7 @@ export function useVoiceRecorder(onAutoStop?: () => void): {
         }
       }, 250);
     } catch {
-      // Нет доступа к микрофону — откат в idle.
+      // No microphone access — fall back to idle.
       cleanup();
       setState('idle');
     }

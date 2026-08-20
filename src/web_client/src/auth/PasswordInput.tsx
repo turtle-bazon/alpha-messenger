@@ -1,8 +1,8 @@
 import { useState } from 'react';
 
-// Поле пароля с глазиком показа/скрытия (как в Telegram): клик по иконке
-// переключает тип input password↔text. Используется на экранах входа и
-// регистрации, чтобы пользователь мог проверить введённый пароль.
+// Password field with a show/hide eye toggle (like Telegram): clicking the icon
+// switches the input type password↔text. Used on the login and registration
+// screens so the user can verify the entered password.
 export function PasswordInput({
   value,
   onChange,
@@ -29,12 +29,12 @@ export function PasswordInput({
         type="button"
         className="password-toggle"
         data-testid="password-toggle"
-        // Без слова «пароль» в подписи: иначе getByLabel('Пароль') в тестах
-        // зацепил бы и эту кнопку вместе с полем ввода.
+        // The label must not contain the word "password": otherwise the tests'
+        // getByLabel(...) for the field would match this button along with the input.
         aria-label={visible ? 'Скрыть' : 'Показать'}
         title={visible ? 'Скрыть пароль' : 'Показать пароль'}
         aria-pressed={visible}
-        // Глазик не должен перехватывать табуляцию формы и сабмитить её.
+        // The eye toggle must not join the form's tab order or submit it.
         tabIndex={-1}
         onClick={() => setVisible((v) => !v)}
       >
@@ -44,7 +44,7 @@ export function PasswordInput({
   );
 }
 
-// Иконки-глазики (inline SVG, чтобы не тянуть зависимость и совпадать по стилю).
+// Eye icons (inline SVG, to avoid pulling in a dependency and to match the style).
 const Eye = (
   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
     <path

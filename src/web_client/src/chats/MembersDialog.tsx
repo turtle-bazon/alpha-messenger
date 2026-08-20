@@ -5,10 +5,10 @@ import { colorFor, initialFor } from './avatar';
 import { formatLastSeen } from '../util/time';
 import { IconX } from '../util/icons';
 
-// Окно со списком участников чата (открывается кликом по заголовку группы).
-// Просмотр — всем участникам; кнопки «удалить» видит только создатель чата.
-// Онлайн берём из живого множества onlineUsers (себя считаем онлайн), createdBy
-// и стартовый состав — из GET /chats/:id/members.
+// Dialog with the chat member list (opens by clicking the group title).
+// Viewing is open to all members; remove buttons are visible only to the chat creator.
+// Online status comes from the live onlineUsers set (self counted as online); createdBy
+// and the initial roster come from GET /chats/:id/members.
 export function MembersDialog({
   chat,
   myId,
@@ -22,7 +22,7 @@ export function MembersDialog({
   myId: string | null;
   onlineUsers: Set<string>;
   awayUsers: Set<string>;
-  // Печатающие сейчас в этом чате участники — их аватар обводим окантовкой (#27).
+  // Members currently typing in this chat — their avatars get a ring (#27).
   typingUsers: Map<string, string>;
   onClose: () => void;
   onShowProfile: (userId: string) => void;
@@ -50,7 +50,7 @@ export function MembersDialog({
     };
   }, [chat.chatId]);
 
-  // Esc закрывает окно.
+  // Esc closes the dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose();
@@ -94,7 +94,7 @@ export function MembersDialog({
     setAdding(true);
     try {
       await addMember(chat.chatId, username);
-      // Перечитываем состав — придёт корректный userId и онлайн нового участника.
+      // Re-fetch the roster — the new member's correct userId and online status arrive.
       const res = await getMembers(chat.chatId);
       setMembers(res.members);
       setAddName('');

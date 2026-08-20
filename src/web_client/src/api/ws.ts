@@ -4,29 +4,31 @@ import type { ServerEvent } from './types';
 
 type Handler = (ev: ServerEvent) => void;
 
-// Клиент единого канала событий (см. architecture.md): одно WS-соединение на
-// устройство, resume через hello/lastSeq, авто-reconnect с нарастающей паузой.
-// Действия (отправка сообщений и т.п.) идут по REST — здесь только приём событий
-// и эфемерные typing/read.
+// Single event channel client (see architecture.md): one WS connection per
+// device, resume via hello/lastSeq, auto-reconnect with growing backoff.
+// Actions (sending messages etc.) go over REST — here we only receive events
+// and ephemeral typing/read.
 export class WsClient {
   private ws: WebSocket | null = null;
   private lastSeq: number;
   private closedByUser = false;
   private backoff = 1000;
-  // false на (ре)коннекте, true после маркера 'synced' — отделяет реплей
-  // истории от живых событий (см. architecture.md).
+  // false on (re)connect, true after the 'synced' marker — separates history
+  // replay from live events (see architecture.md).
   private live = false;
-  // Буфер событий реплея (до 'synced'). Сервер шлёт каждое событие отдельным
-  // WS-кадром, т.е. отдельным onmessage → отдельный setState у подписчиков →
-  // отдельный ререндер. На холодном старте/реконнекте с большой историей это
-  // даёт «мигание» списка из десятков перерисовок. Копим реплей и применяем
-  // одним синхронным пакетом на 'synced' — React 18 батчит его в один ререндер.
+  // Replay event buffer (before 'synced'). The server sends each event as a
+  // separate WS frame, i.e. a separate onmessage → a separate setState in
+  // subscribers → a separate re-render. On cold start / reconnect with a long
+  // history this makes the list "flicker" through dozens of redraws. We collect
+  // the replay and apply it as one synchronous batch on 'synced' — React 18
+  // batches it into a single re-render.
   private replayBuffer: ServerEvent[] = [];
   private readonly handlers = new Map<string, Set<Handler>>();
   private readonly anyHandlers = new Set<Handler>();
 
-  // onSeqAdvance вызывается при продвижении lastSeq — владелец (HomeScreen)
-  // сохраняет курсор между сессиями, чтобы reconnect/reload не реплеил всё с нуля.
+  // onSeqAdvance is called when lastSeq advances — the owner (HomeScreen)
+  // persists the cursor between sessions so reconnect/reload doesn't replay
+  // everything from scratch.
   constructor(
     private readonly token: string,
     lastSeq = 0,
@@ -39,10 +41,10 @@ export class WsClient {
     this.closedByUser = false;
     this.live = false;
     this.replayBuffer = [];
-    // Отвязываем предыдущий сокет: его «поздние» сообщения (буферизованный
-    // реплей, 'synced') не должны портить общее состояние live/lastSeq нового
-    // соединения — иначе реплей нового сокета принимается за live (двойной счёт
-    // непрочитанного). Актуально при reconnect и StrictMode-двойном эффекте.
+    // Detach the previous socket: its "late" messages (buffered replay,
+    // 'synced') must not corrupt the shared live/lastSeq state of the new
+    // connection — otherwise the new socket's replay would be treated as live
+    // (double-counting unread). Relevant on reconnect and StrictMode double-effect.
     this.detach(this.ws);
     const ws = new WebSocket(wsUrl());
     this.ws = ws;
@@ -50,7 +52,7 @@ export class WsClient {
     ws.onopen = () => {
       if (this.ws !== ws) return;
       this.backoff = 1000;
-      // hello с последним известным seq — сервер реплеит всё, что пропустили.
+      // hello with the last known seq — the server replays everything missed.
       ws.send(
         JSON.stringify({
           type: 'hello',
@@ -62,7 +64,7 @@ export class WsClient {
     };
 
     ws.onmessage = (e) => {
-      if (this.ws !== ws) return; // игнорируем вытесненный сокет
+      if (this.ws !== ws) return; // ignore the superseded socket
       let ev: ServerEvent;
       try {
         ev = JSON.parse(typeof e.data === 'string' ? e.data : '');
@@ -81,23 +83,23 @@ export class WsClient {
     };
   }
 
-  // Снимает обработчики и закрывает сокет, чтобы его дальнейшие события не влияли
-  // на общее состояние клиента.
+  // Removes handlers and closes the socket so its further events don't affect
+  // the shared client state.
   private detach(ws: WebSocket | null): void {
     if (!ws) return;
     ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
     try {
       ws.close();
     } catch {
-      /* уже закрыт */
+      /* already closed */
     }
   }
 
   private dispatch(ev: ServerEvent): void {
     if (ev.type === 'synced') {
-      // Конец реплея. Применяем накопленный буфер одним синхронным пакетом
-      // (живость ещё false — подписчики трактуют его как историю), затем
-      // включаем live и отдаём сам маркер. Весь пакет батчится в один ререндер.
+      // End of replay. Apply the accumulated buffer as one synchronous batch
+      // (live is still false — subscribers treat it as history), then enable
+      // live and emit the marker itself. The whole batch renders in one re-render.
       const buffered = this.replayBuffer;
       this.replayBuffer = [];
       for (const e of buffered) this.emit(e);
@@ -105,7 +107,7 @@ export class WsClient {
       this.emit(ev);
       return;
     }
-    // До 'synced' всё, что пришло из outbox, — это реплей: копим, не применяем.
+    // Before 'synced', anything from the outbox is replay: buffer it, don't apply.
     if (!this.live) {
       this.replayBuffer.push(ev);
       return;
@@ -113,9 +115,9 @@ export class WsClient {
     this.emit(ev);
   }
 
-  // Применение одного события: продвижение курсора + вызов подписчиков.
+  // Applies one event: advance the cursor + notify subscribers.
   private emit(ev: ServerEvent): void {
-    // Двигаем курсор только по событиям из outbox (у транзиентных seq нет).
+    // Advance the cursor only for outbox events (transient ones have no seq).
     if (typeof ev.seq === 'number' && ev.seq > this.lastSeq) {
       this.lastSeq = ev.seq;
       this.onSeqAdvance?.(this.lastSeq);
@@ -133,7 +135,7 @@ export class WsClient {
     }, delay);
   }
 
-  // Подписка на конкретный тип события. Возвращает функцию отписки.
+  // Subscribe to a specific event type. Returns an unsubscribe function.
   on(type: string, handler: Handler): () => void {
     let set = this.handlers.get(type);
     if (!set) {
@@ -149,8 +151,8 @@ export class WsClient {
     return () => this.anyHandlers.delete(handler);
   }
 
-  // Дошли ли до конца реплея (получен 'synced'). До этого все события —
-  // историческая выгрузка outbox, а не происходящее сейчас.
+  // Whether the end of the replay has been reached ('synced' received). Before
+  // that all events are historical outbox dump, not what's happening now.
   isLive(): boolean {
     return this.live;
   }
@@ -174,10 +176,10 @@ export class WsClient {
     this.ws?.close();
   }
 
-  /** Переподключение извне (например, после возврата из фона на Android). */
+  /** Reconnect from outside (e.g. after returning from background on Android). */
   reconnect(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      // Уже подключены — ничего не делаем
+      // Already connected — nothing to do
       return;
     }
     this.closedByUser = false;
