@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { makePng, sendImage } from './helpers/media';
 import { createDirectViaUi, registerViaUi } from './helpers/ui';
 
 // Минимальный валидный PNG (1×1) для подстановки в file input.
@@ -154,3 +155,71 @@ test('вставка изображения из буфера открывает
   );
   await expect(pageB.getByTestId('messages')).toContainText('из-буфера');
 });
+
+// #87: маленькие и средние картинки не должны ограничиваться натуральной
+// шириной inline-превью (~320px) — пузырь медиа тянется до стандартной ширины
+// (480px), соотношение сторон сохраняется, на узких экранах сжимается.
+test('изображение рендерится стандартной медиа-шириной (#87)', async ({
+  browser,
+}) => {
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const pageA = await ctxA.newPage();
+  const pageB = await ctxB.newPage();
+
+  const a = await registerViaUi(pageA);
+  const b = await registerViaUi(pageB);
+
+  await createDirectViaUi(pageA, b.username);
+  await expect(pageA.getByTestId('conversation-open')).toBeVisible();
+  await pageB.getByTestId('chat-item').filter({ hasText: a.username }).click();
+  await expect(pageB.getByTestId('conversation-open')).toBeVisible();
+
+  // 640×400 — после масштабирования в стандартный бокс ровно 480×300.
+  await sendImage(pageA, makePng(640, 400), 'широкое');
+
+  // У отправителя и у получателя пузырь медиа ~480px, высота по пропорции.
+  for (const page of [pageA, pageB]) {
+    const img = page.getByTestId('message-image');
+    await expect(img).toHaveAttribute('src', /^data:image\//);
+    const box = (await img.boundingBox())!;
+    assertBox(box, 480, 300);
+  }
+});
+
+// Совсем маленькая картинка тоже растягивается до стандартной ширины
+// (метаданные дают точный бокс, апскейл ограничен этим боксом).
+test('маленькое изображение растягивается до медиа-ширины (#87)', async ({
+  browser,
+}) => {
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const pageA = await ctxA.newPage();
+  const pageB = await ctxB.newPage();
+
+  const a = await registerViaUi(pageA);
+  const b = await registerViaUi(pageB);
+
+  await createDirectViaUi(pageA, b.username);
+  await expect(pageA.getByTestId('conversation-open')).toBeVisible();
+  await pageB.getByTestId('chat-item').filter({ hasText: a.username }).click();
+  await expect(pageB.getByTestId('conversation-open')).toBeVisible();
+
+  // 100×80 -> бокс 480×384.
+  await sendImage(pageA, makePng(100, 80));
+
+  for (const page of [pageA, pageB]) {
+    const img = page.getByTestId('message-image');
+    await expect(img).toHaveAttribute('src', /^data:image\//);
+    assertBox((await img.boundingBox())!, 480, 384);
+  }
+});
+
+function assertBox(
+  box: { x: number; y: number; width: number; height: number },
+  w: number,
+  h: number,
+): void {
+  expect(Math.abs(box.width - w)).toBeLessThanOrEqual(2);
+  expect(Math.abs(box.height - h)).toBeLessThanOrEqual(2);
+}

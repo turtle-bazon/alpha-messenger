@@ -93,6 +93,18 @@ function fmtSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} ${i18n.t('conv.sizeMb')}`;
 }
 
+// Standard display box for images (#87): Telegram-style — the picture fills a
+// fixed-width media box instead of the shrink-to-fit bubble capping it at the
+// inline thumbnail's natural ~320px. The ratio is preserved via aspect-ratio;
+// max-width:100% (CSS) clamps on narrow screens, height follows the ratio.
+const MEDIA_MAX_W = 480;
+const MEDIA_MAX_H = 480;
+function mediaStyle(w: number, h: number): React.CSSProperties | undefined {
+  if (!w || !h) return undefined;
+  const scale = Math.min(MEDIA_MAX_W / w, MEDIA_MAX_H / h);
+  return { width: Math.round(w * scale), aspectRatio: `${w} / ${h}` };
+}
+
 // Member count label — plural forms come from the locale dict (#58):
 // ru has one/few/many forms, en just "member/members".
 function pluralMembers(n: number): string {
@@ -1793,6 +1805,7 @@ export function Conversation({
                               data-testid="message-image"
                               src={thumbUrl(a)}
                               alt={a.caption || t('conv.imageAlt')}
+                              style={mediaStyle(a.width, a.height)}
                               className={a.blobId ? 'is-openable' : undefined}
                               onClick={() =>
                                 a.blobId &&

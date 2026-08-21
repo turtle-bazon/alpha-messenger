@@ -15,6 +15,17 @@ test('язык определяется по локали браузера (en-U
   await expect(page.getByLabel('Username')).toBeVisible();
 });
 
+// RTL-локаль (арабский): корневой dir=rtl, интерфейс на арабском (#58).
+test('арабская локаль включает RTL', async ({ browser }) => {
+  const ctx = await browser.newContext({ locale: 'ar-SA' });
+  const page = await ctx.newPage();
+  await page.goto('/login');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(
+    page.getByRole('heading', { name: 'تسجيل الدخول' }),
+  ).toBeVisible();
+});
+
 // Переключение языка в настройках применяется сразу и переживает перезагрузку.
 test('переключение языка в настройках и сохранение выбора', async ({
   browser,

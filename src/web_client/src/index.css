@@ -1025,10 +1025,11 @@ body {
 
 .bubble-image img {
   display: block;
-  min-width: min(280px, calc(100% - 38px));
+  /* Size comes from metadata (mediaStyle, #87): fixed standard width with
+     preserved ratio. Fallback for legacy messages without dimensions —
+     natural thumbnail size, capped like before. */
   max-width: 100%;
   max-height: 480px;
-  width: 100%;
   height: auto;
   border-radius: 0;
 }
@@ -4678,6 +4679,13 @@ body {
   padding: 6px 10px;
   font-size: 14px;
   cursor: pointer;
+}
+
+/* RTL (#58): mirror directional chrome; text alignment follows dir natively.
+   Chat orientation (own messages right) stays as in Telegram RTL locales. */
+[dir='rtl'] .conv-back svg,
+[dir='rtl'] .settings-back svg {
+  transform: scaleX(-1);
 }
 
 /* Toggle switch (iOS/Telegram style) */
