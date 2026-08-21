@@ -5,6 +5,7 @@ import {
   FormEvent,
   KeyboardEvent,
   useEffect,
+  useMemo,
   useLayoutEffect,
   useRef,
   useState,
@@ -1359,6 +1360,12 @@ export function Conversation({
     }
   }
 
+  // Stable username set for mention highlighting (#71): a fresh Set per render
+  // would defeat downstream memoization.
+  const usernames = useMemo(
+    () => new Set(chat.participants.map((p) => p.username)),
+    [chat.participants],
+  );
   // Subtitle under the title: for groups "N members, M online",
   // for direct chats the peer's status. Self counts as online (we're connected).
   const onlineCount = chat.participants.filter(
@@ -1792,10 +1799,7 @@ export function Conversation({
                             e.clipboardData?.setData('text/plain', sel.toString());
                           }}
                         >
-                          {renderMessageText(
-                            m.content.text,
-                            new Set(chat.participants.map((p) => p.username)),
-                          )}
+                          {renderMessageText(m.content.text, usernames)}
                         </span>
                       )}
                       {m.content.attachments.map((a, ai) =>

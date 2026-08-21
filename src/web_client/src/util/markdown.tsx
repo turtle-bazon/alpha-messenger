@@ -261,6 +261,15 @@ function renderToken(
 
 // ─── Main function ──────────────────────────────────────────────────
 
+// Result cache (#71): renderMarkdown runs for every chat-list preview and every
+// message bubble on any parent re-render (typing events, presence pings, ...),
+// re-parsing identical texts many times. The output depends only on
+// (text, usernames), so identical inputs can share the built element array.
+// Element objects are immutable descriptors — reuse across renders is safe.
+// The callback variant skips the cache: captured handler must stay fresh.
+const mdCache = new Map<string, React.ReactNode[]>();
+const MD_CACHE_CAP = 2000;
+
 export function renderMarkdown(
   text: string,
   usernames: Set<string>,
@@ -268,6 +277,32 @@ export function renderMarkdown(
 ): React.ReactNode[] {
   if (!text) return [];
 
+  if (onMentionClick) {
+    return buildMarkdown(text, usernames, onMentionClick);
+  }
+
+  const key = text + '\u0000' + Array.from(usernames).sort().join('\u0001');
+  const hit = mdCache.get(key);
+  if (hit) return hit;
+
+  const elements = buildMarkdown(text, usernames);
+  mdCache.set(key, elements);
+  if (mdCache.size > MD_CACHE_CAP) {
+    // Drop the oldest quarter (insertion order).
+    let drop = MD_CACHE_CAP >> 2;
+    for (const k of mdCache.keys()) {
+      mdCache.delete(k);
+      if (--drop <= 0) break;
+    }
+  }
+  return elements;
+}
+
+function buildMarkdown(
+  text: string,
+  usernames: Set<string>,
+  onMentionClick?: (username: string) => void,
+): React.ReactNode[] {
   // Pass 1: extract code-spans
   const { result, codes } = extractCodeSpans(text);
 
