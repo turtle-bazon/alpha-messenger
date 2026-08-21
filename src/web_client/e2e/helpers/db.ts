@@ -18,3 +18,19 @@ export async function createInvite(): Promise<string> {
   }
   return code;
 }
+
+// Удаляет все сессии пользователя — имитация потери сессии на сервере
+// (сброс/обновление БД), для проверки автоматического разлогина (#88).
+export async function deleteSessions(username: string): Promise<void> {
+  const client = new Client({ connectionString: DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query(
+      `DELETE FROM sessions
+       WHERE user_id = (SELECT user_id FROM accounts WHERE username = $1)`,
+      [username],
+    );
+  } finally {
+    await client.end();
+  }
+}

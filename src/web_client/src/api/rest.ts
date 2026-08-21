@@ -1,5 +1,5 @@
 import { apiUrl } from './config';
-import { getToken } from './session';
+import { clearSession, getToken } from './session';
 import type {
   AuthResult, Chat, ChatMembers, Me, Message, ReactionGroup,
   UserProfile, UserNote, StickerPack, StickerItem,
@@ -21,6 +21,20 @@ interface RequestOptions {
   auth?: boolean; // add Authorization: Bearer <token>
 }
 
+// A 401 outside the auth endpoints means the session is gone (revoked,
+// wiped by a server update/DB reset). Without this the client becomes a
+// zombie: the shell renders while every request fails silently (#88).
+// Clear the session and reload once — the app boots to the login screen.
+let authFailureHandled = false;
+
+function handleAuthFailure(path: string): void {
+  if (authFailureHandled || path.startsWith('/auth/')) return;
+  if (!getToken()) return; // anonymous request (login/register) — not a session loss
+  authFailureHandled = true;
+  clearSession();
+  window.location.reload();
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -39,7 +53,10 @@ async function request<T>(
   });
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
-  if (!res.ok) throw new ApiError(res.status, data);
+  if (!res.ok) {
+    handleAuthFailure(path);
+    throw new ApiError(res.status, data);
+  }
   return data as T;
 }
 

@@ -195,16 +195,18 @@ export function HomeScreen({
   useEffect(() => () => setUnreadBadge(0), []);
 
   // Periodic client version check. If the server has a newer build — reload
-  // the page (update without Ctrl+Shift+R).
-  // On Android / bundled desktop client, check version.json on the server directly.
+  // the page (update without Ctrl+Shift+R). Web-only: for a bundled client
+  // (Electron from file:, Capacitor assets, AlphaConfig.serverUrl) reloading
+  // cannot bring a new build — assets are local — and navigating to the bare
+  // server URL would leave the app (#88), so bundled clients don't poll.
   useEffect(() => {
-    let currentVersion: string | null = null;
     const nativeServerUrl = ((window as any).AlphaConfig?.getServerUrl?.()
       || (window as any).__ALPHA_CONFIG__?.serverUrl) as string | undefined;
     const isBundled = window.location.protocol === 'file:' || !!nativeServerUrl;
-    const serverUrl = isBundled ? (nativeServerUrl || null) : null;
-    const versionUrl = serverUrl ? `${serverUrl}/version.json` : '/version.json';
-    const reloadUrl = serverUrl || undefined;
+    if (isBundled) return;
+
+    let currentVersion: string | null = null;
+    const versionUrl = '/version.json';
 
     fetch(versionUrl)
       .then((r) => r.json())
@@ -217,11 +219,7 @@ export function HomeScreen({
         .then((r) => r.json())
         .then((v) => {
           if (currentVersion && v.version !== currentVersion) {
-            if (reloadUrl) {
-              window.location.href = reloadUrl;
-            } else {
-              window.location.reload();
-            }
+            window.location.reload();
           }
         })
         .catch(() => {});
@@ -253,6 +251,21 @@ export function HomeScreen({
   // Bootstrapping the chat list + WS connection for the session.
   useEffect(() => {
     let alive = true;
+
+    // Authoritative REST snapshot (chats + profile). Re-run after every WS
+    // sync point: if boot happened during a server restart window and failed,
+    // or the app woke up with a pruned outbox (nothing to replay), this is
+    // what restores the state — without it the UI stays empty until an app
+    // restart (#88).
+    const refreshSnapshot = (): void => {
+      getChats()
+        .then((list) => alive && setChats(list))
+        .catch(() => undefined);
+      getMe()
+        .then((me) => alive && setUsername(me.username))
+        .catch(() => undefined);
+    };
+
     getChats()
       .then((list) => alive && setChats(list))
       .catch(() => undefined)
@@ -467,6 +480,7 @@ export function HomeScreen({
     // After the replay finishes (synced), take a snapshot of online users; also
     // covers reconnects — reseed the set on every synced.
     const offSynced = ws.on('synced', () => {
+      refreshSnapshot();
       void getPresence()
         .then((p) => {
           if (!alive) return;
@@ -561,6 +575,9 @@ export function HomeScreen({
     const onForeground = (): void => {
       console.log('Alpha: foreground — reconnecting WS');
       ws.reconnect();
+      // If the process was restored mid-session, REST state may never have
+      // loaded (or is stale): refresh alongside the WS reconnect (#88).
+      refreshSnapshot();
     };
     window.addEventListener('app-foreground', onForeground);
     const offForeground = () => window.removeEventListener('app-foreground', onForeground);
