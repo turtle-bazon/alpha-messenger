@@ -3,7 +3,7 @@ import { pool } from '../db';
 import { authenticate } from '../auth';
 import { emitEvent } from '../events';
 import { loadChat } from '../chats';
-import { emitToMembers, getMemberIds, getLastActiveMap } from '../chat-helpers';
+import { emitToMembers, getMemberIds, getLastActiveMap, isMember } from '../chat-helpers';
 import { isOnline } from '../ws';
 
 interface CreateChatBody {
@@ -383,6 +383,57 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(201).send({ chatId, userId: targetId });
     },
   );
+
+  // PUT/DELETE /chats/:chatId/pin — pin/unpin a message in the chat (#86).
+  // Any member may pin (direct: both sides, group/channel: admins+owner for v1
+  // keep it simple — any member, same as Telegram direct chats).
+  app.put('/chats/:chatId/pin', { preHandler: authenticate }, async (req, reply) => {
+    const userId = req.user!.userId;
+    const { chatId } = req.params as { chatId: string };
+    const { messageId } = (req.body ?? {}) as { messageId?: string };
+    if (!messageId || !/^\d+$/.test(messageId)) {
+      return reply.code(400).send({ error: 'invalid messageId' });
+    }
+    if (!(await isMember(chatId, userId))) {
+      return reply.code(404).send({ error: 'not found' });
+    }
+    // The message must belong to this chat and not be deleted.
+    const msg = await pool.query(
+      'SELECT 1 FROM messages WHERE message_id = $1::bigint AND chat_id = $2 AND deleted = false',
+      [messageId, chatId],
+    );
+    if (msg.rowCount === 0) {
+      return reply.code(404).send({ error: 'message not found' });
+    }
+    await pool.query(
+      'UPDATE chats SET pinned_message_id = $1::bigint WHERE chat_id = $2',
+      [messageId, chatId],
+    );
+    await emitToMembers(pool, chatId, 'chat.pinned', {
+      chatId,
+      pinnedMessageId: messageId,
+      byUserId: userId,
+    });
+    return loadChat(pool, chatId, userId);
+  });
+
+  app.delete('/chats/:chatId/pin', { preHandler: authenticate }, async (req, reply) => {
+    const userId = req.user!.userId;
+    const { chatId } = req.params as { chatId: string };
+    if (!(await isMember(chatId, userId))) {
+      return reply.code(404).send({ error: 'not found' });
+    }
+    await pool.query(
+      'UPDATE chats SET pinned_message_id = NULL WHERE chat_id = $1',
+      [chatId],
+    );
+    await emitToMembers(pool, chatId, 'chat.pinned', {
+      chatId,
+      pinnedMessageId: null,
+      byUserId: userId,
+    });
+    return loadChat(pool, chatId, userId);
+  });
 
   // PATCH /chats/:chatId — update title/description (owner only).
   app.patch('/chats/:chatId', { preHandler: authenticate }, async (req, reply) => {

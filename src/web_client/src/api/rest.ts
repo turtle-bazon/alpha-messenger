@@ -190,6 +190,14 @@ export function getChatMedia(
   return rest.get<MediaPage>(`/chats/${chatId}/media${qs ? `?${qs}` : ''}`);
 }
 
+// Pin/unpin a chat message (#86). Returns the updated ChatView.
+export function pinMessage(chatId: string, messageId: string): Promise<unknown> {
+  return rest.put(`/chats/${chatId}/pin`, { messageId });
+}
+
+export function unpinMessage(chatId: string): Promise<unknown> {
+  return rest.del(`/chats/${chatId}/pin`);
+}
 export function sendMessage(
   chatId: string,
   clientMessageId: string,

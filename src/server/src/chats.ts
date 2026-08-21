@@ -11,6 +11,7 @@ export interface ChatView {
   username: string | null;
   role: string;
   subscriberCount: number;
+  pinnedMessageId: string | null;
   participants: { userId: string; username: string; lastActiveAt?: string }[];
   lastMessage: {
     messageId: string;
@@ -32,7 +33,7 @@ export async function loadChat(
   userId: string,
 ): Promise<ChatView | null> {
   const chat = await db.query(
-    'SELECT chat_id, type, title, description, created_by, username, updated_at FROM chats WHERE chat_id = $1',
+    'SELECT chat_id, type, title, description, created_by, username, updated_at, pinned_message_id FROM chats WHERE chat_id = $1',
     [chatId],
   );
   if (chat.rowCount === 0) return null;
@@ -111,6 +112,7 @@ export async function loadChat(
     username: row.username ?? null,
     role,
     subscriberCount: subCount.rows[0].c,
+    pinnedMessageId: row.pinned_message_id != null ? String(row.pinned_message_id) : null,
     participants: members.rows.map((m) => ({
       userId: m.user_id,
       username: m.username,

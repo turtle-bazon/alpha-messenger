@@ -544,6 +544,16 @@ export function HomeScreen({
         .catch(() => undefined);
     });
 
+    const offPinned = ws.on('chat.pinned', (ev: ServerEvent) => {
+      const p = ev.payload as { chatId: string; pinnedMessageId: string | null };
+      if (!p.chatId || !ws.isLive()) return;
+      setChats((prev) =>
+        prev.map((c) =>
+          c.chatId === p.chatId ? { ...c, pinnedMessageId: p.pinnedMessageId } : c,
+        ),
+      );
+    });
+
     // On Android: reconnect WS and sync when returning from background
     const onForeground = (): void => {
       console.log('Alpha: foreground — reconnecting WS');
@@ -564,6 +574,7 @@ export function HomeScreen({
       offPresence();
       offAdded();
       offRemoved();
+      offPinned();
       offForeground();
       ws.close();
     };

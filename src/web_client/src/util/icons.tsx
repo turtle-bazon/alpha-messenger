@@ -35,6 +35,7 @@ import {
   Phone,
   Image,
   Forward,
+  Pin,
 } from 'lucide-react';
 
 // Re-export Lucide icons directly.
@@ -74,4 +75,5 @@ export {
   Video as IconVideoCam,
   Image as IconImage,
   Forward as IconForward,
+  Pin as IconPin,
 };

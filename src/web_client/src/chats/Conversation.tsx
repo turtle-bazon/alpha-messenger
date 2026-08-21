@@ -13,6 +13,8 @@ import {
   deleteMessage,
   editMessage,
   getMessages,
+  pinMessage,
+  unpinMessage,
   sendMessage,
   toggleReaction,
   unfurl,
@@ -29,6 +31,7 @@ import {
   decodeContent,
   encodeContent,
   linkThumbUrl,
+  previewText,
   textContent,
   thumbUrl,
   type Attachment,
@@ -41,7 +44,7 @@ import {
 } from '../util/content';
 import { imageBytesToThumb, videoPosterFrame, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam, IconImage, IconForward } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam, IconImage, IconForward, IconPin } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -211,6 +214,54 @@ export function Conversation({
   // Chat media gallery (#82).
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [messages, setMessages] = useState<MsgVM[]>([]);
+  // Pinned message bar preview (#86): resolved from history or a targeted fetch.
+  const [pinnedPreview, setPinnedPreview] = useState<{
+    id: string;
+    name: string;
+    text: string;
+  } | null>(null);
+
+  // Resolve the pinned message preview: from loaded history first, otherwise
+  // fetch exactly that one message (pagination is by messageId < N, so
+  // before = id+1 with limit 1 returns precisely the pinned message).
+  useEffect(() => {
+    const pid = chat.pinnedMessageId;
+    if (!pid) {
+      setPinnedPreview(null);
+      return;
+    }
+    const local = messages.find((m) => m.messageId === pid);
+    if (local) {
+      setPinnedPreview({
+        id: pid,
+        name:
+          chat.participants.find((p) => p.userId === local.senderId)?.username ?? '—',
+        text: previewText(local.content).slice(0, 90),
+      });
+      return;
+    }
+    let alive = true;
+    void getMessages(chatId, { before: String(BigInt(pid) + BigInt(1)), limit: 1 })
+      .then((page) => {
+        const m = page.messages[0];
+        if (!alive) return;
+        if (!m || m.messageId !== pid) {
+          setPinnedPreview({ id: pid, name: '', text: 'Закреплённое сообщение' });
+          return;
+        }
+        const content = decodeContent(m.ciphertext);
+        setPinnedPreview({
+          id: pid,
+          name:
+            chat.participants.find((p) => p.userId === m.senderId)?.username ?? '—',
+          text: previewText(content).slice(0, 90),
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [chat.pinnedMessageId, chat.participants, chatId, messages]);
   const [input, setInput] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   // Reply state: ID of the message being replied to.
@@ -1448,6 +1499,52 @@ export function Conversation({
           </span>
         )}
       </header>
+      {/* Pinned message bar (#86). */}
+      {pinnedPreview && (
+        <div className="conv-pin-bar" data-testid="pin-bar">
+          <span className="conv-pin-icon">
+            <IconPin />
+          </span>
+          <button
+            type="button"
+            className="conv-pin-body"
+            data-testid="pin-jump"
+            onClick={() => {
+              const el = scrollRef.current;
+              const target = el?.querySelector(
+                `[data-message-id="${pinnedPreview.id}"]`,
+              );
+              if (!el || !target) return;
+              pushNavStack();
+              atBottomRef.current = false;
+              el.scrollTo({
+                top:
+                  (target as HTMLElement).offsetTop -
+                  el.offsetTop -
+                  el.clientHeight / 2 +
+                  (target as HTMLElement).clientHeight / 2,
+                behavior: 'smooth',
+              });
+            }}
+          >
+            <span className="conv-pin-name">{pinnedPreview.name}</span>
+            <span className="conv-pin-text">{pinnedPreview.text}</span>
+          </button>
+          <button
+            type="button"
+            className="conv-pin-unpin"
+            aria-label="Открепить"
+            data-testid="pin-unpin"
+            onClick={() => {
+              void unpinMessage(chatId)
+                .then((updated) => onChatUpdated(updated as Chat))
+                .catch(() => undefined);
+            }}
+          >
+            <IconX />
+          </button>
+        </div>
+      )}
       <div
         className="conv-scroll"
         ref={scrollRef}
@@ -1510,6 +1607,26 @@ export function Conversation({
                   const canEdit = ownMsg;
                   const items: ContextMenuItem[] = [
                     { label: 'Ответить', icon: <IconReply />, onClick: () => setReplyTo(m.messageId!) },
+                    m.messageId && m.messageId === chat.pinnedMessageId
+                      ? {
+                          label: 'Открепить',
+                          icon: <IconPin />,
+                          onClick: () => {
+                            void unpinMessage(chatId)
+                              .then((updated) => onChatUpdated(updated as Chat))
+                              .catch(() => undefined);
+                          },
+                        }
+                      : {
+                          label: 'Закрепить',
+                          icon: <IconPin />,
+                          onClick: () => {
+                            if (!m.messageId) return;
+                            void pinMessage(chatId, m.messageId)
+                              .then((updated) => onChatUpdated(updated as Chat))
+                              .catch(() => undefined);
+                          },
+                        },
                   ];
                   if (canEdit) {
                     items.push({ label: 'Редактировать', icon: <IconEdit />, onClick: () => startEdit(m) });

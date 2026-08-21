@@ -56,6 +56,7 @@ export interface Chat {
   username: string | null;
   role: string;
   subscriberCount: number;
+  pinnedMessageId: string | null;
   participants: Participant[];
   lastMessage: MessagePreview | null;
   unreadCount: number;

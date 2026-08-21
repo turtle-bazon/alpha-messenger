@@ -2378,6 +2378,78 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- Закреплённое сообщение (#86) ---- */
+
+.conv-pin-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--bg-side);
+  border-bottom: 1px solid var(--divider);
+}
+
+.conv-pin-icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.conv-pin-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.conv-pin-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.conv-pin-body:hover {
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.conv-pin-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.conv-pin-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.conv-pin-unpin {
+  flex: none;
+  display: inline-flex;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.conv-pin-unpin:hover {
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--text);
+}
+
 /* ---- Уведомления уровня аккаунта (вход/новое устройство) ---- */
 .account-notices {
   position: fixed;
