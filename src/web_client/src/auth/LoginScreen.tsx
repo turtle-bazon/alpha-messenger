@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiError, login } from '../api/rest';
 import { apiUrl } from '../api/config';
 import { getDeviceId, setSession } from '../api/session';
@@ -9,6 +10,7 @@ export function LoginScreen({
 }: {
   onAuthed: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +44,10 @@ export function LoginScreen({
   return (
     <div className="auth-screen" data-testid="login-screen">
       <form className="auth-card" onSubmit={submit}>
-        <h1>Вход</h1>
+        <h1>{t('auth.loginTitle')}</h1>
         <input
-          aria-label="Имя пользователя"
-          placeholder="Имя пользователя"
+          aria-label={t('auth.username')}
+          placeholder={t('auth.username')}
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -57,7 +59,7 @@ export function LoginScreen({
         />
         {error && <p className="auth-error">{error}</p>}
         <button type="submit" disabled={busy || !username || !password}>
-          {busy ? '...' : 'Войти'}
+          {busy ? '...' : t('auth.loginSubmit')}
         </button>
       </form>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EmojiPicker } from './EmojiPicker';
 import { StickerPanel } from './StickerPanel';
 import { searchGifs, uploadBlob } from '../api/rest';
@@ -19,6 +20,7 @@ export function MediaPanel({
   onClose,
   textareaRef,
 }: MediaPanelProps): JSX.Element {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('emoji');
   const ref = useRef<HTMLDivElement>(null);
 
@@ -58,7 +60,7 @@ export function MediaPanel({
           className={'media-tab' + (tab === 'stickers' ? ' active' : '')}
           onClick={() => setTab('stickers')}
         >
-          Стикеры
+          {t('mediaPanel.stickers')}
         </button>
         <button
           type="button"
@@ -103,6 +105,7 @@ interface GifPickerProps {
 }
 
 function GifPicker({ onSelect }: GifPickerProps): JSX.Element {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [gifs, setGifs] = useState<GifResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -157,7 +160,7 @@ function GifPicker({ onSelect }: GifPickerProps): JSX.Element {
       <div className="gif-search">
         <input
           type="text"
-          placeholder="Поиск GIF…"
+          placeholder={t('mediaPanel.gifSearch')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -166,7 +169,7 @@ function GifPicker({ onSelect }: GifPickerProps): JSX.Element {
       <div className="gif-grid">
         {gifs.length === 0 && !loading && (
           <div className="gif-empty">
-            {query ? 'Ничего не найдено' : 'Введите запрос'}
+            {query ? t('chatlist.notFound') : t('mediaPanel.typeQuery')}
           </div>
         )}
         {gifs.map((gif) => (
@@ -187,7 +190,7 @@ function GifPicker({ onSelect }: GifPickerProps): JSX.Element {
           onClick={loadMore}
           disabled={loading}
         >
-          {loading ? 'Загрузка…' : 'Ещё'}
+          {loading ? t('common.loading') : t('common.more')}
         </button>
       )}
     </div>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Theme } from './util/theme';
 import { getPlatform } from './util/platform';
-import { IconArrowLeft, IconBell, IconMoon, IconSun, IconInfo, IconChevronRight, IconMonitor } from './util/icons';
+import { IconArrowLeft, IconBell, IconMoon, IconSun, IconInfo, IconChevronRight, IconMonitor, IconGlobe } from './util/icons';
 import {
   getNotifPrefs,
   getPermission,
@@ -12,6 +13,7 @@ import {
   type NotifPrefs,
 } from './util/notifications';
 import { DevicesScreen } from './DevicesScreen';
+import { LANGS, switchLanguage, type Lang } from './i18n';
 
 type SettingsView = 'main' | 'notifications' | 'devices';
 
@@ -32,6 +34,7 @@ export function SettingsScreen({
   onAbout,
   onBack,
 }: SettingsScreenProps): JSX.Element {
+  const { t, i18n } = useTranslation();
   const [view, setView] = useState<SettingsView>('main');
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [perm, setPerm] = useState<NotificationPermission>(getPermission());
@@ -75,16 +78,16 @@ export function SettingsScreen({
             type="button"
             className="icon-button settings-back"
             data-testid="settings-back"
-            aria-label="Назад"
+            aria-label={t('common.back')}
             onClick={() => setView('main')}
           >
             <IconArrowLeft />
           </button>
-          <span className="settings-header-title">Уведомления</span>
+          <span className="settings-header-title">{t('settings.notifications')}</span>
         </header>
         <div className="settings-items">
           <label className="settings-row">
-            <span className="settings-row-text">Звук</span>
+            <span className="settings-row-text">{t('settings.sound')}</span>
             <input
               type="checkbox"
               className="settings-toggle"
@@ -96,7 +99,7 @@ export function SettingsScreen({
           {isAndroid ? (
             <>
               <label className="settings-row">
-                <span className="settings-row-text">Push-уведомления</span>
+                <span className="settings-row-text">{t('settings.push')}</span>
                 <input
                   type="checkbox"
                   className="settings-toggle"
@@ -105,14 +108,12 @@ export function SettingsScreen({
                   onChange={() => void toggleBrowser()}
                 />
               </label>
-              <div className="settings-hint">
-                Через UnifiedPush / FCM
-              </div>
+              <div className="settings-hint">{t('settings.pushHint')}</div>
             </>
           ) : (
             <>
               <label className="settings-row">
-                <span className="settings-row-text">Уведомления браузера</span>
+                <span className="settings-row-text">{t('settings.browserNotifs')}</span>
                 <input
                   type="checkbox"
                   className="settings-toggle"
@@ -124,12 +125,12 @@ export function SettingsScreen({
               </label>
               {perm === 'denied' && (
                 <div className="settings-hint" data-testid="settings-denied">
-                  Уведомления заблокированы в настройках браузера
+                  {t('settings.denied')}
                 </div>
               )}
               {!notificationsSupported() && (
                 <div className="settings-hint">
-                  Браузер не поддерживает уведомления
+                  {t('settings.notSupported')}
                 </div>
               )}
             </>
@@ -151,12 +152,12 @@ export function SettingsScreen({
           type="button"
           className="icon-button settings-back"
           data-testid="settings-back"
-          aria-label="Назад"
+          aria-label={t('common.back')}
           onClick={onBack}
           >
             <IconArrowLeft />
           </button>
-          <span className="settings-header-title">Настройки</span>
+          <span className="settings-header-title">{t('settings.title')}</span>
       </header>
       <div className="settings-user">
         <span className="settings-avatar">
@@ -172,9 +173,9 @@ export function SettingsScreen({
           onClick={() => setView('notifications')}
         >
           <span className="settings-row-icon"><IconBell /></span>
-          <span className="settings-row-text">Уведомления</span>
+          <span className="settings-row-text">{t('settings.notifications')}</span>
           <span className="settings-row-value">
-            {prefs.sound || prefs.browser ? 'Вкл' : 'Выкл'}
+            {prefs.sound || prefs.browser ? t('common.on') : t('common.off')}
           </span>
           <span className="settings-row-arrow"><IconChevronRight /></span>
         </button>
@@ -185,14 +186,30 @@ export function SettingsScreen({
           onClick={() => setView('devices')}
         >
           <span className="settings-row-icon"><IconMonitor /></span>
-          <span className="settings-row-text">Устройства</span>
+          <span className="settings-row-text">{t('settings.devices')}</span>
           <span className="settings-row-arrow"><IconChevronRight /></span>
         </button>
+        <label className="settings-row">
+          <span className="settings-row-icon"><IconGlobe /></span>
+          <span className="settings-row-text">{t('settings.language')}</span>
+          <select
+            className="settings-lang"
+            data-testid="settings-language"
+            value={i18n.language}
+            onChange={(e) => void switchLanguage(e.target.value as Lang)}
+          >
+            {LANGS.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="settings-row">
           <span className="settings-row-icon">
             {theme === 'dark' ? <IconMoon /> : <IconSun />}
           </span>
-          <span className="settings-row-text">Тёмная тема</span>
+          <span className="settings-row-text">{t('settings.darkTheme')}</span>
           <input
             type="checkbox"
             className="settings-toggle"
@@ -208,13 +225,13 @@ export function SettingsScreen({
           onClick={onAbout}
         >
           <span className="settings-row-icon"><IconInfo /></span>
-          <span className="settings-row-text">О приложении</span>
+          <span className="settings-row-text">{t('settings.about')}</span>
           <span className="settings-row-arrow"><IconChevronRight /></span>
         </button>
       </div>
       <div className="settings-debug" data-testid="settings-debug">
-        <div className="settings-debug-title">Системная информация</div>
-        <div>Платформа: <b>{getPlatform()}</b></div>
+        <div className="settings-debug-title">{t('settings.sysinfo')}</div>
+        <div>{t('settings.platform')}: <b>{getPlatform()}</b></div>
         <div>Capacitor: <b>{String(!!(window as any).Capacitor)}</b></div>
         <div>isNativePlatform: <b>{String((window as any).Capacitor?.isNativePlatform?.() ?? 'N/A')}</b></div>
         <div>userAgent: <b style={{ wordBreak: 'break-all' }}>{navigator.userAgent}</b></div>
@@ -226,7 +243,7 @@ export function SettingsScreen({
           data-testid="settings-logout"
           onClick={onLogout}
         >
-          Выйти
+          {t('settings.logout')}
         </button>
       </div>
     </div>

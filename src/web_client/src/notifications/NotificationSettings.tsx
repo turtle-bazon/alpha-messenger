@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IconBell, IconBellOff } from '../util/icons';
 import {
   getNotifPrefs,
@@ -14,6 +15,7 @@ import {
 // notifications requests system permission; on denial the toggle stays off
 // and we show a hint.
 export function NotificationSettings(): JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [perm, setPerm] = useState<NotificationPermission>(getPermission());
@@ -121,8 +123,8 @@ export function NotificationSettings(): JSX.Element {
         type="button"
         className="icon-button"
         data-testid="notif-toggle"
-        aria-label="Уведомления"
-        title="Уведомления"
+        aria-label={t("settings.notifications")}
+        title={t("settings.notifications")}
         aria-expanded={open}
         onClick={openMenu}
       >
@@ -141,7 +143,7 @@ export function NotificationSettings(): JSX.Element {
           }
         >
           <label className="notif-row">
-            <span>Звук</span>
+            <span>{t("settings.sound")}</span>
             <input
               type="checkbox"
               data-testid="notif-sound"
@@ -150,7 +152,7 @@ export function NotificationSettings(): JSX.Element {
             />
           </label>
           <label className="notif-row">
-            <span>Уведомления браузера</span>
+            <span>{t("settings.browserNotifs")}</span>
             <input
               type="checkbox"
               data-testid="notif-browser"
@@ -161,12 +163,12 @@ export function NotificationSettings(): JSX.Element {
           </label>
           {denied && (
             <div className="notif-hint" data-testid="notif-denied">
-              Уведомления заблокированы в настройках браузера
+              {t('settings.denied')}
             </div>
           )}
           {!notificationsSupported() && (
             <div className="notif-hint">
-              Браузер не поддерживает уведомления
+              {t('settings.notSupported')}
             </div>
           )}
         </div>

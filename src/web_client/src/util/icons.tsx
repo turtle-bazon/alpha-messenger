@@ -36,6 +36,7 @@ import {
   Image,
   Forward,
   Pin,
+  Globe,
 } from 'lucide-react';
 
 // Re-export Lucide icons directly.
@@ -76,4 +77,5 @@ export {
   Image as IconImage,
   Forward as IconForward,
   Pin as IconPin,
+  Globe as IconGlobe,
 };

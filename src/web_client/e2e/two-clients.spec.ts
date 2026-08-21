@@ -29,8 +29,8 @@ function statusOf(page: Page, text: string) {
 test('два клиента: переписка, статусы и свёртывание/восстановление окон', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

@@ -7,8 +7,8 @@ import { createDirectViaUi, createGroupViaUi, registerViaUi } from './helpers/ui
 test('ChatList: кружок присутствия в личном чате (онлайн → оффлайн)', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -36,8 +36,8 @@ test('ChatList: кружок присутствия в личном чате (о
 });
 
 test('ChatList: окантовка «печатает» в личном чате', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -68,8 +68,8 @@ test('ChatList: окантовка «печатает» в личном чате
 test('ChatList: у группы нет кружка присутствия, но есть окантовка тайпинга', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

@@ -13,6 +13,7 @@
 // image inline data is used as thumbnail, blobId empty.
 
 import { decodeText, encodeText } from './text';
+import i18n from '../i18n';
 
 export interface ImageAttachment {
   kind: 'image';
@@ -291,17 +292,17 @@ export function linkThumbUrl(a: LinkAttachment): string {
 // previews the text (the URL itself) is in the message — shown as plain text.
 export function previewText(c: MessageContent): string {
   const sticker = c.attachments.find((a): a is StickerAttachment => a.kind === 'sticker');
-  if (sticker) return '🎯 Стикер';
+  if (sticker) return `🎯 ${i18n.t('preview.sticker')}`;
   const audio = c.attachments.find((a): a is AudioAttachment => a.kind === 'audio');
-  if (audio) return '🎤 Голосовое сообщение';
+  if (audio) return `🎤 ${i18n.t('preview.voice')}`;
   const video = c.attachments.find((a): a is VideoAttachment => a.kind === 'video');
-  if (video) return '🎥 Видео';
+  if (video) return `🎥 ${i18n.t('preview.video')}`;
   const file = c.attachments.find((a): a is FileAttachment => a.kind === 'file');
   if (file) return `📎 ${file.name}`;
   const img = c.attachments.find((a): a is ImageAttachment => a.kind === 'image');
   if (img) {
     const cap = img.caption || c.text;
-    return cap ? `📷 ${cap}` : '📷 Фото';
+    return cap ? `📷 ${cap}` : `📷 ${i18n.t('preview.photo')}`;
   }
   return c.text;
 }

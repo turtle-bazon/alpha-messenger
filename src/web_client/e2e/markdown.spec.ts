@@ -5,7 +5,7 @@ import { createDirectViaUi, registerViaUi } from './helpers/ui';
 // Проверяем рендер inline-форматирования и автодетект URL.
 
 test('markdown: bold, italic, code, strikethrough', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -27,7 +27,7 @@ test('markdown: bold, italic, code, strikethrough', async ({ browser }) => {
 });
 
 test('автодетект URL: ссылка кликабельна', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -46,7 +46,7 @@ test('автодетект URL: ссылка кликабельна', async ({ b
 });
 
 test('markdown-ссылка: [текст](url)', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -65,7 +65,7 @@ test('markdown-ссылка: [текст](url)', async ({ browser }) => {
 });
 
 test('код не парсится как markdown', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -83,7 +83,7 @@ test('код не парсится как markdown', async ({ browser }) => {
 });
 
 test('markdown: смешанный текст', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -102,7 +102,7 @@ test('markdown: смешанный текст', async ({ browser }) => {
 });
 
 test('italic: граница слова', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -123,7 +123,7 @@ test('italic: граница слова', async ({ browser }) => {
 // ─── Панель форматирования (#69) ──────────────────────────────────────
 
 test('WYSIWYG: markdown отображается в композере', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -140,7 +140,7 @@ test('WYSIWYG: markdown отображается в композере', async (
 });
 
 test('панель форматирования: появляется при выделении', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -163,7 +163,7 @@ test('панель форматирования: появляется при в�
 });
 
 test('форматирование: клик Bold оборачивает выделение', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);
@@ -189,7 +189,7 @@ test('форматирование: клик Bold оборачивает выд�
 });
 
 test('горячие клавиши: Ctrl+B для bold', async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
   const a = await registerViaUi(page);
   const b = await registerViaUi(page);

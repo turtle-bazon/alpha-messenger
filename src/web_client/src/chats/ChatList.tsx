@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Chat, Participant } from '../api/types';
 import { decodeContent, previewText } from '../util/content';
 import { renderMarkdown } from '../util/markdown';
@@ -41,6 +42,7 @@ export function ChatList({
   onFocusInput: () => void;
   onShowProfile: (userId: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -86,8 +88,8 @@ export function ChatList({
           className="chat-search-input"
           type="search"
           data-testid="chat-search"
-          aria-label="Поиск чатов"
-          placeholder="Поиск"
+          aria-label={t('chatlist.search')}
+          placeholder={t('chatlist.search')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -103,11 +105,11 @@ export function ChatList({
       )}
       <div className="chat-list-items">
         {loading ? (
-          <p className="chat-list-empty">Загрузка…</p>
+          <p className="chat-list-empty">{t('common.loading')}</p>
         ) : chats.length === 0 ? (
-          <p className="chat-list-empty">Чатов пока нет</p>
+          <p className="chat-list-empty">{t('chatlist.empty')}</p>
         ) : filtered.length === 0 ? (
-          <p className="chat-list-empty">Ничего не найдено</p>
+          <p className="chat-list-empty">{t('chatlist.notFound')}</p>
         ) : (
           filtered.map((chat) => {
             const title = chatTitle(chat, myId);
@@ -165,7 +167,7 @@ export function ChatList({
                           const usernames = new Set(chat.participants.map((p) => p.username));
                           return renderMarkdown(text, usernames);
                         })()
-                      : 'Нет сообщений'}
+                      : t('chatlist.noMessages')}
                   </span>
                   {chat.unreadCount > 0 && (
                     <span className="chat-item-unread" data-testid="chat-unread">
@@ -187,8 +189,8 @@ export function ChatList({
         type="button"
         className="chat-fab"
         data-testid="new-chat-button"
-        aria-label="Новый чат"
-        title="Новый чат"
+        aria-label={t('chatlist.newChat')}
+        title={t('chatlist.newChat')}
         onClick={() => setComposing(true)}
       >
         <IconPlus />

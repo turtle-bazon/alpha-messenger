@@ -11,6 +11,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    // The UI language is auto-detected from the browser (#58); pin it to
+    // Russian so specs asserting on Russian UI text stay deterministic.
+    locale: 'ru-RU',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

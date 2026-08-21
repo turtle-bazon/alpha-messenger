@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { addMember, ApiError, getMembers, removeMember } from '../api/rest';
 import type { Chat, ChatMember } from '../api/types';
 import { colorFor, initialFor } from './avatar';
@@ -27,6 +28,7 @@ export function MembersDialog({
   onClose: () => void;
   onShowProfile: (userId: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<ChatMember[]>([]);
   const [createdBy, setCreatedBy] = useState<string | null>(chat.createdBy);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export function MembersDialog({
         setMembers(res.members);
         setCreatedBy(res.createdBy);
       })
-      .catch(() => alive && setError('Не удалось загрузить участников'))
+      .catch(() => alive && setError(t('members.loadFailed')))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
@@ -74,8 +76,8 @@ export function MembersDialog({
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 403
-          ? 'Недостаточно прав'
-          : 'Не удалось удалить',
+          ? t('members.noRights')
+          : t('members.removeFailed'),
       );
     } finally {
       setRemoving((s) => {
@@ -100,13 +102,13 @@ export function MembersDialog({
       setAddName('');
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setError('Пользователь не найден');
+        setError(t('newChat.userNotFound'));
       } else if (err instanceof ApiError && err.status === 409) {
-        setError('Уже участник');
+        setError(t('members.alreadyMember'));
       } else if (err instanceof ApiError && err.status === 403) {
-        setError('Недостаточно прав');
+        setError(t('members.noRights'));
       } else {
-        setError('Не удалось добавить');
+        setError(t('members.addFailed'));
       }
     } finally {
       setAdding(false);
@@ -126,17 +128,19 @@ export function MembersDialog({
       <div className="members-dialog">
         <div className="members-head">
           <div className="members-head-text">
-            <span className="members-title">Участники</span>
+            <span className="members-title">{t('members.title')}</span>
             <span className="members-count" data-testid="members-count">
-              {members.length} всего
-              {onlineCount > 0 ? `, ${onlineCount} в сети` : ''}
+              {t('members.total', { count: members.length })}
+              {onlineCount > 0
+                ? `, ${t('conv.onlineCount', { n: onlineCount })}`
+                : ''}
             </span>
           </div>
           <button
             type="button"
             className="members-close"
             data-testid="members-close"
-            aria-label="Закрыть"
+            aria-label={t('common.close')}
             onClick={onClose}
           >
             <IconX />
@@ -144,7 +148,7 @@ export function MembersDialog({
         </div>
 
         {loading ? (
-          <p className="members-empty">Загрузка…</p>
+          <p className="members-empty">{t('common.loading')}</p>
         ) : (
           <ul className="members-list" data-testid="members-list">
             {members.map((m) => {
@@ -175,7 +179,7 @@ export function MembersDialog({
                       <span
                         className={'member-online-dot' + (away ? ' is-away' : '')}
                         data-testid="member-online"
-                        aria-label={away ? 'отошёл' : 'в сети'}
+                        aria-label={away ? t('conv.away') : t('conv.online')}
                       />
                     )}
                   </span>
@@ -185,14 +189,14 @@ export function MembersDialog({
                       onClick={() => onShowProfile(m.userId)}
                     >
                       {m.username}
-                      {m.userId === myId && ' (вы)'}
+                      {m.userId === myId && ` (${t('members.you')})`}
                     </span>
                     <span className="member-status">
-                      {isOwner ? 'создатель' :
-                       online ? 'в сети' :
-                       away ? (m.lastActiveAt ? `отошёл. ${formatLastSeen(m.lastActiveAt)}` : 'отошёл') :
+                      {isOwner ? t('members.owner') :
+                       online ? t('conv.online') :
+                       away ? (m.lastActiveAt ? `${t('conv.away')}. ${formatLastSeen(m.lastActiveAt)}` : t('conv.away')) :
                        m.lastActiveAt ? formatLastSeen(m.lastActiveAt) :
-                       'не в сети'}
+                       t('conv.offline')}
                     </span>
                   </span>
                   {canRemove && (
@@ -203,7 +207,7 @@ export function MembersDialog({
                       disabled={removing.has(m.userId)}
                       onClick={() => onRemove(m.userId)}
                     >
-                      удалить
+                      {t('members.remove')}
                     </button>
                   )}
                 </li>
@@ -217,7 +221,7 @@ export function MembersDialog({
             <input
               className="members-add-input"
               data-testid="member-add-input"
-              placeholder="Добавить по username"
+              placeholder={t('members.addPlaceholder')}
               value={addName}
               onChange={(e) => setAddName(e.target.value)}
               disabled={adding}
@@ -228,7 +232,7 @@ export function MembersDialog({
               data-testid="member-add-submit"
               disabled={adding || addName.trim() === ''}
             >
-              Добавить
+              {t('members.add')}
             </button>
           </form>
         )}

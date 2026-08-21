@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   createChannel,
   createDirect,
@@ -28,6 +29,7 @@ import { CallOverlay } from './chats/CallOverlay';
 import { ForwardDialog } from './chats/ForwardDialog';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
+import i18n from './i18n';
 import {
   ensureBrowserPermission,
   getNotifPrefs,
@@ -66,6 +68,7 @@ export function HomeScreen({
 }: {
   onLogout: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const myId = getUserId();
   // The stream cursor is seeded from localStorage (resume across sessions) and
   // saved on each advance — after reload only missed events are replayed; history
@@ -321,7 +324,7 @@ export function HomeScreen({
       if (live && p.senderId !== myId) {
         const chat = chatsRef.current.find((c) => c.chatId === chatId);
         notifyIncoming({
-          title: chat ? chatTitle(chat, myId) : 'Новое сообщение',
+          title: chat ? chatTitle(chat, myId) : i18n.t('common.newMessage'),
           ciphertext: p.ciphertext,
           chatId,
           currentChatId: selectedRef.current,
@@ -417,10 +420,10 @@ export function HomeScreen({
       if (p.userId === myId) return;
       if (p.action !== 'added') return;
       const chat = chatsRef.current.find((c) => c.chatId === chatId);
-      const title = chat ? chatTitle(chat, myId) : 'Чат';
+      const title = chat ? chatTitle(chat, myId) : i18n.t('common.chat');
       // Look up the reactor's name among chat participants
       const reactor = chat?.participants.find((pt) => pt.userId === p.userId);
-      const reactorName = reactor?.username ?? 'Пользователь';
+      const reactorName = reactor?.username ?? i18n.t('common.user');
       notifyReaction({
         title,
         reactor: reactorName,
@@ -719,11 +722,8 @@ export function HomeScreen({
             }}
           >
             <div className="notif-modal-icon"><IconBell /></div>
-            <h3 className="notif-modal-title">Разрешить уведомления?</h3>
-            <p className="notif-modal-text">
-              Вы будете получать уведомления о новых сообщениях, даже когда
-              приложение свёрнуто.
-            </p>
+            <h3 className="notif-modal-title">{t('home.notifBannerTitle')}</h3>
+            <p className="notif-modal-text">{t('home.notifBannerText')}</p>
             <div className="notif-modal-actions">
               <button
                 type="button"
@@ -731,7 +731,7 @@ export function HomeScreen({
                 data-testid="notif-banner-allow"
                 onClick={() => void handleNotifAllow()}
               >
-                Разрешить
+                {t('home.notifBannerAllow')}
               </button>
               <button
                 type="button"
@@ -739,7 +739,7 @@ export function HomeScreen({
                 data-testid="notif-banner-skip"
                 onClick={handleNotifSkip}
               >
-                Не сейчас
+                {t('home.notifBannerSkip')}
               </button>
             </div>
           </div>
@@ -762,8 +762,8 @@ export function HomeScreen({
                 type="button"
                 className="icon-button home-hamburger"
                 data-testid="settings-btn"
-                aria-label="Настройки"
-                title="Настройки"
+                aria-label={t('settings.title')}
+                title={t('settings.title')}
                 onClick={() => setSettingsOpen(true)}
               >
                 <IconMenu />
@@ -816,7 +816,7 @@ export function HomeScreen({
             }}
           />
         ) : (
-          <div className="conversation-empty">Выберите чат</div>
+          <div className="conversation-empty">{t('common.selectChat')}</div>
         )}
       </main>
       {callCtl.call.phase !== 'idle' && (

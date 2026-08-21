@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   deleteMessage,
   editMessage,
@@ -27,6 +28,7 @@ import {
 } from '../api/rest';
 import type { WsClient } from '../api/ws';
 import type { Chat, Message, ReactionGroup, ServerEvent } from '../api/types';
+import i18n from '../i18n';
 import {
   decodeContent,
   encodeContent,
@@ -86,21 +88,15 @@ function fmtSec(total: number): string {
 
 // Bytes → human-readable size for the file card (#85).
 function fmtSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} Б`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+  if (bytes < 1024) return `${bytes} ${i18n.t('conv.sizeB')}`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${i18n.t('conv.sizeKb')}`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ${i18n.t('conv.sizeMb')}`;
 }
 
-// Plural forms for the member count label (1 member, 2 members, 5 members).
+// Member count label — plural forms come from the locale dict (#58):
+// ru has one/few/many forms, en just "member/members".
 function pluralMembers(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  let word: string;
-  if (mod10 === 1 && mod100 !== 11) word = 'участник';
-  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
-    word = 'участника';
-  else word = 'участников';
-  return `${n} ${word}`;
+  return i18n.t('conv.membersCount', { count: n });
 }
 
 const PAGE = 50;
@@ -246,7 +242,7 @@ export function Conversation({
         const m = page.messages[0];
         if (!alive) return;
         if (!m || m.messageId !== pid) {
-          setPinnedPreview({ id: pid, name: '', text: 'Закреплённое сообщение' });
+          setPinnedPreview({ id: pid, name: '', text: i18n.t('conv.pinnedFallback') });
           return;
         }
         const content = decodeContent(m.ciphertext);
@@ -274,6 +270,7 @@ export function Conversation({
   const [micMode, setMicMode] = useState<'voice' | 'video'>('voice');
   const [videoRecKey, setVideoRecKey] = useState(0);
   const [recCancelArmed, setRecCancelArmed] = useState(false);
+  const { t } = useTranslation();
   const [ctxMenu, setCtxMenu] = useState<{ items: ContextMenuItem[]; x: number; y: number } | null>(null);
   // Reaction picker: messageId it is open for, or null
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
@@ -1356,22 +1353,28 @@ export function Conversation({
     (p) => p.userId === myId || onlineUsers.has(p.userId),
   ).length;
   let subtitle: string | null = null;
+  // Status kind drives the CSS coloring and must not depend on the locale (#58).
+  let subtitleKind: '' | 'online' | 'away' = '';
   if (chat.type === 'group') {
     subtitle = pluralMembers(chat.participants.length);
-    if (onlineCount > 0) subtitle += `, ${onlineCount} в сети`;
+    if (onlineCount > 0)
+      subtitle += `, ${i18n.t('conv.onlineCount', { n: onlineCount })}`;
+    subtitleKind = 'online';
   } else {
     const other = chat.participants.find((p) => p.userId !== myId);
     if (other) {
       if (onlineUsers.has(other.userId)) {
-        subtitle = 'в сети';
+        subtitle = i18n.t('conv.online');
+        subtitleKind = 'online';
       } else if (awayUsers.has(other.userId)) {
         subtitle = other.lastActiveAt
-          ? `отошёл. ${formatLastSeen(other.lastActiveAt)}`
-          : 'отошёл';
+          ? `${i18n.t('conv.away')}. ${formatLastSeen(other.lastActiveAt)}`
+          : i18n.t('conv.away');
+        subtitleKind = 'away';
       } else if (other.lastActiveAt) {
         subtitle = formatLastSeen(other.lastActiveAt);
       } else {
-        subtitle = 'не в сети';
+        subtitle = i18n.t('conv.offline');
       }
     }
   }
@@ -1386,21 +1389,23 @@ export function Conversation({
     const names = [...users.keys()]
       .map((id) => chat.participants.find((p) => p.userId === id)?.username)
       .filter((n): n is string => !!n);
-    if (names.length === 0) return 'печатает';
+    const typingP = ` ${i18n.t('conv.typingP')}`;
+    if (names.length === 0) return i18n.t('conv.typing');
     const MAX_LEN = 40;
-    if (names.length === 1) return `${names[0]} печатает`;
-    if (names.length === 2) return `${names[0]} и ${names[1]} печатают`;
+    if (names.length === 1) return `${names[0]} ${i18n.t('conv.typingS')}`;
+    if (names.length === 2)
+      return `${names[0]} ${i18n.t('conv.and')} ${names[1]}${typingP}`;
     // 3+ names: append one by one while it fits; otherwise "and others".
     let result = names[0];
     for (let i = 1; i < names.length; i++) {
       const candidate = `${result}, ${names[i]}`;
-      if (candidate.length + ' печатают'.length <= MAX_LEN) {
+      if (candidate.length + typingP.length <= MAX_LEN) {
         result = candidate;
       } else {
-        return `${result} и др. печатают`;
+        return `${result} ${i18n.t('conv.andOthers')}${typingP}`;
       }
     }
-    return `${result} печатают`;
+    return `${result}${typingP}`;
   };
 
   return (
@@ -1410,7 +1415,7 @@ export function Conversation({
           type="button"
           className="conv-back"
           data-testid="conv-back"
-          aria-label="Назад к списку чатов"
+          aria-label={t('conv.backToList')}
           onClick={onBack}
         >
           <IconArrowLeft />
@@ -1444,8 +1449,8 @@ export function Conversation({
               <span
                 className={
                   'conv-subtitle' +
-                  (subtitle === 'в сети' ? ' conv-subtitle--online' :
-                   subtitle.startsWith('отошёл') ? ' conv-subtitle--away' : '')
+                  (subtitleKind === 'online' ? ' conv-subtitle--online' :
+                   subtitleKind === 'away' ? ' conv-subtitle--away' : '')
                 }
                 data-testid="conv-subtitle"
               >
@@ -1461,7 +1466,7 @@ export function Conversation({
               <button
                 type="button"
                 className="icon-button"
-                aria-label="Аудиозвонок"
+                aria-label={t('conv.audioCall')}
                 data-testid="call-audio-btn"
                 onClick={() => onCall(other.userId, false)}
               >
@@ -1470,7 +1475,7 @@ export function Conversation({
               <button
                 type="button"
                 className="icon-button"
-                aria-label="Видеозвонок"
+                aria-label={t('conv.videoCall')}
                 data-testid="call-video-btn"
                 onClick={() => onCall(other.userId, true)}
               >
@@ -1482,7 +1487,7 @@ export function Conversation({
         <button
           type="button"
           className="icon-button"
-          aria-label="Медиа чата"
+          aria-label={t('conv.chatMedia')}
           data-testid="gallery-btn"
           onClick={() => setGalleryOpen(true)}
         >
@@ -1533,7 +1538,7 @@ export function Conversation({
           <button
             type="button"
             className="conv-pin-unpin"
-            aria-label="Открепить"
+            aria-label={t('conv.unpin')}
             data-testid="pin-unpin"
             onClick={() => {
               void unpinMessage(chatId)
@@ -1550,7 +1555,7 @@ export function Conversation({
         ref={scrollRef}
         onScroll={onScroll}
       >
-        {loadingMore && <div className="conv-loading">Загрузка…</div>}
+        {loadingMore && <div className="conv-loading">{t('common.loading')}</div>}
         <div className="conv-messages" data-testid="messages">
           {(chat.username
             ? messages.filter((m) => !m.replyToMessageId)
@@ -1606,10 +1611,10 @@ export function Conversation({
                   const canDelete = ownMsg || (chat.createdBy === myId);
                   const canEdit = ownMsg;
                   const items: ContextMenuItem[] = [
-                    { label: 'Ответить', icon: <IconReply />, onClick: () => setReplyTo(m.messageId!) },
+                    { label: t('conv.reply'), icon: <IconReply />, onClick: () => setReplyTo(m.messageId!) },
                     m.messageId && m.messageId === chat.pinnedMessageId
                       ? {
-                          label: 'Открепить',
+                          label: t('conv.unpin'),
                           icon: <IconPin />,
                           onClick: () => {
                             void unpinMessage(chatId)
@@ -1618,7 +1623,7 @@ export function Conversation({
                           },
                         }
                       : {
-                          label: 'Закрепить',
+                          label: t('conv.pin'),
                           icon: <IconPin />,
                           onClick: () => {
                             if (!m.messageId) return;
@@ -1629,13 +1634,13 @@ export function Conversation({
                         },
                   ];
                   if (canEdit) {
-                    items.push({ label: 'Редактировать', icon: <IconEdit />, onClick: () => startEdit(m) });
+                    items.push({ label: t('conv.edit'), icon: <IconEdit />, onClick: () => startEdit(m) });
                   }
                   if (onForward && !m.pending && !m.failed) {
-                    items.push({ label: 'Переслать…', icon: <IconForward />, onClick: () => onForward(m) });
+                    items.push({ label: t('conv.forward'), icon: <IconForward />, onClick: () => onForward(m) });
                   }
                   items.push({ separator: true, label: '', onClick: () => {} });
-                  items.push({ label: 'Копировать текст', icon: <IconCopy />, onClick: () => {
+                  items.push({ label: t('conv.copyText'), icon: <IconCopy />, onClick: () => {
                     // Strip markup: **, _, ~~, `
                     const plain = m.content.text
                       .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -1647,7 +1652,7 @@ export function Conversation({
                   } });
                   if (canDelete) {
                     items.push({ separator: true, label: '', onClick: () => {} });
-                    items.push({ label: 'Удалить', icon: <IconTrash />, onClick: () => onDelete(m), danger: true });
+                    items.push({ label: t('common.delete'), icon: <IconTrash />, onClick: () => onDelete(m), danger: true });
                   }
                   setCtxMenu({ items, x: e.clientX, y: e.clientY });
                   setReactionPickerMsgId(m.messageId!);
@@ -1684,7 +1689,7 @@ export function Conversation({
                 )}
                 <span className="bubble-content">
                   {m.deleted ? (
-                    <em>Сообщение удалено</em>
+                    <em>{t('conv.msgDeleted')}</em>
                   ) : (
                     <>
                       {/* Preview of the message being replied to (#33) */}
@@ -1694,7 +1699,9 @@ export function Conversation({
                           ? chat.participants.find((p) => p.userId === ref.senderId)?.username ?? '—'
                           : '';
                         const refText = ref
-                          ? ref.deleted ? 'Сообщение удалено' : ref.content.text.slice(0, 80)
+                          ? ref.deleted
+                            ? t('conv.msgDeleted')
+                            : ref.content.text.slice(0, 80)
                           : '';
                         return (
                           <span
@@ -1755,7 +1762,7 @@ export function Conversation({
                       })()}
                       {m.content.fwd && (
                         <span className="bubble-fwd" data-testid="bubble-fwd">
-                          Переслано от {m.content.fwd.from}
+                          {t('conv.fwdFrom', { name: m.content.fwd.from })}
                         </span>
                       )}
                       {m.content.text && (
@@ -1785,7 +1792,7 @@ export function Conversation({
                             <img
                               data-testid="message-image"
                               src={thumbUrl(a)}
-                              alt={a.caption || 'изображение'}
+                              alt={a.caption || t('conv.imageAlt')}
                               className={a.blobId ? 'is-openable' : undefined}
                               onClick={() =>
                                 a.blobId &&
@@ -1826,7 +1833,7 @@ export function Conversation({
                             }
                           >
                             {a.thumb ? (
-                              <img src={`data:image/jpeg;base64,${a.thumb}`} alt="видео" />
+                              <img src={`data:image/jpeg;base64,${a.thumb}`} alt={t('conv.videoAlt')} />
                             ) : (
                               <span className="bubble-video-placeholder" />
                             )}
@@ -1917,8 +1924,8 @@ export function Conversation({
                           className="bubble-status is-failed"
                           data-testid="msg-status"
                           data-status="failed"
-                          title="Не отправлено"
-                          aria-label="Не отправлено"
+                          title={t('conv.notSent')}
+                          aria-label={t('conv.notSent')}
                         >
                           <IconAlertCircle />
                         </span>
@@ -1927,14 +1934,14 @@ export function Conversation({
                           className="bubble-spinner"
                           data-testid="msg-status"
                           data-status="sending"
-                          aria-label="Отправка"
+                          aria-label={t('conv.sending')}
                         />
                       ) : m.messageId ? (
                         <span
                           className={'bubble-status' + (read ? ' is-read' : '')}
                           data-testid="msg-status"
                           data-status={read ? 'read' : 'sent'}
-                          aria-label={read ? 'Прочитано' : 'Отправлено'}
+                          aria-label={read ? t('conv.read') : t('conv.sent')}
                         >
                           {read ? <IconChecks /> : <IconCheck />}
                         </span>
@@ -1949,7 +1956,7 @@ export function Conversation({
                     data-testid="msg-retry"
                     onClick={retrySend}
                   >
-                    Повторить
+                    {t('conv.retry')}
                   </button>
                 )}
                 {/* Action buttons: delete, edit, reply (#50) */}
@@ -1963,7 +1970,7 @@ export function Conversation({
                       <button
                         type="button"
                         data-testid="msg-emoji"
-                        title="Реакция"
+                        title={t('conv.react')}
                         onClick={(e) => {
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                           ctxMenuPosRef.current = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
@@ -1976,7 +1983,7 @@ export function Conversation({
                         <button
                           type="button"
                           data-testid="msg-delete"
-                          title="Удалить"
+                          title={t('common.delete')}
                           onClick={() => onDelete(m)}
                         >
                           <IconTrash />
@@ -1986,7 +1993,7 @@ export function Conversation({
                         <button
                           type="button"
                           data-testid="msg-edit"
-                          title="Редактировать"
+                          title={t('conv.edit')}
                           onClick={() => startEdit(m)}
                         >
                           <IconEdit />
@@ -1996,7 +2003,7 @@ export function Conversation({
                         <button
                           type="button"
                           data-testid="msg-reply"
-                          title="Ответить"
+                          title={t('conv.reply')}
                           onClick={() => setReplyTo(m.messageId!)}
                         >
                           <IconReply />
@@ -2029,7 +2036,7 @@ export function Conversation({
                       <span className="bubble-text">{draft}</span>
                     </span>
                     <span className="bubble-meta">
-                      <span className="bubble-draft-status">печатает...</span>
+                      <span className="bubble-draft-status">{t('conv.typingDots')}</span>
                     </span>
                   </div>
                 );
@@ -2043,7 +2050,10 @@ export function Conversation({
             type="button"
             className="conv-mention-nav"
             data-testid="mention-nav"
-            title={`Упоминания (${mentionNavIndex + 1}/${mentionMessages.length})`}
+            title={t('conv.mentionsNav', {
+              i: mentionNavIndex + 1,
+              n: mentionMessages.length,
+            })}
             onClick={jumpToNextMention}
           >
             @{mentionMessages.length}
@@ -2055,7 +2065,7 @@ export function Conversation({
           type="button"
           className="nav-back-btn"
           data-testid="nav-back"
-          title="Вернуться назад"
+          title={t('conv.navBack')}
           onClick={goBack}
         >
           <IconRotateCcw />
@@ -2066,7 +2076,7 @@ export function Conversation({
           type="button"
           className="scroll-to-bottom"
           data-testid="scroll-to-bottom"
-          title="К последнему сообщению"
+          title={t('conv.toLast')}
           onClick={scrollToBottom}
         >
           <IconArrowDown />{newCount > 0 && <span className="scroll-to-bottom-badge">{newCount}</span>}
@@ -2074,9 +2084,9 @@ export function Conversation({
       )}
       {editing && (
         <div className="conv-editing" data-testid="editing-banner">
-          <span>Редактирование</span>
+          <span>{t('conv.editing')}</span>
           <button type="button" onClick={cancelEdit}>
-            Отмена
+            {t('common.cancel')}
           </button>
         </div>
       )}
@@ -2102,7 +2112,7 @@ export function Conversation({
             type="button"
             className="composer-link-close"
             data-testid="composer-link-dismiss"
-            aria-label="Убрать превью"
+            aria-label={t('conv.removePreview')}
             onClick={dismissPreview}
           >
             <IconX />
@@ -2113,7 +2123,7 @@ export function Conversation({
         const msg = messages.find((m) => m.messageId === replyTo);
         if (!msg) return null;
         const name = chat.participants.find((p) => p.userId === msg.senderId)?.username ?? '—';
-        const preview = msg.deleted ? 'Сообщение удалено' : msg.content.text.slice(0, 80);
+        const preview = msg.deleted ? t('conv.msgDeleted') : msg.content.text.slice(0, 80);
         return (
           <div className="conv-reply-banner" data-testid="reply-banner">
             <span className="conv-reply-text">
@@ -2124,7 +2134,7 @@ export function Conversation({
               type="button"
               className="conv-reply-close"
               onClick={() => setReplyTo(null)}
-              aria-label="Отменить ответ"
+              aria-label={t('conv.cancelReply')}
             >
               <IconX />
             </button>
@@ -2134,7 +2144,7 @@ export function Conversation({
       <div className="conv-composer-wrap">
         {chat.role === 'non_member' ? (
           <div className="channel-subscribe-banner" data-testid="channel-subscribe-banner">
-            <span>Вы не подписаны на этот канал</span>
+            <span>{t('conv.notSubscribed')}</span>
             <button
               type="button"
               className="btn btn-primary"
@@ -2143,7 +2153,7 @@ export function Conversation({
                 onChatUpdated({ ...chat, role: 'subscriber', subscriberCount: chat.subscriberCount + 1 });
               }}
             >
-              Подписаться
+              {t('conv.subscribe')}
             </button>
           </div>
         ) : (<>
@@ -2158,7 +2168,9 @@ export function Conversation({
               ))}
             </div>
             <span className={'conv-rec-hint' + (recCancelArmed ? ' armed' : '')} data-testid="rec-hint">
-              {recCancelArmed ? 'Отпустите — отмена' : '← влево — отмена'}
+              {recCancelArmed
+                ? t('conv.recCancelArmed')
+                : t('conv.recCancelHint')}
             </span>
           </div>
         )}
@@ -2186,7 +2198,7 @@ export function Conversation({
             type="button"
             className="conv-attach"
             data-testid="attach-image"
-            aria-label="Прикрепить изображение"
+            aria-label={t('conv.attachImage')}
             disabled={!!editing}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -2196,7 +2208,7 @@ export function Conversation({
             type="button"
             className="conv-emoji-btn"
             data-testid="emoji-btn"
-            aria-label="Эмодзи и стикеры"
+            aria-label={t('conv.emojiStickers')}
             onPointerDown={(e) => {
               e.preventDefault();
               const sel = window.getSelection();
@@ -2226,7 +2238,7 @@ export function Conversation({
             type="submit"
             className="conv-send"
             data-testid="message-send"
-            aria-label={editing ? 'Сохранить' : 'Отправить'}
+            aria-label={editing ? t('common.save') : t('conv.send')}
           >
             <IconSend />
           </button>
@@ -2235,7 +2247,11 @@ export function Conversation({
             type="button"
             className={'conv-mic-btn' + (voice.state === 'recording' ? ' is-recording' : '')}
             data-testid="mic-btn"
-            aria-label={micMode === 'voice' ? 'Голосовое: удерживайте для записи' : 'Видео: удерживайте для записи'}
+            aria-label={
+              micMode === 'voice'
+                ? t('conv.voiceRecHint')
+                : t('conv.videoRecHint')
+            }
             onPointerDown={onMicPointerDown}
             onPointerUp={onMicPointerUp}
             onPointerMove={onMicPointerMove}
@@ -2477,6 +2493,7 @@ function ReactionBar({
   onSelect: (emoji: string) => void;
   onOpenFull: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [reactions] = useState(getFrequentReactions);
 
   const handleSelect = (emoji: string) => {
@@ -2505,7 +2522,7 @@ function ReactionBar({
           e.stopPropagation();
           onOpenFull();
         }}
-        title="Ещё"
+        title={t('common.more')}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9" />
@@ -2569,5 +2586,5 @@ function StickerImage({ blobId }: { blobId: string }): JSX.Element {
   }, [blobId]);
 
   if (!url) return <span className="sticker-loading" />;
-  return <img src={url} className="sticker-img" alt="стикер" />;
+  return <img src={url} className="sticker-img" alt={i18n.t('conv.stickerAlt')} />;
 }

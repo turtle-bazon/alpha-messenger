@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Chat } from '../api/types';
 import { chatTitle } from './chatTitle';
 import { colorFor, initialFor } from './avatar';
@@ -18,6 +19,7 @@ export function ForwardDialog({
   onPick: (chatId: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,11 +45,11 @@ export function ForwardDialog({
     <div className="img-editor-backdrop gallery-backdrop" data-testid="forward-dialog">
       <div className="gallery-dialog forward-dialog">
         <header className="gallery-header">
-          <span className="gallery-title">Переслать в…</span>
+          <span className="gallery-title">{t('forward.title')}</span>
           <button
             type="button"
             className="gallery-close"
-            aria-label="Закрыть"
+            aria-label={t('common.close')}
             onClick={onClose}
           >
             <IconX />
@@ -57,14 +59,14 @@ export function ForwardDialog({
           <input
             ref={inputRef}
             data-testid="forward-search"
-            placeholder="Поиск чата…"
+            placeholder={t('forward.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <div className="forward-list">
           {filtered.length === 0 && (
-            <div className="gallery-empty">Чаты не найдены</div>
+            <div className="gallery-empty">{t('forward.notFound')}</div>
           )}
           {filtered.map((c) => (
             <button

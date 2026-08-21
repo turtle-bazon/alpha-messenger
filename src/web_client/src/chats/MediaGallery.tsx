@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getChatMedia, type MediaItem } from '../api/rest';
 import { IconX } from '../util/icons';
 
@@ -16,6 +17,7 @@ export function MediaGallery({
   // Opens the full viewer for a media item (blobId + kind).
   onOpen: (item: MediaItem) => void;
 }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -68,20 +70,20 @@ export function MediaGallery({
     <div className="img-editor-backdrop gallery-backdrop" data-testid="media-gallery">
       <div className="gallery-dialog">
         <header className="gallery-header">
-          <span className="gallery-title">Медиа</span>
+          <span className="gallery-title">{t('gallery.title')}</span>
           <button
             type="button"
             className="gallery-close"
-            aria-label="Закрыть"
+            aria-label={t('common.close')}
             onClick={onClose}
           >
             <IconX />
           </button>
         </header>
         {loading ? (
-          <div className="gallery-empty">Загрузка…</div>
+          <div className="gallery-empty">{t('common.loading')}</div>
         ) : items.length === 0 ? (
-          <div className="gallery-empty">Пока нет фото и видео</div>
+          <div className="gallery-empty">{t('gallery.empty')}</div>
         ) : (
           <div className="gallery-grid" ref={gridRef} onScroll={onScroll}>
             {items.map((it) => {

@@ -11,8 +11,8 @@ const PNG_1x1 =
 test('отправка изображения через редактор доходит до собеседника', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -64,8 +64,8 @@ test('отправка изображения через редактор дох
 test('полноразмерное изображение открывается из блоба по клику', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -110,8 +110,8 @@ test('полноразмерное изображение открывается
 test('вставка изображения из буфера открывает редактор и отправляется', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

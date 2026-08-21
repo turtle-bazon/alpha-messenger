@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface LinkDialogProps {
   initialText: string;
@@ -11,6 +12,7 @@ export function LinkDialog({
   onInsert,
   onClose,
 }: LinkDialogProps): JSX.Element {
+  const { t } = useTranslation();
   const [text, setText] = useState(initialText);
   const [url, setUrl] = useState('');
   const urlRef = useRef<HTMLInputElement>(null);
@@ -31,15 +33,15 @@ export function LinkDialog({
   return (
     <div className="link-dialog-backdrop" data-testid="link-dialog">
       <div className="link-dialog">
-        <h3>Вставить ссылку</h3>
+        <h3>{t('composer.linkDialogTitle')}</h3>
         <form onSubmit={handleSubmit}>
           <label>
-            Текст
+            {t('composer.linkText')}
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Текст ссылки"
+              placeholder={t('composer.linkTextPlaceholder')}
               data-testid="link-text"
             />
           </label>
@@ -57,10 +59,10 @@ export function LinkDialog({
           </label>
           <div className="link-dialog-buttons">
             <button type="button" onClick={onClose}>
-              Отмена
+              {t('common.cancel')}
             </button>
             <button type="submit" disabled={!text.trim() || !url.trim()}>
-              Вставить
+              {t('composer.linkInsert')}
             </button>
           </div>
         </form>

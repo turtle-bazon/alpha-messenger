@@ -1,4 +1,5 @@
 import { IconLink } from '../util/icons';
+import { useTranslation } from 'react-i18next';
 
 export interface FormattingToolbarProps {
   visible: boolean;
@@ -19,13 +20,14 @@ export function FormattingToolbar({
 }: FormattingToolbarProps): JSX.Element | null {
   if (!visible) return null;
 
+  const { t } = useTranslation();
   return (
     <div className="formatting-bar" data-testid="formatting-bar">
       <button
         type="button"
         className="formatting-btn"
         data-testid="format-bold"
-        title="Жирный (Ctrl+B)"
+        title={t('composer.bold')}
         onMouseDown={(e) => { e.preventDefault(); onBold(); }}
       >
         <strong>B</strong>
@@ -34,7 +36,7 @@ export function FormattingToolbar({
         type="button"
         className="formatting-btn"
         data-testid="format-italic"
-        title="Курсив (Ctrl+I)"
+        title={t('composer.italic')}
         onMouseDown={(e) => { e.preventDefault(); onItalic(); }}
       >
         <em>I</em>
@@ -43,7 +45,7 @@ export function FormattingToolbar({
         type="button"
         className="formatting-btn"
         data-testid="format-strike"
-        title="Зачёркнутый"
+        title={t('composer.strike')}
         onMouseDown={(e) => { e.preventDefault(); onStrike(); }}
       >
         <del>S</del>
@@ -52,7 +54,7 @@ export function FormattingToolbar({
         type="button"
         className="formatting-btn"
         data-testid="format-code"
-        title="Код"
+        title={t('composer.code')}
         onMouseDown={(e) => { e.preventDefault(); onCode(); }}
       >
         {'</>'}
@@ -62,7 +64,7 @@ export function FormattingToolbar({
         type="button"
         className="formatting-btn"
         data-testid="format-link"
-        title="Ссылка (Ctrl+K)"
+        title={t('composer.link')}
         onMouseDown={(e) => { e.preventDefault(); onLink(); }}
       >
         <IconLink />

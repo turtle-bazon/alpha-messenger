@@ -23,8 +23,8 @@ async function createGroupViaUi(
 test('идентификация отправителя: имя и аватар в группе, ничего в личке', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
   const a = await registerViaUi(pageA);

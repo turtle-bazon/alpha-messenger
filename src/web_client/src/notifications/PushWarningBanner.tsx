@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { shouldShowPushWarning } from './push';
 import { IconX } from '../util/icons';
 
@@ -7,6 +8,7 @@ import { IconX } from '../util/icons';
  * Shown on Android when neither FCM nor UnifiedPush is available.
  */
 export function PushWarningBanner(): JSX.Element | null {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -23,12 +25,12 @@ export function PushWarningBanner(): JSX.Element | null {
   return (
     <div className="push-warning-banner" data-testid="push-warning">
       <div className="push-warning-header">
-        <span>Уведомления недоступны</span>
+        <span>{t("push.unavailable")}</span>
         <button
           type="button"
           className="push-warning-close"
           onClick={() => setVisible(false)}
-          aria-label="Закрыть"
+          aria-label={t("common.close")}
         >
           <IconX />
         </button>
@@ -39,23 +41,19 @@ export function PushWarningBanner(): JSX.Element | null {
           className="push-warning-details"
           onClick={() => setExpanded(true)}
         >
-          Подробнее
+          {t('push.details')}
         </button>
       )}
       {expanded && (
         <div className="push-warning-content">
+          <p>{t('push.noBackground')}</p>
           <p>
-            Вы не будете получать уведомления после закрытия приложения.
-          </p>
-          <p>
-            Для получения уведомлений установите{' '}
-            <strong>ntfy</strong> — бесплатное приложение для push-уведомлений
-            через UnifiedPush.
+            {t('push.installNtfy')} <strong>ntfy</strong> — {t('push.ntfyWhat')}
           </p>
           <ol>
-            <li>Установите ntfy из F-Droid или GitHub</li>
-            <li>Откройте ntfy и выберите сервер</li>
-            <li>Вернитесь в Alpha и нажмите «Проверить»</li>
+            <li>{t('push.step1')}</li>
+            <li>{t('push.step2')}</li>
+            <li>{t('push.step3')}</li>
           </ol>
           <p>
             <a
@@ -63,7 +61,7 @@ export function PushWarningBanner(): JSX.Element | null {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Узнать больше о UnifiedPush
+              {t('push.learnMore')}
             </a>
           </p>
           <div className="push-warning-actions">
@@ -75,14 +73,14 @@ export function PushWarningBanner(): JSX.Element | null {
                 window.location.reload();
               }}
             >
-              Проверить
+              {t('push.check')}
             </button>
             <button
               type="button"
               className="btn-secondary"
               onClick={() => setVisible(false)}
             >
-              Пропустить
+              {t('push.skip')}
             </button>
           </div>
         </div>

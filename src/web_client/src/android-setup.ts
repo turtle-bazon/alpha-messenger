@@ -2,6 +2,7 @@
 // Loaded only when running in Capacitor (Android WebView).
 // No imports from @capacitor/* — we work through window.Capacitor.
 
+import i18n from './i18n';
 import { registerPlatformInit } from './util/platform';
 import { getToken, getDeviceId } from './api/session';
 import { subscribePush } from './api/rest';
@@ -273,7 +274,7 @@ function showDistributorPicker(distributors: string[]): Promise<string | null> {
     `;
 
     const title = document.createElement('h3');
-    title.textContent = 'Выберите дистрибьютор';
+    title.textContent = i18n.t('push.pickDistributor');
     title.style.cssText = 'margin: 0 0 16px 0; font-size: 17px;';
 
     const list = document.createElement('div');
@@ -298,7 +299,7 @@ function showDistributorPicker(distributors: string[]): Promise<string | null> {
     });
 
     const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Отмена';
+    cancelBtn.textContent = i18n.t('common.cancel');
     cancelBtn.style.cssText = `
       margin-top: 8px; padding: 10px; border: none;
       background: none; color: var(--text-muted, #888);

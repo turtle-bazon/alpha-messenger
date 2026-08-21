@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { initI18n } from './i18n';
 import './util/theme'; // applies the initial theme before the first render
 import './index.css';
 
@@ -14,8 +15,12 @@ if (
   import('./android-setup').then((m) => m.setupAndroid());
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+// The locale dict is loaded before the first render (#58): no flash of
+// untranslated strings on startup.
+initI18n().finally(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});

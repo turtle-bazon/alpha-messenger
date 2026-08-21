@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ApiError, register } from '../api/rest';
 import { getDeviceId, setSession } from '../api/session';
 import { PasswordInput } from './PasswordInput';
@@ -14,6 +15,7 @@ export function RegisterScreen({
   onAuthed: () => void;
   onGoLogin: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -37,11 +39,11 @@ export function RegisterScreen({
       if (err instanceof ApiError) {
         setError(
           err.status === 409
-            ? 'Это имя уже занято'
-            : 'Инвайт недействителен или истёк',
+            ? t('auth.nameTaken')
+            : t('auth.inviteInvalid'),
         );
       } else {
-        setError('Сервер недоступен');
+        setError(t('auth.serverUnavailable'));
       }
     } finally {
       setBusy(false);
@@ -51,13 +53,13 @@ export function RegisterScreen({
   return (
     <div className="auth-screen" data-testid="register-screen">
       <form className="auth-card" onSubmit={submit}>
-        <h1>Регистрация</h1>
+        <h1>{t('auth.registerTitle')}</h1>
         {!invite && (
-          <p className="auth-error">Нужна инвайт-ссылка для регистрации</p>
+          <p className="auth-error">{t('auth.inviteNeeded')}</p>
         )}
         <input
-          aria-label="Имя пользователя"
-          placeholder="Имя пользователя"
+          aria-label={t('auth.username')}
+          placeholder={t('auth.username')}
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -69,10 +71,10 @@ export function RegisterScreen({
         />
         {error && <p className="auth-error">{error}</p>}
         <button type="submit" disabled={busy || !invite || !username || !password}>
-          {busy ? '...' : 'Создать аккаунт'}
+          {busy ? '...' : t('auth.registerSubmit')}
         </button>
         <button type="button" className="auth-link" onClick={onGoLogin}>
-          Уже есть аккаунт? Войти
+          {t('auth.haveAccount')}
         </button>
       </form>
     </div>

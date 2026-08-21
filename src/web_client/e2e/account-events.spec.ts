@@ -8,7 +8,7 @@ test('уведомление о входе с нового устройства 
   browser,
 }) => {
   // Устройство A: регистрируемся и остаёмся на главном экране (WS подключён).
-  const ctxA = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const creds = await registerViaUi(pageA);
 
@@ -16,7 +16,7 @@ test('уведомление о входе с нового устройства 
   await expect(pageA.getByTestId('account-notice')).toHaveCount(0);
 
   // Устройство B: новый контекст = новый deviceId; входим тем же аккаунтом.
-  const ctxB = await browser.newContext();
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageB = await ctxB.newPage();
   await pageB.goto('/');
   await pageB.getByLabel('Имя пользователя').fill(creds.username);

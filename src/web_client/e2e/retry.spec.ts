@@ -15,8 +15,8 @@ async function failSends(page: Page): Promise<void> {
 test('неотправленное: failed + ручной повтор, порядок сохраняется', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
   const a = await registerViaUi(pageA);
@@ -80,8 +80,8 @@ test('неотправленное: failed + ручной повтор, поря
 
 // Автоповтор при восстановлении связи (событие online).
 test('неотправленное: автоповтор по событию online', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
   const b = await registerViaUi(pageB);

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SetupScreenProps {
   onConfigured: (url: string) => void;
 }
 
 export function SetupScreen({ onConfigured }: SetupScreenProps): JSX.Element {
+  const { t } = useTranslation();
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -16,7 +18,7 @@ export function SetupScreen({ onConfigured }: SetupScreenProps): JSX.Element {
     try {
       new URL(trimmed);
     } catch {
-      setError('Введите корректный URL (например, https://example.com)');
+      setError(t('setup.badUrl'));
       return;
     }
 
@@ -32,10 +34,10 @@ export function SetupScreen({ onConfigured }: SetupScreenProps): JSX.Element {
     <div className="setup-screen">
       <div className="setup-card">
         <h1 className="setup-title">Alpha Messenger</h1>
-        <p className="setup-subtitle">Подключение к серверу</p>
+        <p className="setup-subtitle">{t('setup.subtitle')}</p>
         <form onSubmit={handleSubmit}>
           <label htmlFor="server-url" className="setup-label">
-            Адрес сервера
+            {t('setup.serverUrl')}
           </label>
           <input
             id="server-url"
@@ -53,7 +55,7 @@ export function SetupScreen({ onConfigured }: SetupScreenProps): JSX.Element {
             className="setup-btn"
             disabled={connecting}
           >
-            {connecting ? 'Подключение...' : 'Подключиться'}
+            {connecting ? t('setup.connecting') : t('setup.connect')}
           </button>
         </form>
       </div>

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ─── Markdown → HTML (for setMarkdown — restore draft) ──────────────
 
@@ -81,11 +82,13 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       onBlur,
       divRef,
       usernames: _usernames,
-      placeholder = 'Сообщение…',
+      placeholder,
       'data-testid': testId = 'message-input',
     },
     ref,
   ): JSX.Element {
+    const { t } = useTranslation();
+    const ph = placeholder ?? t('conv.message');
     const skipNextInputRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
@@ -168,8 +171,8 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
           data-testid={testId}
           contentEditable
           role="textbox"
-          aria-label="Сообщение"
-          data-placeholder={placeholder}
+          aria-label={t('conv.message')}
+          data-placeholder={ph}
           onInput={handleInput}
           onBlur={handleBlur}
           onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLDivElement>}

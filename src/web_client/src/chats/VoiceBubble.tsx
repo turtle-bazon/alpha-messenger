@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   forwardRef,
   useEffect,
@@ -35,6 +36,7 @@ export const VoiceBubble = forwardRef<
 >(function VoiceBubble({ messageId, att, own, onEnded }, ref) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlRef = useRef<string | null>(null);
+  const { t } = useTranslation();
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0); // 0..1
@@ -131,7 +133,7 @@ export const VoiceBubble = forwardRef<
       <button
         type="button"
         className="voice-play"
-        aria-label={playing ? 'Пауза' : 'Воспроизвести'}
+        aria-label={playing ? t('voice.pause') : t('voice.play')}
         data-testid="voice-play"
         onClick={toggle}
       >
@@ -150,7 +152,12 @@ export const VoiceBubble = forwardRef<
         })}
       </div>
       <span className="voice-duration">{fmtDur(att.duration)}</span>
-      <button type="button" className="voice-speed" onClick={cycleSpeed} aria-label="Скорость">
+      <button
+        type="button"
+        className="voice-speed"
+        onClick={cycleSpeed}
+        aria-label={t('voice.speed')}
+      >
         {speed}x
       </button>
     </div>

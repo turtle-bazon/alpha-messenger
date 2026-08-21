@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   getMyStickerPacks,
   getStickerPackItems,
@@ -19,6 +20,7 @@ interface StickerPanelProps {
 
 export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone = true }: StickerPanelProps): JSX.Element {
   const [packs, setPacks] = useState<StickerPack[]>([]);
+  const { t } = useTranslation();
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
   const [items, setItems] = useState<StickerItem[]>([]);
   const [search, setSearch] = useState('');
@@ -96,7 +98,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
   }
 
   async function handleCreatePack(): Promise<void> {
-    const title = prompt('Название пака:');
+    const title = prompt(t('stickers.packNamePrompt'));
     if (!title) return;
     const pack = await createStickerPack(title);
     setPacks((prev) => [pack, ...prev]);
@@ -111,14 +113,14 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
           className="sticker-tab active"
           disabled
         >
-          Стикеры
+          {t('mediaPanel.stickers')}
         </button>
       </div>
 
       <div className="sticker-panel-search">
         <input
           type="text"
-          placeholder="Найти пак…"
+          placeholder={t('stickers.searchPacks')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -168,7 +170,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
             onClick={handleCreatePack}
           >
             <div className="sticker-pack-placeholder">+</div>
-            <span className="sticker-pack-title">Новый пак</span>
+            <span className="sticker-pack-title">{t('stickers.newPack')}</span>
           </button>
         </div>
       ) : (
@@ -179,14 +181,14 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
               className="sticker-back-btn"
               onClick={() => { setSelectedPack(null); setItems([]); }}
             >
-              ← Назад
+              ← {t('common.back')}
             </button>
             <button
               type="button"
               className="sticker-add-btn"
               onClick={() => fileInputRef.current?.click()}
             >
-              + Добавить стикер
+              + {t('stickers.addSticker')}
             </button>
             <input
               ref={fileInputRef}
@@ -197,7 +199,7 @@ export function StickerPanel({ onSelectSticker, onClose, textareaRef, standalone
             />
           </div>
           {loading ? (
-            <div className="sticker-loading">Загрузка…</div>
+            <div className="sticker-loading">{t('common.loading')}</div>
           ) : (
             <div className="sticker-items-grid">
               {items.map((item) => (

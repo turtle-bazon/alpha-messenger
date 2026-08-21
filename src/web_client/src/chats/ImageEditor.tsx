@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { prepareImage, type PreparedImage, type Stroke } from '../util/image';
 
 // Simple image editor before sending: preview, 90° rotation, freehand
@@ -26,6 +27,7 @@ export function ImageEditor({
   onSend: (prepared: PreparedImage, caption: string) => void;
   onClose?: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [src, setSrc] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -162,7 +164,7 @@ export function ImageEditor({
               <img
                 ref={imgRef}
                 src={src}
-                alt="Предпросмотр"
+                alt={t('editor.preview')}
                 onLoad={() => setReady(true)}
                 style={{
                   width: dispSize.w,
@@ -183,14 +185,14 @@ export function ImageEditor({
           )}
         </div>
         <div className="img-editor-tools" data-testid="image-annot-tools">
-          <span className="img-editor-tool-label">Рисовать:</span>
+          <span className="img-editor-tool-label">{t('editor.draw')}</span>
           {PEN_COLORS.map((c) => (
             <button
               key={c}
               type="button"
               className={'img-editor-color' + (c === penColor ? ' active' : '')}
               style={{ background: c }}
-              aria-label={`Цвет ${c}`}
+              aria-label={t('editor.color', { color: c })}
               data-testid={`image-color-${c.slice(1)}`}
               onClick={() => setPenColor(c)}
             />
@@ -201,7 +203,7 @@ export function ImageEditor({
             disabled={strokes.length === 0 || busy}
             onClick={() => setStrokes((prev) => prev.slice(0, -1))}
           >
-            Отменить штрих
+            {t('editor.undoStroke')}
           </button>
           <button
             type="button"
@@ -209,7 +211,7 @@ export function ImageEditor({
             disabled={strokes.length === 0 || busy}
             onClick={() => setStrokes([])}
           >
-            Стереть всё
+            {t('editor.clearStrokes')}
           </button>
         </div>
         <div className="img-editor-controls">
@@ -219,13 +221,13 @@ export function ImageEditor({
             disabled={busy}
             onClick={() => setRotation((r) => (r + 90) % 360)}
           >
-            Повернуть
+            {t('editor.rotate')}
           </button>
           <input
             ref={captionRef}
             data-testid="image-caption"
-            aria-label="Подпись к изображению"
-            placeholder="Подпись…"
+            aria-label={t('editor.caption')}
+            placeholder={t('editor.captionPlaceholder')}
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             onKeyDown={(e) => {
@@ -236,7 +238,7 @@ export function ImageEditor({
             }}
           />
           <button type="button" disabled={busy} onClick={onCancel}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -244,7 +246,7 @@ export function ImageEditor({
             disabled={!ready || busy}
             onClick={() => void send()}
           >
-            Отправить
+            {t('conv.send')}
           </button>
         </div>
       </div>

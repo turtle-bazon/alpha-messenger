@@ -6,8 +6,8 @@ import { createDirectViaUi, registerViaUi } from './helpers/ui';
 test('композер: кнопка всегда видна, Enter/Shift+Enter, авторасширение, SVG-статус', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
   await registerViaUi(pageA);

@@ -12,8 +12,8 @@ async function scrollUp(page: Page, px: number): Promise<void> {
 // ==================== #53 — Кнопка «назад» после перехода к сообщению ====================
 
 test('#53: кнопка «назад» после перехода по ответу', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -64,8 +64,8 @@ test('#53: кнопка «назад» после перехода по отве
 test('#76: кнопка «к последнему» при пролистывании вверх', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

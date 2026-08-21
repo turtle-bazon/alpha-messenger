@@ -68,8 +68,8 @@ test('channels: subscribe and unsubscribe', async ({ page }) => {
 
 // Channel subscriber cannot post
 test('channels: subscriber cannot send messages', async ({ browser }) => {
-  const ctxOwner = await browser.newContext();
-  const ctxSub = await browser.newContext();
+  const ctxOwner = await browser.newContext({ locale: 'ru-RU' });
+  const ctxSub = await browser.newContext({ locale: 'ru-RU' });
   const pageOwner = await ctxOwner.newPage();
   const pageSub = await ctxSub.newPage();
 

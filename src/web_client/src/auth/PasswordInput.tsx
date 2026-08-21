@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Password field with a show/hide eye toggle (like Telegram): clicking the icon
 // switches the input type password↔text. Used on the login and registration
@@ -7,19 +8,20 @@ export function PasswordInput({
   value,
   onChange,
   autoComplete,
-  placeholder = 'Пароль',
+  placeholder,
 }: {
   value: string;
   onChange: (value: string) => void;
   autoComplete: string;
   placeholder?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   return (
     <div className="password-field">
       <input
-        aria-label="Пароль"
-        placeholder={placeholder}
+        aria-label={t('auth.password')}
+        placeholder={placeholder ?? t('auth.password')}
         type={visible ? 'text' : 'password'}
         autoComplete={autoComplete}
         value={value}
@@ -31,8 +33,8 @@ export function PasswordInput({
         data-testid="password-toggle"
         // The label must not contain the word "password": otherwise the tests'
         // getByLabel(...) for the field would match this button along with the input.
-        aria-label={visible ? 'Скрыть' : 'Показать'}
-        title={visible ? 'Скрыть пароль' : 'Показать пароль'}
+        aria-label={visible ? t('auth.hide') : t('auth.show')}
+        title={visible ? t('auth.hidePassword') : t('auth.showPassword')}
         aria-pressed={visible}
         // The eye toggle must not join the form's tab order or submit it.
         tabIndex={-1}

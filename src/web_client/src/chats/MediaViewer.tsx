@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { blobObjectUrl } from '../util/blobUrl';
 import { IconX } from '../util/icons';
 
@@ -16,6 +17,7 @@ export function MediaViewer({
   kind?: 'image' | 'video';
   onClose: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -48,13 +50,13 @@ export function MediaViewer({
       <button
         type="button"
         className="media-viewer-close"
-        aria-label="Закрыть"
+        aria-label={t('common.close')}
         onClick={onClose}
       >
         <IconX />
       </button>
       {error ? (
-        <div className="media-viewer-msg">Не удалось загрузить медиа</div>
+        <div className="media-viewer-msg">{t('mediaViewer.loadFailed')}</div>
       ) : url && kind === 'video' ? (
         <figure className="media-viewer-fig" onClick={(e) => e.stopPropagation()}>
           <video
@@ -72,12 +74,12 @@ export function MediaViewer({
             className="media-viewer-img"
             data-testid="media-viewer-img"
             src={url}
-            alt={caption || 'изображение'}
+            alt={caption || t('conv.imageAlt')}
           />
           {caption && <figcaption>{caption}</figcaption>}
         </figure>
       ) : (
-        <div className="media-viewer-msg">Загрузка…</div>
+        <div className="media-viewer-msg">{t('common.loading')}</div>
       )}
     </div>
   );

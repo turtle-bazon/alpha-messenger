@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getDeviceId } from '../api/session';
 import type { ServerEvent } from '../api/types';
 import { WsClient } from '../api/ws';
 import { IconX } from '../util/icons';
+import i18n from '../i18n';
 
 // Account-level (security) notifications: new sign-in / new device.
 // Source: the shared event stream (auth.attempt, device.added from the outbox).
@@ -21,6 +23,7 @@ interface Notice {
 const HIDE_MS = 8000;
 
 export function AccountNotifications({ ws }: { ws: WsClient }): JSX.Element {
+  const { t } = useTranslation();
   const [notices, setNotices] = useState<Notice[]>([]);
   const nextId = useRef(0);
   const newDevices = useRef<Set<string>>(new Set());
@@ -54,9 +57,9 @@ export function AccountNotifications({ ws }: { ws: WsClient }): JSX.Element {
       const fromNewDevice = newDevices.current.has(p.deviceId);
       push(
         fromNewDevice
-          ? 'Новый вход в аккаунт с нового устройства'
-          : 'Новый вход в аккаунт',
-        p.ip ? `IP: ${p.ip}` : null,
+          ? i18n.t('account.newLoginNewDevice')
+          : i18n.t('account.newLogin'),
+        p.ip ? `${i18n.t('account.ip')}: ${p.ip}` : null,
       );
     });
 
@@ -84,7 +87,7 @@ export function AccountNotifications({ ws }: { ws: WsClient }): JSX.Element {
           </div>
           <button
             type="button"
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
             onClick={() => dismiss(n.id)}
           >
             <IconX />

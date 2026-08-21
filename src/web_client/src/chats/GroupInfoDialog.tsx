@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { updateChat, ApiError } from '../api/rest';
 import type { Chat } from '../api/types';
 import { IconX } from '../util/icons';
@@ -18,6 +19,7 @@ export function GroupInfoDialog({
   onClose: () => void;
   onUpdated: (chat: Chat) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const isOwner = chat.createdBy === myId;
   const [title, setTitle] = useState(chat.title ?? '');
   const [description, setDescription] = useState(chat.description ?? '');
@@ -56,8 +58,8 @@ export function GroupInfoDialog({
       } catch (err) {
         setError(
           err instanceof ApiError && err.status === 403
-            ? 'Недостаточно прав'
-            : 'Не удалось сохранить',
+            ? t('members.noRights')
+            : t('groupInfo.saveFailed'),
         );
       } finally {
         setSaving(false);
@@ -75,12 +77,12 @@ export function GroupInfoDialog({
     >
       <div className="profile-dialog">
         <div className="profile-head">
-          <span className="profile-title">Информация о группе</span>
+          <span className="profile-title">{t('groupInfo.title')}</span>
           <button
             type="button"
             className="members-close"
             data-testid="group-info-close"
-            aria-label="Закрыть"
+            aria-label={t('common.close')}
             onClick={onClose}
           >
             <IconX />
@@ -97,11 +99,11 @@ export function GroupInfoDialog({
                 setTitle(e.target.value);
                 scheduleSave(e.target.value, description);
               }}
-              placeholder="Название группы"
+              placeholder={t('newChat.groupTitle')}
             />
           ) : (
             <div className="profile-username">
-              {chat.title || 'Без названия'}
+              {chat.title || t('groupInfo.untitled')}
             </div>
           )}
 
@@ -109,7 +111,7 @@ export function GroupInfoDialog({
             <textarea
               className="profile-note-input"
               data-testid="group-info-description"
-              placeholder="Описание группы…"
+              placeholder={t('groupInfo.descPlaceholder')}
               rows={3}
               value={description}
               onChange={(e) => {
@@ -119,15 +121,15 @@ export function GroupInfoDialog({
             />
           ) : (
             <div className="group-info-description-view">
-              {chat.description || 'Нет описания'}
+              {chat.description || t('groupInfo.noDescription')}
             </div>
           )}
 
           {isOwner && saving && (
-            <div className="profile-note-hint">Сохранение…</div>
+            <div className="profile-note-hint">{t('groupInfo.saving')}</div>
           )}
           {isOwner && dirty && !saving && (
-            <div className="profile-note-hint">Есть несохранённые изменения</div>
+            <div className="profile-note-hint">{t('groupInfo.unsaved')}</div>
           )}
           {error && (
             <div className="members-error" data-testid="group-info-error">
@@ -141,7 +143,7 @@ export function GroupInfoDialog({
             data-testid="group-info-members"
             onClick={onOpenMembers}
           >
-            Участники
+            {t('members.title')}
           </button>
         </div>
       </div>

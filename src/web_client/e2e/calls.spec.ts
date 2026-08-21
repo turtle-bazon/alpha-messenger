@@ -15,8 +15,8 @@ test.use({
 
 // Full cycle: A calls B by audio → B accepts → both active → A hangs up.
 test('аудиозвонок: вызов, ответ, соединение, сброс', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -63,8 +63,8 @@ test('аудиозвонок: вызов, ответ, соединение, сб
 
 // Decline: B rejects → A's outgoing call ends.
 test('звонок отклонён получателем', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

@@ -6,7 +6,7 @@ import { createDirectViaUi, registerViaUi } from './helpers/ui';
 test('непрочитанное сообщение даёт badge в title и браузерное уведомление', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
   // Эмулируем «вкладка не активна» и подменяем Notification, чтобы перехватить
   // показанные уведомления (реальный системный попап в headless недоступен).
   await ctxA.addInitScript(() => {
@@ -35,7 +35,7 @@ test('непрочитанное сообщение даёт badge в title и �
     });
     document.hasFocus = () => false;
   });
-  const ctxB = await browser.newContext();
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -85,7 +85,7 @@ test('непрочитанное сообщение даёт badge в title и �
 test('при входе предлагает включить уведомления, запрос — по клику', async ({
   browser,
 }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ locale: 'ru-RU' });
   // permission='default' (не дано/не запрещено), считаем вызовы requestPermission.
   await ctx.addInitScript(() => {
     (window as unknown as { __reqCount: number }).__reqCount = 0;

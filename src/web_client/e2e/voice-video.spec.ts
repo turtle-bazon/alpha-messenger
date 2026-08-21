@@ -18,8 +18,8 @@ test.use({
 test('голосовое сообщение: запись удержанием и воспроизведение у собеседника', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -71,8 +71,8 @@ test('голосовое сообщение: запись удержанием �
 
 // Свайп влево во время записи — отмена: пузыря нет ни у A, ни у B.
 test('голосовое сообщение: свайп влево отменяет запись', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -111,8 +111,8 @@ test('голосовое сообщение: свайп влево отменя�
 test('видеосообщение: запись в модалке и воспроизведение у собеседника', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

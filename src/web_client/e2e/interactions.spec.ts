@@ -7,8 +7,8 @@ import { createDirectViaUi, registerViaUi } from './helpers/ui';
 test('edit, delete, read и typing между двумя пользователями', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -54,8 +54,8 @@ test('edit, delete, read и typing между двумя пользовател�
 // открытии чата, а не деградировать в ✓ (сид из серверного состояния, а не
 // только из live-события message.read).
 test('статус ✓✓ переживает переоткрытие чата', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

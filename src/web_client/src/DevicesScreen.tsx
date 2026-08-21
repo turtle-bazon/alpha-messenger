@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getDeviceId } from './api/session';
 import { getDevices, deleteDevice, deleteAllDevices, type DeviceInfo } from './api/rest';
 import { IconArrowLeft, IconMonitor, IconSmartphone, IconTrash } from './util/icons';
+import { intlLocale } from './i18n';
 
 interface DevicesScreenProps {
   onBack: () => void;
 }
 
 export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
       const data = await getDevices();
       setDevices(data.devices);
     } catch (e) {
-      setError('Не удалось загрузить устройства');
+      setError(t('devices.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -38,7 +41,7 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
       setDevices(devices.filter(d => d.deviceId !== deviceId));
       setConfirmDelete(null);
     } catch (e) {
-      setError('Не удалось удалить устройство');
+      setError(t('devices.deleteFailed'));
     }
   }
 
@@ -48,13 +51,13 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
       setDevices(devices.filter(d => d.deviceId === currentDeviceId));
       setConfirmDeleteAll(false);
     } catch (e) {
-      setError('Не удалось удалить устройства');
+      setError(t('devices.deleteAllFailed'));
     }
   }
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('ru-RU', {
+    return date.toLocaleDateString(intlLocale(), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -74,9 +77,9 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
 
   function getDeviceLabel(deviceId: string): string {
     if (deviceId === currentDeviceId) {
-      return 'Это устройство';
+      return t('devices.current');
     }
-    return 'Устройство';
+    return t('devices.device');
   }
 
   if (loading) {
@@ -87,14 +90,14 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
             type="button"
             className="icon-button settings-back"
             onClick={onBack}
-            aria-label="Назад"
+            aria-label={t("common.back")}
           >
             <IconArrowLeft />
           </button>
-          <span className="settings-header-title">Устройства</span>
+          <span className="settings-header-title">{t("settings.devices")}</span>
         </header>
         <div className="settings-items">
-          <div className="settings-hint">Загрузка...</div>
+          <div className="settings-hint">{t("common.loading")}</div>
         </div>
       </div>
     );
@@ -107,11 +110,11 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
           type="button"
           className="icon-button settings-back"
           onClick={onBack}
-          aria-label="Назад"
+          aria-label={t("common.back")}
         >
           <IconArrowLeft />
         </button>
-        <span className="settings-header-title">Устройства</span>
+        <span className="settings-header-title">{t("settings.devices")}</span>
       </header>
 
       {error && (
@@ -135,7 +138,7 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
                 <div>{getDeviceLabel(device.deviceId)}</div>
                 <div className="settings-hint" style={{ margin: 0 }}>
                   {formatDate(device.createdAt)}
-                  {device.lastSeenAt && ` • Последний вход: ${formatDate(device.lastSeenAt)}`}
+                  {device.lastSeenAt && `${t("devices.lastSeen")} ${formatDate(device.lastSeenAt)}`}
                 </div>
               </div>
             </div>
@@ -150,14 +153,14 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
                       onClick={() => void handleDelete(device.deviceId)}
                       style={{ color: 'var(--danger)' }}
                     >
-                      Удалить
+                      {t('common.delete')}
                     </button>
                     <button
                       type="button"
                       className="settings-toggle"
                       onClick={() => setConfirmDelete(null)}
                     >
-                      Отмена
+                      {t('common.cancel')}
                     </button>
                   </div>
                 ) : (
@@ -165,7 +168,7 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
                     type="button"
                     className="icon-button"
                     onClick={() => setConfirmDelete(device.deviceId)}
-                    aria-label="Удалить устройство"
+                    aria-label={t("devices.deleteDevice")}
                     style={{ color: 'var(--danger)' }}
                   >
                     <IconTrash />
@@ -181,7 +184,7 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
         <div className="settings-items" style={{ marginTop: '16px' }}>
           {confirmDeleteAll ? (
             <div className="settings-row" style={{ justifyContent: 'space-between' }}>
-              <span>Удалить все кроме текущего?</span>
+              <span>{t("devices.deleteAllConfirm")}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
@@ -189,14 +192,14 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
                   onClick={() => void handleDeleteAll()}
                   style={{ color: 'var(--danger)' }}
                 >
-                  Удалить
+                  {t('common.delete')}
                 </button>
                 <button
                   type="button"
                   className="settings-toggle"
                   onClick={() => setConfirmDeleteAll(false)}
                 >
-                  Отмена
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -208,7 +211,7 @@ export function DevicesScreen({ onBack }: DevicesScreenProps): JSX.Element {
               style={{ color: 'var(--danger)' }}
             >
               <span className="settings-row-icon"><IconTrash /></span>
-              <span className="settings-row-text">Удалить все остальные устройства</span>
+              <span className="settings-row-text">{t("devices.deleteAllOthers")}</span>
             </button>
           )}
         </div>

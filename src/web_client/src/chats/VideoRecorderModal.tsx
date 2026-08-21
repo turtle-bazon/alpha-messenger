@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Video recording modal (#34): mirrored camera preview, recording starts
 // immediately on open, timer, auto-stop at the 60s limit. After stopping —
@@ -32,6 +33,7 @@ export function VideoRecorderModal({
   const startedAtRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [phase, setPhase] = useState<'starting' | 'recording' | 'preview'>('starting');
+  const { t } = useTranslation();
   const [seconds, setSeconds] = useState(0);
   const [result, setResult] = useState<{ url: string; rec: VideoRecording } | null>(null);
   const [error, setError] = useState(false);
@@ -136,12 +138,12 @@ export function VideoRecorderModal({
   return (
     <div className="img-editor-backdrop video-rec-backdrop" data-testid="video-recorder">
       <div className="video-rec">
-        <button type="button" className="video-rec-close" aria-label="Закрыть" onClick={onClose}>
+        <button type="button" className="video-rec-close" aria-label={t('common.close')} onClick={onClose}>
           ×
         </button>
         {error ? (
           <div className="video-rec-error" data-testid="video-rec-error">
-            Нет доступа к камере
+            {t('videoRec.noCamera')}
           </div>
         ) : phase === 'preview' && result ? (
           <video
@@ -170,14 +172,14 @@ export function VideoRecorderModal({
                 data-testid="video-rec-stop"
                 onClick={stopRecording}
               >
-                Стоп
+                {t('videoRec.stop')}
               </button>
             </>
           )}
           {phase === 'preview' && (
             <>
               <button type="button" className="btn" onClick={reRecord}>
-                Перезаписать
+                {t('videoRec.rerecord')}
               </button>
               <button
                 type="button"
@@ -185,11 +187,11 @@ export function VideoRecorderModal({
                 data-testid="video-rec-send"
                 onClick={send}
               >
-                Отправить
+                {t('conv.send')}
               </button>
             </>
           )}
-          {phase === 'starting' && !error && <span>Включаем камеру…</span>}
+          {phase === 'starting' && !error && <span>{t('videoRec.starting')}</span>}
         </div>
       </div>
     </div>

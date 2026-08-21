@@ -9,12 +9,12 @@ test('после reload история не всплывает как live-ув�
   browser,
 }) => {
   // Устройство A: регистрируемся, остаёмся онлайн (WS подключён).
-  const ctxA = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const creds = await registerViaUi(pageA);
 
   // Вход со второго устройства → A получает live-уведомление безопасности.
-  const ctxB = await browser.newContext();
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageB = await ctxB.newPage();
   await pageB.goto('/');
   await pageB.getByLabel('Имя пользователя').fill(creds.username);

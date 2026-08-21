@@ -32,8 +32,8 @@ async function stubUnfurl(page: import('@playwright/test').Page): Promise<void> 
 test('превью ссылки: карточка в композере, отправка и доставка собеседнику', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -73,8 +73,8 @@ test('превью ссылки: карточка в композере, отп�
 test('превью ссылки: крестик снимает превью, ссылка уходит без карточки', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

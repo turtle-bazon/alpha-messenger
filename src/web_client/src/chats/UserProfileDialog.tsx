@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getNote, getUserProfile, saveNote } from '../api/rest';
 import type { UserNote, UserProfile } from '../api/types';
 import { colorFor, initialFor } from './avatar';
 import { formatLastSeen } from '../util/time';
+import { intlLocale } from '../i18n';
 import { IconX } from '../util/icons';
 
 // User profile dialog (#22). Opens by clicking the avatar/name
@@ -20,6 +22,7 @@ export function UserProfileDialog({
   awayUsers: Set<string>;
   onClose: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [note, setNote] = useState<UserNote | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -38,7 +41,7 @@ export function UserProfileDialog({
         setNote(n.note);
         setNoteText(n.note?.text ?? '');
       })
-      .catch(() => alive && setError('Не удалось загрузить профиль'))
+      .catch(() => alive && setError(t('profile.loadFailed')))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
@@ -99,12 +102,12 @@ export function UserProfileDialog({
     >
       <div className="profile-dialog">
         <div className="profile-head">
-          <span className="profile-title">Профиль</span>
+          <span className="profile-title">{t('profile.title')}</span>
           <button
             type="button"
             className="members-close"
             data-testid="profile-close"
-            aria-label="Закрыть"
+            aria-label={t('common.close')}
             onClick={onClose}
           >
             <IconX />
@@ -112,7 +115,7 @@ export function UserProfileDialog({
         </div>
 
         {loading ? (
-          <p className="members-empty">Загрузка…</p>
+          <p className="members-empty">{t('common.loading')}</p>
         ) : error ? (
           <p className="members-error" data-testid="profile-error">{error}</p>
         ) : profile ? (
@@ -125,7 +128,7 @@ export function UserProfileDialog({
               {(online || away) && (
                 <span
                   className={'member-online-dot' + (away ? ' is-away' : '')}
-                  aria-label={away ? 'отошёл' : 'в сети'}
+                  aria-label={away ? t('conv.away') : t('conv.online')}
                 />
               )}
             </div>
@@ -134,28 +137,28 @@ export function UserProfileDialog({
 
             <div className="profile-meta">
               <div className="profile-meta-row">
-                <span className="profile-meta-label">Зарегистрирован</span>
+                <span className="profile-meta-label">{t('profile.registered')}</span>
                 <span className="profile-meta-value">{createdDate}</span>
               </div>
               <div className="profile-meta-row">
-                <span className="profile-meta-label">Последний вход</span>
+                <span className="profile-meta-label">{t('profile.lastSeenLabel')}</span>
                 <span className="profile-meta-value">
                   {isMe
-                    ? 'сейчас'
+                    ? t('profile.now')
                     : profile.lastActiveAt
                       ? formatLastSeen(profile.lastActiveAt)
-                      : 'нет данных'}
+                      : t('profile.noData')}
                 </span>
               </div>
             </div>
 
             {!isMe && (
               <div className="profile-note-section">
-                <div className="profile-note-label">Заметка</div>
+                <div className="profile-note-label">{t('profile.note')}</div>
                 <textarea
                   className="profile-note-input"
                   data-testid="profile-note-input"
-                  placeholder="Личная заметка об этом пользователе…"
+                  placeholder={t('profile.notePlaceholder')}
                   rows={3}
                   value={noteText}
                   onChange={(e) => {
@@ -165,7 +168,9 @@ export function UserProfileDialog({
                 />
                 {note && (
                   <div className="profile-note-hint">
-                    Сохранено {new Date(note.updatedAt).toLocaleString('ru-RU')}
+                    {t('profile.savedAt', {
+                      date: new Date(note.updatedAt).toLocaleString(intlLocale()),
+                    })}
                   </div>
                 )}
               </div>

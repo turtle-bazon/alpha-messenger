@@ -28,8 +28,8 @@ async function createGroupViaUi(
 test('заголовок direct: статус собеседника в сети/не в сети', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -70,8 +70,8 @@ test('заголовок группы: число участников и онл
 // затем добавляет живого клиента C — у C группа появляется в списке, у A растёт
 // счётчик участников. Не-создатель C формы добавления не видит.
 test('окно участников: добавление участника создателем', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxC = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxC = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageC = await ctxC.newPage();
 

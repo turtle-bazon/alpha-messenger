@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { colorFor, initialFor } from './avatar';
 import type { CallInfo } from './useCall';
 
@@ -27,6 +28,7 @@ export function CallOverlay({
   onToggleMute: () => void;
   onToggleCamera: () => void;
 }) {
+  const { t } = useTranslation();
   const [elapsed, setElapsed] = useState(0);
 
   // Timer counts from the moment the phase becomes 'active'.
@@ -51,12 +53,12 @@ export function CallOverlay({
   const statusText =
     call.phase === 'incoming'
       ? call.video
-        ? 'Входящий видеозвонок…'
-        : 'Входящий звонок…'
+        ? t('call.incomingVideo')
+        : t('call.incoming')
       : call.phase === 'outgoing'
-        ? 'Вызов…'
+        ? t('call.outgoing')
         : call.phase === 'connecting'
-          ? 'Соединение…'
+          ? t('call.connecting')
           : fmtSec(elapsed);
 
   return (
@@ -102,7 +104,7 @@ export function CallOverlay({
             <button
               type="button"
               className="call-btn decline"
-              aria-label="Отклонить"
+              aria-label={t('call.decline')}
               data-testid="call-decline"
               onClick={onReject}
             >
@@ -111,7 +113,7 @@ export function CallOverlay({
             <button
               type="button"
               className="call-btn accept"
-              aria-label="Принять"
+              aria-label={t('call.accept')}
               data-testid="call-accept"
               onClick={() => onAccept(false)}
             >
@@ -120,7 +122,7 @@ export function CallOverlay({
             <button
               type="button"
               className="call-btn accept"
-              aria-label="Принять с видео"
+              aria-label={t('call.acceptVideo')}
               data-testid="call-accept-video"
               onClick={() => onAccept(true)}
             >
@@ -134,7 +136,9 @@ export function CallOverlay({
                 <button
                   type="button"
                   className={'call-btn small' + (call.muted ? ' toggled' : '')}
-                  aria-label={call.muted ? 'Включить микрофон' : 'Выключить микрофон'}
+                  aria-label={
+                    call.muted ? t('call.unmute') : t('call.mute')
+                  }
                   data-testid="call-mute"
                   onClick={onToggleMute}
                 >
@@ -144,7 +148,9 @@ export function CallOverlay({
                   <button
                     type="button"
                     className={'call-btn small' + (call.cameraOff ? ' toggled' : '')}
-                    aria-label={call.cameraOff ? 'Включить камеру' : 'Выключить камеру'}
+                    aria-label={
+                      call.cameraOff ? t('call.cameraOn') : t('call.cameraOff')
+                    }
                     data-testid="call-camera"
                     onClick={onToggleCamera}
                   >
@@ -156,7 +162,7 @@ export function CallOverlay({
             <button
               type="button"
               className="call-btn decline"
-              aria-label="Завершить"
+              aria-label={t('call.hangup')}
               data-testid="call-hangup"
               onClick={onHangup}
             >

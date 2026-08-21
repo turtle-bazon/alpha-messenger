@@ -60,8 +60,8 @@ test('group info: owner can edit title and description', async ({ page }) => {
 
 // Участник (не owner): клик по заголовку → GroupInfoDialog → только просмотр
 test('group info: non-owner sees read-only view', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   updateChat,
   subscribeChannel,
@@ -18,6 +19,7 @@ interface ChannelInfoDialogProps {
 }
 
 export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }: ChannelInfoDialogProps): JSX.Element {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(chat.title ?? '');
   const [description, setDescription] = useState(chat.description ?? '');
   const [editing, setEditing] = useState(false);
@@ -52,8 +54,8 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
     >
       <div className="profile-dialog">
         <div className="profile-head">
-          <span className="profile-title">Информация о канале</span>
-          <button type="button" className="members-close" onClick={onClose} data-testid="channel-info-close" aria-label="Закрыть">
+          <span className="profile-title">{t('channelInfo.title')}</span>
+          <button type="button" className="members-close" onClick={onClose} data-testid="channel-info-close" aria-label={t('common.close')}>
             <IconX />
           </button>
         </div>
@@ -68,23 +70,23 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
                 className="channel-info-input"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Название канала"
+                placeholder={t('newChat.channelTitle')}
                 data-testid="channel-info-title"
               />
               <textarea
                 className="channel-info-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Описание (необязательно)"
+                placeholder={t('channelInfo.descOptional')}
                 rows={3}
                 data-testid="channel-info-description"
               />
               <div className="channel-info-actions">
                 <button type="button" className="btn btn-primary" onClick={handleSave}>
-                  Сохранить
+                  {t('common.save')}
                 </button>
                 <button type="button" className="btn" onClick={() => setEditing(false)}>
-                  Отмена
+                  {t('common.cancel')}
                 </button>
               </div>
             </>
@@ -118,11 +120,11 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
                     setTimeout(() => setCopied(false), 2000);
                   }}
                 >
-                  {copied ? 'Скопировано' : 'Копировать'}
+                  {copied ? t('common.copied') : t('common.copy')}
                 </button>
               </div>
               <div className="channel-info-stats">
-                <span>{chat.subscriberCount} подписчиков</span>
+                <span>{t('channelInfo.subscribers', { count: chat.subscriberCount })}</span>
               </div>
               {isOwner && (
                 <button
@@ -130,7 +132,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
                   className="btn"
                   onClick={() => setEditing(true)}
                 >
-                  Редактировать
+                  {t('conv.edit')}
                 </button>
               )}
               {!isOwner && (
@@ -141,7 +143,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
                       className="btn btn-danger"
                       onClick={handleUnsubscribe}
                     >
-                      Отписаться
+                      {t('channelInfo.unsubscribe')}
                     </button>
                   ) : (
                     <button
@@ -149,7 +151,7 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
                       className="btn btn-primary"
                       onClick={handleSubscribe}
                     >
-                      Подписаться
+                      {t('conv.subscribe')}
                     </button>
                   )}
                 </div>
@@ -169,6 +171,7 @@ interface SearchChannelsDialogProps {
 }
 
 export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialogProps): JSX.Element {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Array<{
     chatId: string;
@@ -204,20 +207,20 @@ export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialog
     >
       <div className="profile-dialog">
         <div className="profile-head">
-          <span className="profile-title">Найти канал</span>
-          <button type="button" className="members-close" onClick={onClose} data-testid="search-channels-close" aria-label="Закрыть">
+          <span className="profile-title">{t('channelInfo.findTitle')}</span>
+          <button type="button" className="members-close" onClick={onClose} data-testid="search-channels-close" aria-label={t('common.close')}>
             <IconX />
           </button>
         </div>
         <div className="profile-body">
           <input
             className="search-input"
-            placeholder="@хэндл или название…"
+            placeholder={t('channelInfo.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
-          {loading && <div className="search-loading">Поиск…</div>}
+          {loading && <div className="search-loading">{t('channelInfo.searching')}</div>}
           <div className="search-results">
             {results.map((ch) => (
               <button
@@ -232,12 +235,14 @@ export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialog
                 <div className="search-result-info">
                   <div className="search-result-title">{ch.title || ch.username}</div>
                   {ch.username && <div className="search-result-subtitle">@{ch.username}</div>}
-                  <div className="search-result-meta">{ch.subscriberCount} подписчиков</div>
+                  <div className="search-result-meta">
+                  {t('channelInfo.subscribers', { count: ch.subscriberCount })}
+                </div>
                 </div>
               </button>
             ))}
             {!loading && query && results.length === 0 && (
-              <div className="search-empty">Каналы не найдены</div>
+              <div className="search-empty">{t('channelInfo.notFound')}</div>
             )}
           </div>
         </div>

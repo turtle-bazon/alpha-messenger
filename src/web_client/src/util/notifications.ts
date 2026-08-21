@@ -9,6 +9,7 @@
 // replayed events are filtered out by the caller.
 
 import { decodeContent, previewText } from './content';
+import i18n from '../i18n';
 
 export interface NotifPrefs {
   sound: boolean;
@@ -219,7 +220,9 @@ export function notifyIncoming(opts: {
   // In Electron and Capacitor, native notifications don't require browser permission
   if (prefs.browser && (isNative || getPermission() === 'granted')) {
     const body = opts.isReply
-      ? `Ответил(а) на ваше сообщение: ${previewText(decodeContent(opts.ciphertext))}`
+      ? i18n.t('notif.repliedTo', {
+          text: previewText(decodeContent(opts.ciphertext)),
+        })
       : previewText(decodeContent(opts.ciphertext));
     // In Electron, register the click handler once
     if (isElectron && !electronClickRegistered) {
@@ -247,7 +250,7 @@ export function notifyReaction(opts: {
   if (prefs.sound && !isNativeCap) playSound();
   const isNative = isElectron || isNativeCap;
   if (prefs.browser && (isNative || getPermission() === 'granted')) {
-    const body = `${opts.reactor} поставил(а) ${opts.emoji}`;
+    const body = i18n.t('notif.reacted', { name: opts.reactor, emoji: opts.emoji });
     if (isElectron && !electronClickRegistered) {
       electronClickRegistered = true;
       window.electronAPI!.onNotificationClick(() => {

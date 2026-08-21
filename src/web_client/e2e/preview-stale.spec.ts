@@ -4,8 +4,8 @@ import { registerViaUi, createDirectViaUi } from './helpers/ui';
 // Регрессия #28: превью последнего сообщения в ChatList должно отражать самое
 // свежее сообщение при инкрементальном обновлении через WS (без перезагрузки).
 test('превью в ChatList обновляется при новом сообщении', async ({ browser }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
@@ -44,8 +44,8 @@ test('превью в ChatList обновляется при новом сооб
 test('превью нового чата отражает последнее из всплеска сообщений', async ({
   browser,
 }) => {
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  const ctxA = await browser.newContext({ locale: 'ru-RU' });
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
   const pageA = await ctxA.newPage();
   const pageB = await ctxB.newPage();
 
