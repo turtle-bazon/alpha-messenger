@@ -96,14 +96,22 @@ function fmtSize(bytes: number): string {
 
 // Standard display box for images (#87): Telegram-style — the picture fills a
 // fixed-width media box instead of the shrink-to-fit bubble capping it at the
-// inline thumbnail's natural ~320px. The ratio is preserved via aspect-ratio;
-// max-width:100% (CSS) clamps on narrow screens, height follows the ratio.
+// inline thumbnail's natural ~320px.
+// Both dimensions are set explicitly and the ratio never relies on the CSS
+// aspect-ratio property: older Android WebViews ignore it (#75). When
+// max-width clamps the box on a narrow screen, object-fit:contain keeps the
+// picture undistorted inside the box.
 const MEDIA_MAX_W = 480;
 const MEDIA_MAX_H = 480;
 function mediaStyle(w: number, h: number): React.CSSProperties | undefined {
   if (!w || !h) return undefined;
   const scale = Math.min(MEDIA_MAX_W / w, MEDIA_MAX_H / h);
-  return { width: Math.round(w * scale), aspectRatio: `${w} / ${h}` };
+  return {
+    width: Math.round(w * scale),
+    height: Math.round(h * scale),
+    maxWidth: '100%',
+    objectFit: 'contain',
+  };
 }
 
 // Member count label — plural forms come from the locale dict (#58):

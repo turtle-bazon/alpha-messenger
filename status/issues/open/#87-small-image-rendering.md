@@ -27,3 +27,10 @@ thumb'а (≤320px по THUMB_MAX_DIM), плюс был `min-width:280px`. Ит�
 
 ## Приоритет
 high (тикет Focus #53)
+
+## Уточнение (#75, 2026-08-21)
+На старых Android WebView без поддержки CSS aspect-ratio боксы могли
+рендериться исходными 480px и обрезаться overflow:hidden («не помещается»).
+Теперь mediaStyle задаёт width И height явно (object-fit:contain страхует
+узкие экраны) — размер больше не зависит от aspect-ratio.
+

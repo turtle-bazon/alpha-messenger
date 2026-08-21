@@ -21,6 +21,7 @@
     "preview": "electron dist/main/index.js"
   },
   "dependencies": {
+    "dbus-next": "^0.10.2",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
