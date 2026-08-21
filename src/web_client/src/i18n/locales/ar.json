@@ -302,15 +302,28 @@
     "newPack": "حزمة جديدة",
     "addSticker": "إضافة ملصق"
   },
-  "mediaViewer": { "loadFailed": "تعذّر تحميل الوسائط" },
-  "gallery": { "title": "الوسائط", "empty": "لا صور أو فيديوهات بعد" },
+  "mediaViewer": {
+    "loadFailed": "تعذّر تحميل الوسائط"
+  },
+  "gallery": {
+    "title": "الوسائط",
+    "empty": "لا صور أو فيديوهات بعد"
+  },
   "forward": {
     "title": "إعادة توجيه إلى…",
     "searchPlaceholder": "ابحث في المحادثات…",
     "notFound": "لا محادثات"
   },
-  "about": { "messenger": "مراسِل", "icons": "الأيقونات", "project": "المشروع" },
-  "voice": { "pause": "إيقاف مؤقت", "play": "تشغيل", "speed": "السرعة" },
+  "about": {
+    "messenger": "مراسِل",
+    "icons": "الأيقونات",
+    "project": "المشروع"
+  },
+  "voice": {
+    "pause": "إيقاف مؤقت",
+    "play": "تشغيل",
+    "speed": "السرعة"
+  },
   "composer": {
     "bold": "عريض (Ctrl+B)",
     "italic": "مائل (Ctrl+I)",
@@ -321,5 +334,18 @@
     "linkText": "النص",
     "linkTextPlaceholder": "نص الرابط",
     "linkInsert": "إدراج"
+  },
+  "emoji": {
+    "search": "بحث",
+    "noRecent": "لا شيء حديثًا",
+    "native": "عادية",
+    "catFrequent": "شائعة",
+    "catSmileys": "وجوه",
+    "catGestures": "إيماءات",
+    "catAnimals": "حيوانات",
+    "catFood": "طعام",
+    "catActivities": "أنشطة",
+    "catObjects": "أشياء",
+    "catSymbols": "رموز"
   }
 }

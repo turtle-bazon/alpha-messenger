@@ -3439,6 +3439,77 @@ body {
   gap: 2px;
 }
 
+/* Image emoji packs (#62): pack chips in the category row + small tiles. */
+.emoji-pack-chip {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.75;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.emoji-pack-chip:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
+.emoji-pack-chip.active {
+  opacity: 1;
+  background: var(--bg-active);
+}
+
+.emoji-pack-chip img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.emoji-pack-chip-loading,
+.emoji-img-loading {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  animation: emoji-pulse 1s ease-in-out infinite;
+}
+
+@keyframes emoji-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.emoji-img-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.emoji-img-btn:hover {
+  background: var(--bg-hover);
+}
+
+.emoji-img-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
 .emoji-btn {
   border: none;
   background: none;

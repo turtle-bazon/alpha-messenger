@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { getMyStickerPacks, getStickerPackItems } from '../api/rest';
+import type { StickerItem, StickerPack } from '../api/types';
+import { blobObjectUrl } from '../util/blobUrl';
 
 // Keywords for emoji search
 const EMOJI_KEYWORDS: Record<string, string> = {};
@@ -322,8 +326,8 @@ kw('炸弹','бомба');
 kw('💎','алмаз');
 kw('🧲','магнит');
 const CATEGORIES = [
-  { name: 'Частые', icon: '🕐', emojis: [] as string[] },
-  { name: 'Смайлики', icon: '😊', emojis: [
+  { nameKey: 'emoji.catFrequent', icon: '🕐', emojis: [] as string[] },
+  { nameKey: 'emoji.catSmileys', icon: '😊', emojis: [
     '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃',
     '😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙',
     '🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢',
@@ -334,38 +338,38 @@ const CATEGORIES = [
     '😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰',
     '😥','😢','😭','😱','😖','😣','😞','😓','😩','😫',
   ]},
-  { name: 'Жесты', icon: '👋', emojis: [
+  { nameKey: 'emoji.catGestures', icon: '👋', emojis: [
     '👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌',
     '🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉',
     '👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛',
     '🤜','👏','🙌','🫶','👐','🤲','🤝','🙏',
   ]},
-  { name: 'Животные', icon: '🐶', emojis: [
+  { nameKey: 'emoji.catAnimals', icon: '🐶', emojis: [
     '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨',
     '🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊',
     '🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉',
     '🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌',
   ]},
-  { name: 'Еда', icon: '🍔', emojis: [
+  { nameKey: 'emoji.catFood', icon: '🍔', emojis: [
     '🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐',
     '🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑',
     '🧅','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄',
     '🥔','🍠','🫘','🥐','🍞','🥖','🥨','🧀','🥚','🍳',
     '🧈','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍔',
   ]},
-  { name: 'Активности', icon: '⚽', emojis: [
+  { nameKey: 'emoji.catActivities', icon: '⚽', emojis: [
     '⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱',
     '🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳',
     '🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷',
     '⛸️','🥌','🎿','🎯','🪀','🪁','🎮','🕹️',
   ]},
-  { name: 'Объекты', icon: '💡', emojis: [
+  { nameKey: 'emoji.catObjects', icon: '💡', emojis: [
     '⌚','📱','📲','💻','⌨️','🖥️','🖨️','🖱️','🖲️','🕹️',
     '🗜️','💽','💾','💿','📀','📼','📷','📸','📹','🎥',
     '📽️','🎞️','📞','☎️','📟','📠','📺','📻','🎙️','🎚️',
     '🎛️','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋',
   ]},
-  { name: 'Символы', icon: '❤️', emojis: [
+  { nameKey: 'emoji.catSymbols', icon: '❤️', emojis: [
     '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔',
     '❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝',
     '⭐','🌟','✨','💫','🔥','💥','❄️','🌈','☀️','🌤️',
@@ -397,12 +401,47 @@ interface EmojiPickerProps {
   textareaRef?: React.RefObject<HTMLDivElement>;
   /** If false — doesn't register its own close handler (the parent panel handles closing). */
   standalone?: boolean;
+  /**
+   * Image emoji sets (#62): when provided, the picker shows the user's
+   * installed image packs as additional tabs; picking a tile reports its
+   * blobId (sent as a compact sticker by the caller). Without the callback
+   * the picker is native-only (e.g. the reaction picker).
+   */
+  onPickImage?: (blobId: string) => void;
 }
 
-export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true }: EmojiPickerProps): JSX.Element {
+export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true, onPickImage }: EmojiPickerProps): JSX.Element {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState(0);
   const [search, setSearch] = useState('');
+  const [packs, setPacks] = useState<StickerPack[]>([]);
+  const [activePack, setActivePack] = useState<string | null>(null);
+  const [packItems, setPackItems] = useState<StickerItem[]>([]);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Installed image emoji packs (#62). Loaded only when the caller can
+  // handle image picks.
+  useEffect(() => {
+    if (!onPickImage) return;
+    let alive = true;
+    getMyStickerPacks()
+      .then((res) => alive && setPacks(res.packs))
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [onPickImage]);
+
+  // Items of the selected pack.
+  useEffect(() => {
+    if (!activePack) {
+      setPackItems([]);
+      return;
+    }
+    let alive = true;
+    getStickerPackItems(activePack)
+      .then((res) => alive && setPackItems(res.items))
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [activePack]);
 
   // Close on outside click + return focus to the textarea
   useEffect(() => {
@@ -437,61 +476,143 @@ export function EmojiPicker({ onSelect, onClose, textareaRef, standalone = true 
       })
     : null;
 
-  const currentEmojis = search
-    ? filtered ?? []
-    : activeCategory === 0
-      ? recent
-      : CATEGORIES[activeCategory].emojis;
+  const currentEmojis = activePack
+    ? []
+    : search
+      ? filtered ?? []
+      : activeCategory === 0
+        ? recent
+        : CATEGORIES[activeCategory].emojis;
 
   function handleSelect(emoji: string): void {
     saveRecent(emoji);
     onSelect(emoji);
   }
 
+  function openPack(packId: string | null): void {
+    setActivePack(packId);
+    setSearch('');
+  }
+
   return (
     <div className="emoji-picker" ref={ref} data-testid="emoji-picker">
-      <div className="emoji-picker-search">
-        <input
-          type="text"
-          placeholder="Поиск…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoFocus
-        />
-      </div>
+      {!activePack && (
+        <div className="emoji-picker-search">
+          <input
+            type="text"
+            placeholder={t('emoji.search')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+      )}
       <div className="emoji-picker-categories">
-        {CATEGORIES.map((cat, i) => (
+        {!activePack && CATEGORIES.map((cat, i) => (
           <button
-            key={cat.name}
+            key={cat.nameKey}
             type="button"
             className={'emoji-cat-btn' + (activeCategory === i && !search ? ' active' : '')}
-            title={cat.name}
+            title={t(cat.nameKey)}
             onClick={() => { setActiveCategory(i); setSearch(''); }}
           >
             {cat.icon}
           </button>
         ))}
+        {/* Image emoji packs (#62): native chip first, then installed packs. */}
+        {onPickImage && packs.length > 0 && (
+          <>
+            <button
+              type="button"
+              className={'emoji-cat-btn' + (!activePack ? ' active' : '')}
+              title={t('emoji.native')}
+              onClick={() => openPack(null)}
+            >
+              😀
+            </button>
+            {packs.map((p) => (
+              <button
+                key={p.packId}
+                type="button"
+                data-testid="emoji-pack-chip"
+                className={'emoji-pack-chip' + (activePack === p.packId ? ' active' : '')}
+                title={p.title}
+                onClick={() => openPack(p.packId)}
+              >
+                {p.coverBlobId
+                  ? <PackChipImg blobId={p.coverBlobId} />
+                  : '📦'}
+              </button>
+            ))}
+          </>
+        )}
       </div>
       <div className="emoji-picker-grid">
-        {currentEmojis.length === 0 && (
-          <div className="emoji-picker-empty">
-            {search ? 'Ничего не найдено' : 'Нет недавних'}
-          </div>
+        {activePack ? (
+          packItems.length === 0 ? (
+            <div className="emoji-picker-empty">{t('chatlist.notFound')}</div>
+          ) : (
+            packItems.map((item) => (
+              <button
+                key={item.itemId}
+                type="button"
+                data-testid="emoji-img-tile"
+                className="emoji-img-btn"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  onPickImage?.(item.blobId);
+                }}
+              >
+                <PackItemImg blobId={item.blobId} />
+              </button>
+            ))
+          )
+        ) : (
+          <>
+            {currentEmojis.length === 0 && (
+              <div className="emoji-picker-empty">
+                {search ? t('chatlist.notFound') : t('emoji.noRecent')}
+              </div>
+            )}
+            {currentEmojis.map((emoji, i) => (
+              <button
+                key={`${emoji}-${i}`}
+                type="button"
+                className="emoji-btn"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(emoji);
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </>
         )}
-        {currentEmojis.map((emoji, i) => (
-          <button
-            key={`${emoji}-${i}`}
-            type="button"
-            className="emoji-btn"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              handleSelect(emoji);
-            }}
-          >
-            {emoji}
-          </button>
-        ))}
       </div>
     </div>
   );
+}
+
+// Pack cover / item image with the shared object-URL cache.
+function PackChipImg({ blobId }: { blobId: string }): JSX.Element {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    blobObjectUrl(blobId).then((u) => !cancelled && setUrl(u)).catch(() => {});
+    return () => { cancelled = true; };
+  }, [blobId]);
+  if (!url) return <span className="emoji-pack-chip-loading" />;
+  return <img src={url} alt="" />;
+}
+
+function PackItemImg({ blobId }: { blobId: string }): JSX.Element {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    blobObjectUrl(blobId).then((u) => !cancelled && setUrl(u)).catch(() => {});
+    return () => { cancelled = true; };
+  }, [blobId]);
+  if (!url) return <span className="emoji-img-loading" />;
+  return <img src={url} alt="" />;
 }

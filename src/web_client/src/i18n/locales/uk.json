@@ -298,15 +298,28 @@
     "newPack": "Новий пак",
     "addSticker": "Додати стикер"
   },
-  "mediaViewer": { "loadFailed": "Не вдалося завантажити медіа" },
-  "gallery": { "title": "Медіа", "empty": "Ще немає фото та відео" },
+  "mediaViewer": {
+    "loadFailed": "Не вдалося завантажити медіа"
+  },
+  "gallery": {
+    "title": "Медіа",
+    "empty": "Ще немає фото та відео"
+  },
   "forward": {
     "title": "Переслати до…",
     "searchPlaceholder": "Пошук чатів…",
     "notFound": "Чати не знайдено"
   },
-  "about": { "messenger": "Месенджер", "icons": "Іконки", "project": "Проєкт" },
-  "voice": { "pause": "Пауза", "play": "Відтворити", "speed": "Швидкість" },
+  "about": {
+    "messenger": "Месенджер",
+    "icons": "Іконки",
+    "project": "Проєкт"
+  },
+  "voice": {
+    "pause": "Пауза",
+    "play": "Відтворити",
+    "speed": "Швидкість"
+  },
   "composer": {
     "bold": "Жирний (Ctrl+B)",
     "italic": "Курсив (Ctrl+I)",
@@ -317,5 +330,18 @@
     "linkText": "Текст",
     "linkTextPlaceholder": "Текст посилання",
     "linkInsert": "Вставити"
+  },
+  "emoji": {
+    "search": "Пошук",
+    "noRecent": "Немає нещодавніх",
+    "native": "Звичайні",
+    "catFrequent": "Часті",
+    "catSmileys": "Смайлики",
+    "catGestures": "Жести",
+    "catAnimals": "Тварини",
+    "catFood": "Їжа",
+    "catActivities": "Активності",
+    "catObjects": "Об'єкти",
+    "catSymbols": "Символи"
   }
 }

@@ -75,6 +75,7 @@ export function MediaPanel({
         {tab === 'emoji' && (
           <EmojiPicker
             onSelect={onSelectEmoji}
+            onPickImage={onSelectSticker}
             onClose={onClose}
             textareaRef={textareaRef}
             standalone={false}

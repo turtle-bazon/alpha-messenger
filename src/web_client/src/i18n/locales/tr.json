@@ -294,15 +294,28 @@
     "newPack": "Yeni paket",
     "addSticker": "Çıkartma ekle"
   },
-  "mediaViewer": { "loadFailed": "Medya yüklenemedi" },
-  "gallery": { "title": "Medya", "empty": "Henüz fotoğraf veya video yok" },
+  "mediaViewer": {
+    "loadFailed": "Medya yüklenemedi"
+  },
+  "gallery": {
+    "title": "Medya",
+    "empty": "Henüz fotoğraf veya video yok"
+  },
   "forward": {
     "title": "Şuraya ilet…",
     "searchPlaceholder": "Sohbet ara…",
     "notFound": "Sohbet bulunamadı"
   },
-  "about": { "messenger": "Mesajlaşma", "icons": "Simgeler", "project": "Proje" },
-  "voice": { "pause": "Duraklat", "play": "Oynat", "speed": "Hız" },
+  "about": {
+    "messenger": "Mesajlaşma",
+    "icons": "Simgeler",
+    "project": "Proje"
+  },
+  "voice": {
+    "pause": "Duraklat",
+    "play": "Oynat",
+    "speed": "Hız"
+  },
   "composer": {
     "bold": "Kalın (Ctrl+B)",
     "italic": "İtalik (Ctrl+I)",
@@ -313,5 +326,18 @@
     "linkText": "Metin",
     "linkTextPlaceholder": "Bağlantı metni",
     "linkInsert": "Ekle"
+  },
+  "emoji": {
+    "search": "Ara",
+    "noRecent": "Son kullanılan yok",
+    "native": "Normal",
+    "catFrequent": "Sık",
+    "catSmileys": "Yüzler",
+    "catGestures": "El hareketleri",
+    "catAnimals": "Hayvanlar",
+    "catFood": "Yiyecekler",
+    "catActivities": "Etkinlikler",
+    "catObjects": "Nesneler",
+    "catSymbols": "Semboller"
   }
 }

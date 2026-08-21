@@ -292,15 +292,28 @@
     "newPack": "新建贴纸包",
     "addSticker": "添加贴纸"
   },
-  "mediaViewer": { "loadFailed": "媒体加载失败" },
-  "gallery": { "title": "媒体", "empty": "暂无图片和视频" },
+  "mediaViewer": {
+    "loadFailed": "媒体加载失败"
+  },
+  "gallery": {
+    "title": "媒体",
+    "empty": "暂无图片和视频"
+  },
   "forward": {
     "title": "转发到…",
     "searchPlaceholder": "搜索聊天…",
     "notFound": "未找到聊天"
   },
-  "about": { "messenger": "即时通讯", "icons": "图标", "project": "项目" },
-  "voice": { "pause": "暂停", "play": "播放", "speed": "语速" },
+  "about": {
+    "messenger": "即时通讯",
+    "icons": "图标",
+    "project": "项目"
+  },
+  "voice": {
+    "pause": "暂停",
+    "play": "播放",
+    "speed": "语速"
+  },
   "composer": {
     "bold": "粗体 (Ctrl+B)",
     "italic": "斜体 (Ctrl+I)",
@@ -311,5 +324,18 @@
     "linkText": "文字",
     "linkTextPlaceholder": "链接文字",
     "linkInsert": "插入"
+  },
+  "emoji": {
+    "search": "搜索",
+    "noRecent": "暂无最近使用",
+    "native": "默认",
+    "catFrequent": "常用",
+    "catSmileys": "笑脸",
+    "catGestures": "手势",
+    "catAnimals": "动物",
+    "catFood": "食物",
+    "catActivities": "活动",
+    "catObjects": "物体",
+    "catSymbols": "符号"
   }
 }

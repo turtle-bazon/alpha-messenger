@@ -330,5 +330,18 @@
     "linkText": "Text",
     "linkTextPlaceholder": "Link text",
     "linkInsert": "Insert"
+  },
+  "emoji": {
+    "search": "Search",
+    "noRecent": "No recents",
+    "native": "Native",
+    "catFrequent": "Frequent",
+    "catSmileys": "Smileys",
+    "catGestures": "Gestures",
+    "catAnimals": "Animals",
+    "catFood": "Food",
+    "catActivities": "Activities",
+    "catObjects": "Objects",
+    "catSymbols": "Symbols"
   }
 }

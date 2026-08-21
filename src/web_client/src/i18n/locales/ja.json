@@ -292,15 +292,28 @@
     "newPack": "新しいパック",
     "addSticker": "スタンプを追加"
   },
-  "mediaViewer": { "loadFailed": "メディアを読み込めませんでした" },
-  "gallery": { "title": "メディア", "empty": "写真や動画はまだありません" },
+  "mediaViewer": {
+    "loadFailed": "メディアを読み込めませんでした"
+  },
+  "gallery": {
+    "title": "メディア",
+    "empty": "写真や動画はまだありません"
+  },
   "forward": {
     "title": "転送先…",
     "searchPlaceholder": "チャットを検索…",
     "notFound": "チャットが見つかりません"
   },
-  "about": { "messenger": "メッセンジャー", "icons": "アイコン", "project": "プロジェクト" },
-  "voice": { "pause": "一時停止", "play": "再生", "speed": "速度" },
+  "about": {
+    "messenger": "メッセンジャー",
+    "icons": "アイコン",
+    "project": "プロジェクト"
+  },
+  "voice": {
+    "pause": "一時停止",
+    "play": "再生",
+    "speed": "速度"
+  },
   "composer": {
     "bold": "太字 (Ctrl+B)",
     "italic": "斜体 (Ctrl+I)",
@@ -311,5 +324,18 @@
     "linkText": "テキスト",
     "linkTextPlaceholder": "リンクテキスト",
     "linkInsert": "挿入"
+  },
+  "emoji": {
+    "search": "検索",
+    "noRecent": "最近使った絵文字はありません",
+    "native": "標準",
+    "catFrequent": "よく使う",
+    "catSmileys": "顔",
+    "catGestures": "ジェスチャー",
+    "catAnimals": "動物",
+    "catFood": "食べ物",
+    "catActivities": "活動",
+    "catObjects": "物",
+    "catSymbols": "記号"
   }
 }

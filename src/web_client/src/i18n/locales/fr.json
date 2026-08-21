@@ -296,15 +296,28 @@
     "newPack": "Nouveau pack",
     "addSticker": "Ajouter un sticker"
   },
-  "mediaViewer": { "loadFailed": "Échec du chargement du média" },
-  "gallery": { "title": "Médias", "empty": "Pas encore de photos ni de vidéos" },
+  "mediaViewer": {
+    "loadFailed": "Échec du chargement du média"
+  },
+  "gallery": {
+    "title": "Médias",
+    "empty": "Pas encore de photos ni de vidéos"
+  },
   "forward": {
     "title": "Transférer vers…",
     "searchPlaceholder": "Rechercher des discussions…",
     "notFound": "Aucune discussion trouvée"
   },
-  "about": { "messenger": "Messagerie", "icons": "Icônes", "project": "Projet" },
-  "voice": { "pause": "Pause", "play": "Lecture", "speed": "Vitesse" },
+  "about": {
+    "messenger": "Messagerie",
+    "icons": "Icônes",
+    "project": "Projet"
+  },
+  "voice": {
+    "pause": "Pause",
+    "play": "Lecture",
+    "speed": "Vitesse"
+  },
   "composer": {
     "bold": "Gras (Ctrl+B)",
     "italic": "Italique (Ctrl+I)",
@@ -315,5 +328,18 @@
     "linkText": "Texte",
     "linkTextPlaceholder": "Texte du lien",
     "linkInsert": "Insérer"
+  },
+  "emoji": {
+    "search": "Rechercher",
+    "noRecent": "Aucun récent",
+    "native": "Natifs",
+    "catFrequent": "Fréquents",
+    "catSmileys": "Émotions",
+    "catGestures": "Gestes",
+    "catAnimals": "Animaux",
+    "catFood": "Nourriture",
+    "catActivities": "Activités",
+    "catObjects": "Objets",
+    "catSymbols": "Symboles"
   }
 }

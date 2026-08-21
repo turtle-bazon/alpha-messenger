@@ -292,15 +292,28 @@
     "newPack": "새 팩",
     "addSticker": "스티커 추가"
   },
-  "mediaViewer": { "loadFailed": "미디어를 불러오지 못했습니다" },
-  "gallery": { "title": "미디어", "empty": "아직 사진이나 동영상이 없습니다" },
+  "mediaViewer": {
+    "loadFailed": "미디어를 불러오지 못했습니다"
+  },
+  "gallery": {
+    "title": "미디어",
+    "empty": "아직 사진이나 동영상이 없습니다"
+  },
   "forward": {
     "title": "전달할 곳…",
     "searchPlaceholder": "채팅 검색…",
     "notFound": "채팅이 없습니다"
   },
-  "about": { "messenger": "메신저", "icons": "아이콘", "project": "프로젝트" },
-  "voice": { "pause": "일시정지", "play": "재생", "speed": "속도" },
+  "about": {
+    "messenger": "메신저",
+    "icons": "아이콘",
+    "project": "프로젝트"
+  },
+  "voice": {
+    "pause": "일시정지",
+    "play": "재생",
+    "speed": "속도"
+  },
   "composer": {
     "bold": "굵게 (Ctrl+B)",
     "italic": "기울임 (Ctrl+I)",
@@ -311,5 +324,18 @@
     "linkText": "텍스트",
     "linkTextPlaceholder": "링크 텍스트",
     "linkInsert": "삽입"
+  },
+  "emoji": {
+    "search": "검색",
+    "noRecent": "최근 항목 없음",
+    "native": "기본",
+    "catFrequent": "자주 사용",
+    "catSmileys": "표정",
+    "catGestures": "제스처",
+    "catAnimals": "동물",
+    "catFood": "음식",
+    "catActivities": "활동",
+    "catObjects": "사물",
+    "catSymbols": "기호"
   }
 }

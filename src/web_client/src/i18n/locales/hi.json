@@ -300,15 +300,28 @@
     "newPack": "नया पैक",
     "addSticker": "स्टिकर जोड़ें"
   },
-  "mediaViewer": { "loadFailed": "मीडिया लोड करने में विफल" },
-  "gallery": { "title": "मीडिया", "empty": "अभी कोई फ़ोटो या वीडियो नहीं" },
+  "mediaViewer": {
+    "loadFailed": "मीडिया लोड करने में विफल"
+  },
+  "gallery": {
+    "title": "मीडिया",
+    "empty": "अभी कोई फ़ोटो या वीडियो नहीं"
+  },
   "forward": {
     "title": "यहाँ फ़ॉरवर्ड करें…",
     "searchPlaceholder": "चैट खोजें…",
     "notFound": "कोई चैट नहीं मिली"
   },
-  "about": { "messenger": "मैसेंजर", "icons": "आइकन", "project": "प्रोजेक्ट" },
-  "voice": { "pause": "रोकें", "play": "चलाएँ", "speed": "गति" },
+  "about": {
+    "messenger": "मैसेंजर",
+    "icons": "आइकन",
+    "project": "प्रोजेक्ट"
+  },
+  "voice": {
+    "pause": "रोकें",
+    "play": "चलाएँ",
+    "speed": "गति"
+  },
   "composer": {
     "bold": "बोल्ड (Ctrl+B)",
     "italic": "इटैलिक (Ctrl+I)",
@@ -319,5 +332,18 @@
     "linkText": "टेक्स्ट",
     "linkTextPlaceholder": "लिंक टेक्स्ट",
     "linkInsert": "जोड़ें"
+  },
+  "emoji": {
+    "search": "खोज",
+    "noRecent": "कोई हाल का नहीं",
+    "native": "सामान्य",
+    "catFrequent": "बारंबार",
+    "catSmileys": "स्माइली",
+    "catGestures": "इशारे",
+    "catAnimals": "जानवर",
+    "catFood": "भोजन",
+    "catActivities": "गतिविधियाँ",
+    "catObjects": "वस्तुएँ",
+    "catSymbols": "प्रतीक"
   }
 }

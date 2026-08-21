@@ -296,15 +296,28 @@
     "newPack": "Nuevo pack",
     "addSticker": "Añadir sticker"
   },
-  "mediaViewer": { "loadFailed": "No se pudo cargar el multimedia" },
-  "gallery": { "title": "Multimedia", "empty": "Aún no hay fotos ni vídeos" },
+  "mediaViewer": {
+    "loadFailed": "No se pudo cargar el multimedia"
+  },
+  "gallery": {
+    "title": "Multimedia",
+    "empty": "Aún no hay fotos ni vídeos"
+  },
   "forward": {
     "title": "Reenviar a…",
     "searchPlaceholder": "Buscar chats…",
     "notFound": "No se encontraron chats"
   },
-  "about": { "messenger": "Mensajería", "icons": "Iconos", "project": "Proyecto" },
-  "voice": { "pause": "Pausa", "play": "Reproducir", "speed": "Velocidad" },
+  "about": {
+    "messenger": "Mensajería",
+    "icons": "Iconos",
+    "project": "Proyecto"
+  },
+  "voice": {
+    "pause": "Pausa",
+    "play": "Reproducir",
+    "speed": "Velocidad"
+  },
   "composer": {
     "bold": "Negrita (Ctrl+B)",
     "italic": "Cursiva (Ctrl+I)",
@@ -315,5 +328,18 @@
     "linkText": "Texto",
     "linkTextPlaceholder": "Texto del enlace",
     "linkInsert": "Insertar"
+  },
+  "emoji": {
+    "search": "Buscar",
+    "noRecent": "Sin recientes",
+    "native": "Nativos",
+    "catFrequent": "Frecuentes",
+    "catSmileys": "Caritas",
+    "catGestures": "Gestos",
+    "catAnimals": "Animales",
+    "catFood": "Comida",
+    "catActivities": "Actividades",
+    "catObjects": "Objetos",
+    "catSymbols": "Símbolos"
   }
 }

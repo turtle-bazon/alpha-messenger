@@ -330,5 +330,18 @@
     "linkText": "Текст",
     "linkTextPlaceholder": "Текст ссылки",
     "linkInsert": "Вставить"
+  },
+  "emoji": {
+    "search": "Поиск",
+    "noRecent": "Нет недавних",
+    "native": "Обычные",
+    "catFrequent": "Частые",
+    "catSmileys": "Смайлики",
+    "catGestures": "Жесты",
+    "catAnimals": "Животные",
+    "catFood": "Еда",
+    "catActivities": "Активности",
+    "catObjects": "Объекты",
+    "catSymbols": "Символы"
   }
 }

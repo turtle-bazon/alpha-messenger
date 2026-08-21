@@ -296,15 +296,28 @@
     "newPack": "Neues Pack",
     "addSticker": "Sticker hinzufügen"
   },
-  "mediaViewer": { "loadFailed": "Medium konnte nicht geladen werden" },
-  "gallery": { "title": "Medien", "empty": "Noch keine Fotos oder Videos" },
+  "mediaViewer": {
+    "loadFailed": "Medium konnte nicht geladen werden"
+  },
+  "gallery": {
+    "title": "Medien",
+    "empty": "Noch keine Fotos oder Videos"
+  },
   "forward": {
     "title": "Weiterleiten an…",
     "searchPlaceholder": "Chats suchen…",
     "notFound": "Keine Chats gefunden"
   },
-  "about": { "messenger": "Messenger", "icons": "Symbole", "project": "Projekt" },
-  "voice": { "pause": "Pause", "play": "Abspielen", "speed": "Geschwindigkeit" },
+  "about": {
+    "messenger": "Messenger",
+    "icons": "Symbole",
+    "project": "Projekt"
+  },
+  "voice": {
+    "pause": "Pause",
+    "play": "Abspielen",
+    "speed": "Geschwindigkeit"
+  },
   "composer": {
     "bold": "Fett (Ctrl+B)",
     "italic": "Kursiv (Ctrl+I)",
@@ -315,5 +328,18 @@
     "linkText": "Text",
     "linkTextPlaceholder": "Linktext",
     "linkInsert": "Einfügen"
+  },
+  "emoji": {
+    "search": "Suche",
+    "noRecent": "Keine recenten",
+    "native": "Standard",
+    "catFrequent": "Häufig",
+    "catSmileys": "Smileys",
+    "catGestures": "Gesten",
+    "catAnimals": "Tiere",
+    "catFood": "Essen",
+    "catActivities": "Aktivitäten",
+    "catObjects": "Objekte",
+    "catSymbols": "Symbole"
   }
 }

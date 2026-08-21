@@ -18,6 +18,20 @@ export async function registerViaUi(
   return { username, password };
 }
 
+// Вход существующего пользователя через UI (например, зарегистрированного
+// через API, чтобы тест мог готовить данные напрямую через REST).
+export async function loginViaUi(
+  page: Page,
+  username: string,
+  password: string,
+): Promise<void> {
+  await page.goto('/login');
+  await page.getByLabel('Имя пользователя').fill(username);
+  await page.getByLabel('Пароль').fill(password);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await expect(page.getByTestId('app-home')).toBeVisible();
+}
+
 // Создание direct-чата через UI: синяя «+» открывает диалог, дальше — username.
 export async function createDirectViaUi(
   page: Page,
