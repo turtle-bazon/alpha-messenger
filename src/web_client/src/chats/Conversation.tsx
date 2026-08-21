@@ -37,10 +37,11 @@ import {
   type LinkAttachment,
   type MessageContent,
   type VideoAttachment,
+  type FileAttachment,
 } from '../util/content';
 import { imageBytesToThumb, videoPosterFrame, type PreparedImage } from '../util/image';
 import { formatTime, formatDateDivider, sameDay, formatLastSeen } from '../util/time';
-import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam, IconImage } from '../util/icons';
+import { IconAttach, IconCheck, IconChecks, IconCopy, IconEdit, IconReply, IconSend, IconSmilePlus, IconTrash, IconArrowDown, IconRotateCcw, IconX, IconArrowLeft, IconAlertCircle, IconMic, IconCamera, IconPlay, IconPhone, IconVideoCam, IconImage, IconForward } from '../util/icons';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { colorFor, initialFor } from './avatar';
 import { chatTitle } from './chatTitle';
@@ -78,6 +79,13 @@ function fmtSec(total: number): string {
   const m = Math.floor(total / 60);
   const s = Math.floor(total % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// Bytes → human-readable size for the file card (#85).
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
 // Plural forms for the member count label (1 member, 2 members, 5 members).
@@ -179,6 +187,7 @@ export function Conversation({
   onBack,
   onShowProfile,
   onCall,
+  onForward,
   onChatUpdated,
   onChatRemoved,
 }: {
@@ -192,6 +201,7 @@ export function Conversation({
   onBack: () => void;
   onShowProfile: (userId: string) => void;
   onCall?: (peerId: string, video: boolean) => void;
+  onForward?: (message: MsgVM) => void;
   onChatUpdated: (chat: Chat) => void;
   onChatRemoved: (chatId: string) => void;
 }): JSX.Element {
@@ -293,8 +303,8 @@ export function Conversation({
       text: string;
       images: OutgoingImage[];
       link?: LinkAttachment;
-      // Voice/video (#34): raw blob + attachment metadata.
-      media?: { att: AudioAttachment | VideoAttachment; blob: Blob };
+      // Voice/video (#34) and documents (#85): raw blob + attachment metadata.
+      media?: { att: AudioAttachment | VideoAttachment | FileAttachment; blob: Blob };
       replyToMessageId?: string;
     }[]
   >([]);
@@ -850,7 +860,7 @@ export function Conversation({
     images: OutgoingImage[],
     link?: LinkAttachment,
     replyToMessageId?: string,
-    media?: { att: AudioAttachment | VideoAttachment; blob: Blob },
+    media?: { att: AudioAttachment | VideoAttachment | FileAttachment; blob: Blob },
   ): void {
     const clientMessageId = crypto.randomUUID();
     const attachments: Attachment[] = [
@@ -1188,7 +1198,43 @@ export function Conversation({
   function onPickFile(e: ChangeEvent<HTMLInputElement>): void {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow picking the same file again
-    if (file) setPendingImage(file);
+    if (!file) return;
+    // Images go through the editor; everything else is sent as a document (#85).
+    if (file.type.startsWith('image/')) {
+      setPendingImage(file);
+    } else {
+      sendFile(file);
+    }
+  }
+
+  // Document sending (#85): straight into the queue with a file attachment.
+  function sendFile(file: File): void {
+    const att: FileAttachment = {
+      kind: 'file',
+      blobId: '',
+      name: file.name,
+      mime: file.type || 'application/octet-stream',
+      size: file.size,
+    };
+    const replyId = replyTo;
+    setReplyTo(null);
+    enqueueSend('', [], undefined, replyId ?? undefined, { att, blob: file });
+  }
+
+  // Download a document (#85): fetch the blob with auth, then trigger save-as.
+  async function downloadFile(name: string, blobId: string): Promise<void> {
+    if (!blobId) return;
+    try {
+      const blob = await fetchBlob(blobId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      // Ignore download failures for now.
+    }
   }
 
   // Paste image from clipboard (Ctrl/Cmd+V): if there's an image, open the same
@@ -1468,6 +1514,9 @@ export function Conversation({
                   if (canEdit) {
                     items.push({ label: 'Редактировать', icon: <IconEdit />, onClick: () => startEdit(m) });
                   }
+                  if (onForward && !m.pending && !m.failed) {
+                    items.push({ label: 'Переслать…', icon: <IconForward />, onClick: () => onForward(m) });
+                  }
                   items.push({ separator: true, label: '', onClick: () => {} });
                   items.push({ label: 'Копировать текст', icon: <IconCopy />, onClick: () => {
                     // Strip markup: **, _, ~~, `
@@ -1587,6 +1636,11 @@ export function Conversation({
                           </span>
                         );
                       })()}
+                      {m.content.fwd && (
+                        <span className="bubble-fwd" data-testid="bubble-fwd">
+                          Переслано от {m.content.fwd.from}
+                        </span>
+                      )}
                       {m.content.text && (
                         <span
                           className="bubble-text"
@@ -1664,6 +1718,20 @@ export function Conversation({
                             </span>
                             <span className="bubble-video-duration">{fmtSec(a.duration)}</span>
                           </span>
+                        ) : a.kind === 'file' ? (
+                          <button
+                            type="button"
+                            className="bubble-file"
+                            key={ai}
+                            data-testid="message-file"
+                            onClick={() => downloadFile(a.name, a.blobId)}
+                          >
+                            <span className="bubble-file-icon">📎</span>
+                            <span className="bubble-file-body">
+                              <span className="bubble-file-name">{a.name}</span>
+                              <span className="bubble-file-size">{fmtSize(a.size)}</span>
+                            </span>
+                          </button>
                         ) : (
                           <a
                             className="bubble-link"
@@ -1991,7 +2059,7 @@ export function Conversation({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="*/*"
             hidden
             data-testid="image-input"
             onChange={onPickFile}

@@ -68,18 +68,31 @@ export interface VideoAttachment {
   thumb: string; // base64 JPEG without data: prefix
 }
 
+// Arbitrary file (document) (#85): card with name/size, download on click.
+export interface FileAttachment {
+  kind: 'file';
+  blobId: string;
+  name: string;
+  mime: string;
+  size: number;
+}
+
 export type Attachment =
   | ImageAttachment
   | LinkAttachment
   | StickerAttachment
   | AudioAttachment
-  | VideoAttachment;
+  | VideoAttachment
+  | FileAttachment;
 
 // Message — text and/or attachments. Text without attachments is a plain text
 // message; attachments without text are media; a combination is possible too.
+// fwd (#84): the message was forwarded; from — display name of the original
+// sender (metadata only, lives inside the ciphertext).
 export interface MessageContent {
   text: string;
   attachments: Attachment[];
+  fwd?: { from: string };
 }
 
 export function textContent(text: string): MessageContent {
@@ -89,6 +102,7 @@ export function textContent(text: string): MessageContent {
 export function encodeContent(c: MessageContent): string {
   const body: Record<string, unknown> = { t: 'msg' };
   if (c.text) body.text = c.text;
+  if (c.fwd) body.fwd = c.fwd.from;
   if (c.attachments.length) {
     body.atts = c.attachments.map((a) => {
       if (a.kind === 'image') {
@@ -127,6 +141,15 @@ export function encodeContent(c: MessageContent): string {
           h: a.height,
           size: a.size,
           thumb: a.thumb,
+        };
+      }
+      if (a.kind === 'file') {
+        return {
+          k: 'file',
+          blob: a.blobId,
+          name: a.name,
+          mime: a.mime,
+          size: a.size,
         };
       }
       return {
@@ -184,6 +207,16 @@ function decodeAttachment(o: Record<string, unknown>): Attachment | null {
       thumb: typeof o.thumb === 'string' ? o.thumb : '',
     };
   }
+  if (o.k === 'file') {
+    if (typeof o.blob !== 'string' || typeof o.name !== 'string') return null;
+    return {
+      kind: 'file',
+      blobId: o.blob,
+      name: o.name,
+      mime: typeof o.mime === 'string' ? o.mime : 'application/octet-stream',
+      size: typeof o.size === 'number' ? o.size : 0,
+    };
+  }
   if (o.k !== 'image' && o.k !== undefined) return null;
   if (typeof o.thumb !== 'string' && typeof o.blob !== 'string') return null;
   return {
@@ -210,7 +243,11 @@ export function decodeContent(b64: string): MessageContent {
             .map(decodeAttachment)
             .filter((a): a is Attachment => a !== null)
         : [];
-      return { text: typeof o.text === 'string' ? o.text : '', attachments: atts };
+      return {
+        text: typeof o.text === 'string' ? o.text : '',
+        attachments: atts,
+        ...(typeof o.fwd === 'string' && o.fwd ? { fwd: { from: o.fwd } } : {}),
+      };
     }
     // Legacy: image inline entirely — data becomes the thumbnail, blobId empty.
     if (o && o.t === 'image' && typeof o.data === 'string') {
@@ -259,6 +296,8 @@ export function previewText(c: MessageContent): string {
   if (audio) return '🎤 Голосовое сообщение';
   const video = c.attachments.find((a): a is VideoAttachment => a.kind === 'video');
   if (video) return '🎥 Видео';
+  const file = c.attachments.find((a): a is FileAttachment => a.kind === 'file');
+  if (file) return `📎 ${file.name}`;
   const img = c.attachments.find((a): a is ImageAttachment => a.kind === 'image');
   if (img) {
     const cap = img.caption || c.text;

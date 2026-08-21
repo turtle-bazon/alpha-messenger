@@ -34,6 +34,7 @@ import {
   Pause,
   Phone,
   Image,
+  Forward,
 } from 'lucide-react';
 
 // Re-export Lucide icons directly.
@@ -72,4 +73,5 @@ export {
   Phone as IconPhone,
   Video as IconVideoCam,
   Image as IconImage,
+  Forward as IconForward,
 };

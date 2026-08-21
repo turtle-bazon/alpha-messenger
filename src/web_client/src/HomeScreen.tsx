@@ -9,10 +9,12 @@ import {
   getPresence,
   reportActivity,
   resolveChannelId,
+  sendMessage,
 } from './api/rest';
 import { getLastSeq, getToken, getUserId, setLastSeq } from './api/session';
 import { WsClient } from './api/ws';
 import type { Chat, MessagePreview, ServerEvent } from './api/types';
+import { encodeContent, type MessageContent } from './util/content';
 import { AccountNotifications } from './account/AccountNotifications';
 import { ChatList } from './chats/ChatList';
 import { Conversation } from './chats/Conversation';
@@ -23,6 +25,7 @@ import { IconMenu, IconBell } from './util/icons';
 import { useTyping } from './chats/useTyping';
 import { useCall } from './chats/useCall';
 import { CallOverlay } from './chats/CallOverlay';
+import { ForwardDialog } from './chats/ForwardDialog';
 import { chatTitle } from './chats/chatTitle';
 import { getTheme, setTheme, type Theme } from './util/theme';
 import {
@@ -80,6 +83,11 @@ export function HomeScreen({
   const typingByChat = useTyping(ws, myId);
   // Calls (#81): one manager for the whole app, overlay rendered above all.
   const callCtl = useCall(ws);
+  // Forwarding (#84): the message being forwarded (picked via context menu).
+  const [forwardMsg, setForwardMsg] = useState<{
+    content: MessageContent;
+    senderId: string;
+  } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
@@ -100,6 +108,23 @@ export function HomeScreen({
     }
     return '—';
   };
+
+  // Forward the picked message into the chosen chat (#84). Blobs are
+  // content-addressed and already exist server-side — no re-upload needed.
+  async function doForward(targetChatId: string): Promise<void> {
+    if (!forwardMsg) return;
+    const from = peerNameOf(forwardMsg.senderId);
+    const content: MessageContent = { ...forwardMsg.content, fwd: { from } };
+    const blobIds = content.attachments
+      .map((a) => ('blobId' in a ? (a as { blobId: string }).blobId : ''))
+      .filter((x) => x);
+    try {
+      await sendMessage(targetChatId, crypto.randomUUID(), encodeContent(content), blobIds);
+    } catch {
+      // v1: no retry UI for forwarding failures.
+    }
+    setForwardMsg(null);
+  }
   // Up-to-date list for checks inside WS handlers (without restarting the
   // effect and without side effects in setState updaters).
   const chatsRef = useRef<Chat[]>([]);
@@ -768,6 +793,7 @@ export function HomeScreen({
             onBack={() => setSelectedId(null)}
             onShowProfile={onShowProfile}
             onCall={(peerId, video) => void callCtl.startCall(peerId, video)}
+            onForward={(m) => setForwardMsg({ content: m.content, senderId: m.senderId })}
             onChatUpdated={(updated) => {
               setChats((prev) =>
                 prev.map((c) => (c.chatId === updated.chatId ? updated : c)),
@@ -793,6 +819,14 @@ export function HomeScreen({
           onHangup={callCtl.hangup}
           onToggleMute={callCtl.toggleMute}
           onToggleCamera={callCtl.toggleCamera}
+        />
+      )}
+      {forwardMsg && (
+        <ForwardDialog
+          chats={chats}
+          myId={myId}
+          onPick={(chatId) => void doForward(chatId)}
+          onClose={() => setForwardMsg(null)}
         />
       )}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
