@@ -151,6 +151,15 @@ public class MainActivity extends BridgeActivity {
             CachedWebViewClient cachedClient = new CachedWebViewClient(original, cacheDir);
             webView.setWebViewClient(cachedClient);
 
+            // #75: контент, загруженный через loadDataWithBaseURL, известен тем,
+            // что WebView может разложить его на layout-viewport шире экрана
+            // (пузыри обрезаются справа без горизонтального скролла). Явно
+            // включаем режим «широкий viewport + overview», при котором
+            // <meta name="viewport"> из index.html применяется корректно.
+            android.webkit.WebSettings ws = webView.getSettings();
+            ws.setUseWideViewPort(true);
+            ws.setLoadWithOverviewMode(true);
+
             // Загружаем cached HTML через loadDataWithBaseURL.
             // Base URL = https://localhost/ — совпадает с origin Capacitor,
             // поэтому бридж пересоздаётся в onPageStarted.

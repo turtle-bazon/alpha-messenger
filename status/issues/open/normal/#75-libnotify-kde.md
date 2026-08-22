@@ -17,3 +17,11 @@
 - Electron main process уже показывает уведомления через `new Notification()` (см. `preload.ts`)
 - В GNOME уведомления работают корректно, проблема именно в KDE Plasma
 - Telegram Desktop использует libnotify — уведомления видны в KDE
+
+## Примечание (2026-08-22)
+Тикет Focus #75 «Chat width» — другая проблема (обрезка интерфейса на
+Android), анализ там: layout-viewport шире экрана при загрузке кеша через
+loadDataWithBaseURL; фикс — setUseWideViewPort(true) +
+setLoadWithOverviewMode(true) в MainActivity.installInterceptor.
+Плюс защитный фикс размеров картинок #87 (без зависимости от aspect-ratio).
+
