@@ -51,7 +51,9 @@
     "empty": "अभी कोई चैट नहीं है",
     "notFound": "कुछ नहीं मिला",
     "noMessages": "कोई संदेश नहीं",
-    "newChat": "नई चैट"
+    "newChat": "नई चैट",
+    "loadError": "चैट लोड करने में विफल",
+    "retry": "पुनः प्रयास"
   },
   "chatTitle": {
     "group": "समूह",

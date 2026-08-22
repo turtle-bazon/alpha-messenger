@@ -51,7 +51,9 @@
     "empty": "아직 채팅이 없습니다",
     "notFound": "결과 없음",
     "noMessages": "메시지 없음",
-    "newChat": "새 채팅"
+    "newChat": "새 채팅",
+    "loadError": "채팅을 불러오지 못했습니다",
+    "retry": "다시 시도"
   },
   "chatTitle": {
     "group": "그룹",

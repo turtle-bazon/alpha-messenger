@@ -51,7 +51,9 @@
     "empty": "Nenhuma conversa ainda",
     "notFound": "Nada encontrado",
     "noMessages": "Sem mensagens",
-    "newChat": "Nova conversa"
+    "newChat": "Nova conversa",
+    "loadError": "Não foi possível carregar os chats",
+    "retry": "Tentar novamente"
   },
   "chatTitle": {
     "group": "Grupo",

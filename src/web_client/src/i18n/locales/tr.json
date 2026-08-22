@@ -51,7 +51,9 @@
     "empty": "Henüz sohbet yok",
     "notFound": "Hiçbir şey bulunamadı",
     "noMessages": "Mesaj yok",
-    "newChat": "Yeni sohbet"
+    "newChat": "Yeni sohbet",
+    "loadError": "Sohbetler yüklenemedi",
+    "retry": "Yeniden dene"
   },
   "chatTitle": {
     "group": "Grup",

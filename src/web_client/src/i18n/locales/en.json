@@ -51,7 +51,9 @@
     "empty": "No chats yet",
     "notFound": "Nothing found",
     "noMessages": "No messages",
-    "newChat": "New chat"
+    "newChat": "New chat",
+    "loadError": "Failed to load chats",
+    "retry": "Retry"
   },
   "chatTitle": {
     "group": "Group",

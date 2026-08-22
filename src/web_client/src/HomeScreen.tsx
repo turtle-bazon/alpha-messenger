@@ -79,6 +79,10 @@ export function HomeScreen({
   const [username, setUsername] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  // Ошибка первичной загрузки списка чатов — показывается в ChatList
+  // с кнопкой «Повторить» вместо вводящего в заблуждение «Чатов пока нет».
+  const [bootError, setBootError] = useState<string | null>(null);
+  const bootRetryRef = useRef<(() => void) | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [awayUsers, setAwayUsers] = useState<Set<string>>(new Set());
   // Who is typing, per chat — single source for the chat list, conversation
@@ -278,17 +282,39 @@ export function HomeScreen({
         });
     };
 
-    getChats()
-      .then((list) => alive && setChats(list))
-      .catch(() => undefined)
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-        // Connect to WS only after the REST list has loaded. The replay then lands
-        // on an already populated list (no extra getChat per chat), and WsClient
-        // applies it in one batch — the list doesn't flicker on login.
-        ws.connect();
-      });
+    // Загрузка списка чатов. Провал больше не молчит (#88-диагностика): раньше
+    // ошибка загрузки выглядела как честное «Чатов пока нет», что вводило в
+    // заблуждение (кейс с потерянным settings.js на Android).
+    const loadChats = (): void => {
+      setLoading(true);
+      setBootError(null);
+      getChats()
+        .then((list) => {
+          if (!alive) return;
+          setChats(list);
+          noteDebug('chats', list.length);
+          noteDebug('lastError', null);
+        })
+        .catch((e) => {
+          if (!alive) return;
+          const msg = e?.status != null ? String(e.status) : String(e?.message ?? e);
+          setBootError(msg);
+          noteDebug(
+            'lastError',
+            `${new Date().toISOString().slice(11, 19)} boot getChats ${msg}`,
+          );
+        })
+        .finally(() => {
+          if (!alive) return;
+          setLoading(false);
+          // Connect to WS only after the REST attempt settled. The replay then lands
+          // on an already populated list (no extra getChat per chat), and WsClient
+          // applies it in one batch — the list doesn't flicker on login.
+          ws.connect();
+        });
+    };
+    loadChats();
+    bootRetryRef.current = loadChats;
 
     // New chat created (payload carries only chatId) — fetch the chat object.
     const offCreated = ws.on('chat.created', (ev: ServerEvent) => {
@@ -805,6 +831,8 @@ export function HomeScreen({
             <ChatList
               chats={chats}
               loading={loading}
+              loadError={bootError}
+              onRetry={() => bootRetryRef.current?.()}
               selectedId={selectedId}
               myId={myId}
               onlineUsers={onlineUsers}

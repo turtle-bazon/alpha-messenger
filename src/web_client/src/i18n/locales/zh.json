@@ -51,7 +51,9 @@
     "empty": "还没有聊天",
     "notFound": "未找到结果",
     "noMessages": "没有消息",
-    "newChat": "新建聊天"
+    "newChat": "新建聊天",
+    "loadError": "加载聊天失败",
+    "retry": "重试"
   },
   "chatTitle": {
     "group": "群组",

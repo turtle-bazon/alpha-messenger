@@ -16,6 +16,8 @@ import { NewChatDialog } from './NewChatDialog';
 export function ChatList({
   chats,
   loading,
+  loadError,
+  onRetry,
   selectedId,
   myId,
   onlineUsers,
@@ -30,6 +32,8 @@ export function ChatList({
 }: {
   chats: Chat[];
   loading: boolean;
+  loadError: string | null;
+  onRetry: () => void;
   selectedId: string | null;
   myId: string | null;
   onlineUsers: Set<string>;
@@ -106,6 +110,23 @@ export function ChatList({
       <div className="chat-list-items">
         {loading ? (
           <p className="chat-list-empty">{t('common.loading')}</p>
+        ) : loadError ? (
+          <div className="chat-list-error" data-testid="chat-list-error">
+            <p className="chat-list-empty">
+              {t('chatlist.loadError')}
+              {loadError && (
+                <span className="chat-list-error-detail"> ({loadError})</span>
+              )}
+            </p>
+            <button
+              type="button"
+              className="chat-list-retry"
+              data-testid="chat-list-retry"
+              onClick={onRetry}
+            >
+              {t('chatlist.retry')}
+            </button>
+          </div>
         ) : chats.length === 0 ? (
           <p className="chat-list-empty">{t('chatlist.empty')}</p>
         ) : filtered.length === 0 ? (

@@ -51,7 +51,9 @@
     "empty": "Aucune discussion pour le moment",
     "notFound": "Aucun résultat",
     "noMessages": "Aucun message",
-    "newChat": "Nouvelle discussion"
+    "newChat": "Nouvelle discussion",
+    "loadError": "Impossible de charger les discussions",
+    "retry": "Réessayer"
   },
   "chatTitle": {
     "group": "Groupe",

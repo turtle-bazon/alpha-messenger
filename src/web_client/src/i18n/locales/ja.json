@@ -51,7 +51,9 @@
     "empty": "まだチャットはありません",
     "notFound": "見つかりません",
     "noMessages": "メッセージなし",
-    "newChat": "新しいチャット"
+    "newChat": "新しいチャット",
+    "loadError": "チャットを読み込めませんでした",
+    "retry": "再試行"
   },
   "chatTitle": {
     "group": "グループ",
