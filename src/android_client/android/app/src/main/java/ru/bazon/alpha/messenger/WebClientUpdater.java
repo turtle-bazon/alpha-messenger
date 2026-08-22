@@ -102,11 +102,17 @@ public class WebClientUpdater {
                 }
             }
 
-            // Удаляем старую версию
+            // Удаляем старую версию.
+            // ВАЖНО (#88): cacheDir содержит и settings.js (адрес сервера для
+            // клиента). Полная замена кеша стирает его — клиент теряет адрес
+            // сервера и падает на https://localhost («всё пусто» после
+            // обновления сервера, лечится перезапуском). Поэтому сразу после
+            // замены восстанавливаем файл.
             if (cacheDir.exists()) deleteRecursive(cacheDir);
 
             // Переименовываем tmp → cache
             tmpDir.renameTo(cacheDir);
+            writeSettingsJs(cacheDir);
 
             // Запоминаем версию
             SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -196,5 +202,20 @@ public class WebClientUpdater {
             }
         }
         file.delete();
+    }
+
+    /** Пишет settings.js в указанную директорию (см. MainActivity.writeSettingsJs). */
+    private void writeSettingsJs(File dir) {
+        try {
+            if (!dir.exists()) dir.mkdirs();
+            String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
+            String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
+            FileWriter w = new FileWriter(new File(dir, "settings.js"));
+            w.write(content);
+            w.close();
+            Log.d(TAG, "Wrote settings.js for " + serverUrl);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to write settings.js", e);
+        }
     }
 }

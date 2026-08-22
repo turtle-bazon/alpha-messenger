@@ -73,3 +73,14 @@ Focus-тикет: board id 72, «#88 Mobile: UI empties after server update
 Тесты: e2e/session-expiry.spec.ts (deleteSessions через БД -> клик по чату
 -> 401 -> авто-разлогин -> экран входа; повторный reload остаётся на входе).
 tsc/vite build — ок. Регресс на run/dev.
+
+## НАСТОЯЩАЯ первопричина (2026-08-22, найдена после отчёта пользователя)
+WebClientUpdater.checkAndUpdate() при обновлении веб-клиента делает
+deleteRecursive(cacheDir) и стирает settings.js (адрес сервера). Клиент
+теряет __ALPHA_CONFIG__.serverUrl, getApiUrl() падает на origin
+https://localhost — все запросы умирают, «всё пусто». Перезапуск лечит:
+onCreate заново пишет settings.js перед загрузкой. Мои ранние фиксы
+(refreshSnapshot/401) лечили симптомы, не причину.
+Фикс: WebClientUpdater восстанавливает settings.js сразу после замены кеша
+(собственный writeSettingsJs). Требуется пересборка APK.
+
