@@ -77,6 +77,10 @@ public class MainActivity extends BridgeActivity {
         File cacheDir = updater.getCacheDir();
         File cacheIndex = new File(cacheDir, "index.html");
 
+        // Отложенное при прошлом запуске обновление (#88): активируем до
+        // загрузки страницы — подмена локальных файлов, сессию не трогает.
+        updater.applyPendingUpdate();
+
         Log.d(TAG, "Cache dir: " + cacheDir.getAbsolutePath());
         Log.d(TAG, "Cache index exists: " + cacheIndex.exists());
 
@@ -86,23 +90,12 @@ public class MainActivity extends BridgeActivity {
             writeSettingsJs(serverUrl, cacheDir);
             installInterceptor(webView, cacheDir);
             hideLoading();
-            // Фоновая проверка обновлений
+            // Фоновая проверка обновлений: скачивает и помечает «отложено»,
+            // активация — при следующем запуске (см. applyPendingUpdate выше).
             new Thread(() -> {
                 try {
                     boolean updated = updater.checkAndUpdate();
-                    Log.d(TAG, "Background update: " + updated);
-                    if (updated) {
-                        new Handler(Looper.getMainLooper()).post(() -> {
-                            // Перечитываем HTML из кеша и перезагружаем
-                            CachedWebViewClient client = getCachedClient(webView);
-                            if (client != null) {
-                                String html = client.readCachedIndexHtml();
-                                if (html != null) {
-                                    webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null);
-                                }
-                            }
-                        });
-                    }
+                    Log.d(TAG, "Background update staged/ok: " + updated);
                 } catch (Exception e) {
                     Log.e(TAG, "Update failed", e);
                 }
@@ -221,17 +214,6 @@ public class MainActivity extends BridgeActivity {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (overlay != null) overlay.setVisibility(View.GONE);
         });
-    }
-
-    /** Проверяет, является ли текущий WebViewClient экземпляром CachedWebViewClient. */
-    private CachedWebViewClient getCachedClient(WebView webView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WebViewClient client = webView.getWebViewClient();
-            if (client instanceof CachedWebViewClient) {
-                return (CachedWebViewClient) client;
-            }
-        }
-        return null;
     }
 
     /**

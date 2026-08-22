@@ -25,7 +25,12 @@ import java.util.List;
  * 1. GET /mobile-client/manifest.json — получаем версию и список файлов
  * 2. Сравниваем с кешированной версией (SharedPreferences)
  * 3. Если версия отличается — скачиваем все файлы из манифеста
- * 4. Сохраняем в getFilesDir()/web_client/
+ * 4а. Кеша ещё нет — устанавливаем сразу в getFilesDir()/web_client/
+ * 4б. Кеш есть (приложение работает на нём) — оставляем скачанное во
+ *     временной папке и помечаем «отложенное обновление»; активация — при
+ *     следующем запуске (applyPendingUpdate), чтобы не подменять файлы под
+ *     работающей страницей (#88: раньше замена кеша посреди сессии рвала
+ *     settings.js и вызывала перезагрузку с миганием «всё пропало»)
  * 5. Запоминаем версию в SharedPreferences
  *
  * Используется простой HttpURLConnection без доп. зависимостей.
@@ -35,6 +40,7 @@ public class WebClientUpdater {
     private static final String TAG = "WebClientUpdater";
     private static final String PREFS_NAME = "alpha";
     private static final String KEY_CACHED_VERSION = "web_client_version";
+    private static final String KEY_PENDING_VERSION = "web_client_pending_version";
     private static final String CACHE_DIR = "web_client";
     private static final int CONNECT_TIMEOUT = 10_000;
     private static final int READ_TIMEOUT = 30_000;
@@ -86,7 +92,6 @@ public class WebClientUpdater {
             Log.d(TAG, "Updating web client: " + cachedVersion + " → " + serverVersion);
 
             JSONArray files = manifest.getJSONArray("files");
-            File cacheDir = getCacheDir();
 
             // Скачиваем все файлы во временную папку (вне cacheDir!), потом перемещаем
             File tmpDir = getTmpDir();
@@ -102,27 +107,78 @@ public class WebClientUpdater {
                 }
             }
 
-            // Удаляем старую версию.
-            // ВАЖНО (#88): cacheDir содержит и settings.js (адрес сервера для
-            // клиента). Полная замена кеша стирает его — клиент теряет адрес
-            // сервера и падает на https://localhost («всё пусто» после
-            // обновления сервера, лечится перезапуском). Поэтому сразу после
-            // замены восстанавливаем файл.
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+
+            if (hasCachedClient()) {
+                // Отложенное обновление (#88): не трогаем кеш под работающей
+                // страницей. Активация — applyPendingUpdate() при следующем запуске.
+                writeSettingsJs(tmpDir);
+                prefs.edit().putString(KEY_PENDING_VERSION, serverVersion).apply();
+                Log.d(TAG, "Staged web client update " + serverVersion
+                        + " (" + files.length() + " files), activates on next start");
+                return true;
+            }
+
+            // Первая установка: кеша нет — ставим скачанное сразу.
+            File cacheDir = getCacheDir();
             if (cacheDir.exists()) deleteRecursive(cacheDir);
 
             // Переименовываем tmp → cache
-            tmpDir.renameTo(cacheDir);
+            if (!tmpDir.renameTo(cacheDir)) {
+                Log.e(TAG, "Failed to rename tmp dir to cache dir");
+                return false;
+            }
             writeSettingsJs(cacheDir);
 
             // Запоминаем версию
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             prefs.edit().putString(KEY_CACHED_VERSION, serverVersion).apply();
 
-            Log.d(TAG, "Web client updated to " + serverVersion + " (" + files.length() + " files)");
+            Log.d(TAG, "Web client installed: " + serverVersion + " (" + files.length() + " files)");
             return true;
 
         } catch (Exception e) {
             Log.e(TAG, "Update failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Активирует отложенное обновление, если оно есть: заменяет кеш уже
+     * скачанной версией. Вызывать при старте приложения ДО загрузки страницы —
+     * операции локальные и быстрые, сессию не трогают (#88).
+     *
+     * @true если кеш был заменён
+     */
+    public boolean applyPendingUpdate() {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String pending = prefs.getString(KEY_PENDING_VERSION, null);
+        if (pending == null) return false;
+
+        File tmpDir = getTmpDir();
+        if (!new File(tmpDir, "index.html").exists()) {
+            Log.w(TAG, "Pending update " + pending + " but staged files missing, dropping");
+            prefs.edit().remove(KEY_PENDING_VERSION).apply();
+            return false;
+        }
+
+        try {
+            File cacheDir = getCacheDir();
+            if (cacheDir.exists()) deleteRecursive(cacheDir);
+            if (!tmpDir.renameTo(cacheDir)) {
+                Log.e(TAG, "Failed to activate pending update " + pending);
+                return false;
+            }
+            // ВАЖНО (#88): после замены кеша восстанавливаем settings.js —
+            // клиент без него теряет адрес сервера («всё пусто»).
+            writeSettingsJs(cacheDir);
+            prefs.edit()
+                    .putString(KEY_CACHED_VERSION, pending)
+                    .remove(KEY_PENDING_VERSION)
+                    .apply();
+            Log.d(TAG, "Activated staged web client update " + pending);
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to activate pending update " + pending, e);
             return false;
         }
     }
