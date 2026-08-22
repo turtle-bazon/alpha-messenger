@@ -34,12 +34,23 @@ initI18n().finally(() => {
   const update = () => {
     const vv = window.visualViewport;
     const dbg = (window as any).__alphaDebug ?? {};
+    // Elements sticking out past the right edge (#75): top offenders by class.
+    const ovr: string[] = [];
+    document.querySelectorAll('*').forEach((e) => {
+      const r = e.getBoundingClientRect();
+      if (r.right > window.innerWidth + 2 && e.children.length < 8) {
+        const c = (e.className && String(e.className)) || e.tagName;
+        if (!ovr.includes(c)) ovr.push(c);
+      }
+    });
     el.textContent =
       `inner=${window.innerWidth} client=${document.documentElement.clientWidth}` +
+      ` scroll=${document.documentElement.scrollWidth}` +
       `\nvisual=${vv ? Math.round(vv.width) : '?'} scale=${vv ? vv.scale.toFixed(2) : '?'}` +
       ` dpr=${window.devicePixelRatio}` +
       `\nws=${dbg.live ?? '?'} chats=${dbg.chats ?? '?'} me=${dbg.username ?? '?'}` +
-      `\nerr=${dbg.lastError ?? '-'}`;
+      `\nerr=${dbg.lastError ?? '-'}` +
+      `\novr: ${ovr.slice(0, 4).join(' | ') || '-'}`;
   };
   update();
   window.visualViewport?.addEventListener('resize', update);
