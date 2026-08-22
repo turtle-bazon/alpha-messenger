@@ -210,9 +210,9 @@ public class WebClientUpdater {
             if (!dir.exists()) dir.mkdirs();
             String escaped = serverUrl.replace("\\", "\\\\").replace("\"", "\\\"");
             String content = "window.__ALPHA_CONFIG__ = {\"serverUrl\":\"" + escaped + "\"};\n";
-            FileWriter w = new FileWriter(new File(dir, "settings.js"));
-            w.write(content);
-            w.close();
+            try (FileOutputStream w = new FileOutputStream(new File(dir, "settings.js"))) {
+                w.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
             Log.d(TAG, "Wrote settings.js for " + serverUrl);
         } catch (IOException e) {
             Log.e(TAG, "Failed to write settings.js", e);
