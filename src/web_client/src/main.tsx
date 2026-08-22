@@ -24,24 +24,26 @@ initI18n().finally(() => {
     </StrictMode>,
   );
 
-  // TEMP DEBUG (#75): viewport probe for Android builds. Shows the numbers
-  // that distinguish layout-viewport vs visual-viewport mismatch.
-  // Remove after diagnosis.
-  if (localStorage.getItem('alpha.vpdebug') === '1' || /Capacitor/i.test(navigator.userAgent)) {
-    const el = document.createElement('div');
-    el.style.cssText =
-      'position:fixed;top:0;left:0;z-index:99999;background:#000c;color:#0f0;' +
-      'font:10px monospace;padding:2px 4px;pointer-events:none;white-space:pre';
-    const update = () => {
-      const vv = window.visualViewport;
-      el.textContent =
-        `inner=${window.innerWidth} client=${document.documentElement.clientWidth}` +
-        `\nvisual=${vv ? Math.round(vv.width) : '?'} scale=${vv ? vv.scale.toFixed(2) : '?'}` +
-        ` dpr=${window.devicePixelRatio}`;
-    };
-    update();
-    window.visualViewport?.addEventListener('resize', update);
-    window.addEventListener('resize', update);
-    document.body.appendChild(el);
-  }
+  // TEMP DEBUG (#75/#88): unconditional diagnostic overlay. Viewport numbers
+  // (layout vs visual mismatch) + app state snapshot (ws live, chats count,
+  // last REST error). REMOVE AFTER DIAGNOSIS.
+  const el = document.createElement('div');
+  el.style.cssText =
+    'position:fixed;top:0;left:0;z-index:99999;background:#000c;color:#0f0;' +
+    'font:10px monospace;padding:2px 4px;pointer-events:none;white-space:pre';
+  const update = () => {
+    const vv = window.visualViewport;
+    const dbg = (window as any).__alphaDebug ?? {};
+    el.textContent =
+      `inner=${window.innerWidth} client=${document.documentElement.clientWidth}` +
+      `\nvisual=${vv ? Math.round(vv.width) : '?'} scale=${vv ? vv.scale.toFixed(2) : '?'}` +
+      ` dpr=${window.devicePixelRatio}` +
+      `\nws=${dbg.live ?? '?'} chats=${dbg.chats ?? '?'} me=${dbg.username ?? '?'}` +
+      `\nerr=${dbg.lastError ?? '-'}`;
+  };
+  update();
+  window.visualViewport?.addEventListener('resize', update);
+  window.addEventListener('resize', update);
+  setInterval(update, 1000);
+  document.body.appendChild(el);
 });

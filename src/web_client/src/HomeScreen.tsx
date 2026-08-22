@@ -257,13 +257,25 @@ export function HomeScreen({
     // or the app woke up with a pruned outbox (nothing to replay), this is
     // what restores the state — without it the UI stays empty until an app
     // restart (#88).
+    const noteDebug = (k: string, v: unknown): void => {
+      ((window as any).__alphaDebug ??= {})[k] = v;
+    };
     const refreshSnapshot = (): void => {
       getChats()
-        .then((list) => alive && setChats(list))
-        .catch(() => undefined);
+        .then((list) => {
+          if (!alive) return;
+          setChats(list);
+          noteDebug('chats', list.length);
+          noteDebug('lastError', null);
+        })
+        .catch((e) => {
+          noteDebug('lastError', `${new Date().toISOString().slice(11, 19)} getChats ${e?.status ?? e?.message ?? e}`);
+        });
       getMe()
         .then((me) => alive && setUsername(me.username))
-        .catch(() => undefined);
+        .catch((e) => {
+          noteDebug('lastError', `${new Date().toISOString().slice(11, 19)} getMe ${e?.status ?? e?.message ?? e}`);
+        });
     };
 
     getChats()
@@ -480,6 +492,7 @@ export function HomeScreen({
     // After the replay finishes (synced), take a snapshot of online users; also
     // covers reconnects — reseed the set on every synced.
     const offSynced = ws.on('synced', () => {
+      noteDebug('live', true);
       refreshSnapshot();
       void getPresence()
         .then((p) => {
