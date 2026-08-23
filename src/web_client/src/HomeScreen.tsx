@@ -96,6 +96,10 @@ export function HomeScreen({
     senderId: string;
   } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // #92: на телефоне (одноколоночный режим ≤600px) открытие чата добавляет
+  // запись в историю WebView/браузера. Системный Back (жест от левого края)
+  // тогда возвращает к списку чатов вместо закрытия приложения — как в Telegram.
+  const isNarrowPane = (): boolean => window.matchMedia('(max-width: 600px)').matches;
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
   // Notification permission request banner: shown only on first visit (no keys
@@ -105,6 +109,29 @@ export function HomeScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   selectedRef.current = selectedId;
+
+  // #92: открытие чата на телефоне — push записи истории (см. isNarrowPane).
+  useEffect(() => {
+    if (!selectedId || !isNarrowPane()) return;
+    if (!history.state?.alphaChat) history.pushState({ alphaChat: true }, '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  // #92: Back-навигация закрывает открытый чат.
+  useEffect(() => {
+    const onPopState = (): void => {
+      if (selectedRef.current) setSelectedId(null);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Закрытие чата: в одноколоночном режиме съедаем свою запись истории,
+  // чтобы стек не рос; на десктопе просто сбрасываем выбор.
+  function closeChat(): void {
+    if (isNarrowPane() && history.state?.alphaChat) history.back();
+    else setSelectedId(null);
+  }
 
   // Peer display name for the call overlay: look up the participant across
   // all known chats (works for both outgoing and incoming calls).
@@ -566,7 +593,7 @@ export function HomeScreen({
       if (!chatId) return;
       if (p.userId === myId) {
         setChats((prev) => prev.filter((c) => c.chatId !== chatId));
-        if (selectedRef.current === chatId) setSelectedId(null);
+        if (selectedRef.current === chatId) closeChat();
         return;
       }
       // On replay, chat membership is already current from getChats — update live only.
@@ -839,7 +866,7 @@ export function HomeScreen({
             awayUsers={awayUsers}
             typingUsers={typingByChat.get(selectedChat.chatId) ?? EMPTY_TYPING}
             inputRef={inputRef}
-            onBack={() => setSelectedId(null)}
+            onBack={closeChat}
             onShowProfile={onShowProfile}
             onCall={(peerId, video) => void callCtl.startCall(peerId, video)}
             onForward={(m) => setForwardMsg({ content: m.content, senderId: m.senderId })}
@@ -850,7 +877,7 @@ export function HomeScreen({
             }}
             onChatRemoved={(chatId) => {
               setChats((prev) => prev.filter((c) => c.chatId !== chatId));
-              setSelectedId(null);
+              closeChat();
             }}
           />
         ) : (
