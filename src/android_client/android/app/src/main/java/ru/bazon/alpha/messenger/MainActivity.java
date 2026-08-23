@@ -17,6 +17,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
@@ -69,6 +70,23 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UnifiedPushPlugin.class);
         registerPlugin(NotificationPlugin.class);
         super.onCreate(savedInstanceState);
+
+        // #92: системный Back (жест от края / кнопка) по умолчанию просто
+        // закрывает активность — ядро Capacitor историю WebView само не
+        // использует. Роутим Back в WebView: открытый чат закроется в список
+        // (запись истории кладёт веб-клиент), при пустой истории — как раньше.
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView webView = getBridge().getWebView();
+                if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
 
         showLoadingOverlay();
 
