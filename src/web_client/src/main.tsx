@@ -23,38 +23,4 @@ initI18n().finally(() => {
       <App />
     </StrictMode>,
   );
-
-  // TEMP DEBUG (#75/#88): unconditional diagnostic overlay. Viewport numbers
-  // (layout vs visual mismatch) + app state snapshot (ws live, chats count,
-  // last REST error). REMOVE AFTER DIAGNOSIS.
-  const el = document.createElement('div');
-  el.style.cssText =
-    'position:fixed;top:0;left:0;z-index:99999;background:#000c;color:#0f0;' +
-    'font:10px monospace;padding:2px 4px;pointer-events:none;white-space:pre';
-  const update = () => {
-    const vv = window.visualViewport;
-    const dbg = (window as any).__alphaDebug ?? {};
-    // Elements sticking out past the right edge (#75): top offenders by class.
-    const ovr: string[] = [];
-    document.querySelectorAll('*').forEach((e) => {
-      const r = e.getBoundingClientRect();
-      if (r.right > window.innerWidth + 2 && e.children.length < 8) {
-        const c = (e.className && String(e.className)) || e.tagName;
-        if (!ovr.includes(c)) ovr.push(c);
-      }
-    });
-    el.textContent =
-      `inner=${window.innerWidth} client=${document.documentElement.clientWidth}` +
-      ` scroll=${document.documentElement.scrollWidth}` +
-      `\nvisual=${vv ? Math.round(vv.width) : '?'} scale=${vv ? vv.scale.toFixed(2) : '?'}` +
-      ` dpr=${window.devicePixelRatio}` +
-      `\nws=${dbg.live ?? '?'} chats=${dbg.chats ?? '?'} me=${dbg.username ?? '?'}` +
-      `\nerr=${dbg.lastError ?? '-'}` +
-      `\novr: ${ovr.slice(0, 4).join(' | ') || '-'}`;
-  };
-  update();
-  window.visualViewport?.addEventListener('resize', update);
-  window.addEventListener('resize', update);
-  setInterval(update, 1000);
-  document.body.appendChild(el);
 });
