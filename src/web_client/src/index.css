@@ -695,6 +695,11 @@ body {
 .bubble {
   position: relative;
   max-width: 70%;
+  /* #93: без min-width:0 flex-элемент не сжимается ниже min-content.
+     У <img> медиа задана inline width (до 480px), а процентный max-width
+     при расчёте min-content игнорируется — пузырь с картинкой распирает
+     ряд шире экрана, появляется горизонтальный скролл и обрезка. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding: 6px 10px;
