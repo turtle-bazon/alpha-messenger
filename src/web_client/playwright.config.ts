@@ -8,6 +8,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: [['list']],
+  // Most assertions wait for something the server delivers asynchronously
+  // (WS message, blob upload, presence broadcast). The 5s default is tight
+  // when the whole suite hammers one server, and produced flaky failures that
+  // passed in isolation — 10s keeps the intent and removes the flakiness.
+  expect: { timeout: 10_000 },
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

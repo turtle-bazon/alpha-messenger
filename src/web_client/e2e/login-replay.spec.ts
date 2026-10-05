@@ -75,7 +75,11 @@ test('повторный логин: реплей не дёргает getChat н
   const item = page.getByTestId('chat-item');
   await expect(item).toHaveCount(1);
   await expect(item.first()).toContainText(b.username);
-  await expect(item.first()).toContainText('Ответ от B');
+  // Превью в списке обновляется независимо от переписки (свой setState),
+  // поэтому ждём с опросом, а не проверяем один раз.
+  await expect
+    .poll(async () => (await item.first().textContent()) ?? '', { timeout: 10_000 })
+    .toContain('Ответ от B');
 
   // Дать реплею прийти и примениться, затем проверить отсутствие getChat.
   await page.waitForTimeout(800);

@@ -342,55 +342,6 @@ body {
   color: var(--text-muted);
 }
 
-/* Настройки уведомлений: колокольчик в шапке + выпадающее меню под ним. */
-.notif-settings {
-  position: relative;
-  display: inline-flex;
-}
-
-.notif-menu {
-  /* position: fixed — меню вырывается из .app-shell (overflow: hidden), а
-     координаты (top/left) считает компонент с клампом по вьюпорту (проблема
-     №11: иначе меню обрезалось слева). */
-  position: fixed;
-  z-index: 20;
-  min-width: 240px;
-  padding: 6px;
-  background: var(--bg);
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-pop);
-}
-
-.notif-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 10px;
-  border-radius: var(--radius-sm);
-  font-weight: 400;
-  cursor: pointer;
-}
-
-.notif-row:hover {
-  background: var(--bg-hover);
-}
-
-.notif-row input {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent);
-}
-
-.notif-hint {
-  padding: 6px 10px 8px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
-
 /* Модальный диалог запроса разрешения на уведомления */
 .notif-overlay {
   position: fixed;
@@ -4067,33 +4018,6 @@ body {
   color: var(--text-muted);
   margin-left: 6px;
 }
-
-/* Search channels dialog. */
-.search-channels-dialog { max-width: 400px; }
-.search-channels-dialog .search-input {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--bg-input); font-size: 14px; outline: none; box-sizing: border-box;
-}
-.search-channels-dialog .search-input:focus { border-color: var(--accent); }
-.search-results { margin-top: 8px; max-height: 300px; overflow-y: auto; }
-.search-result-item {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 8px; border: none; background: none;
-  cursor: pointer; text-align: left; border-radius: 6px;
-}
-.search-result-item:hover { background: var(--bg-hover); }
-.search-result-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--accent); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 600; flex-shrink: 0;
-}
-.search-result-info { flex: 1; min-width: 0; }
-.search-result-title { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.search-result-subtitle { font-size: 12px; color: var(--text-muted); }
-.search-result-meta { font-size: 12px; color: var(--text-muted); }
-.search-loading, .search-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 16px 0; }
 
 /* Контекстное меню (#54). */
 .context-menu {

@@ -1,11 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  updateChat,
-  subscribeChannel,
-  unsubscribeChannel,
-  searchChannels,
-} from '../api/rest';
+import { updateChat, subscribeChannel, unsubscribeChannel } from '../api/rest';
 import type { Chat } from '../api/types';
 import { IconX } from '../util/icons';
 
@@ -158,93 +153,6 @@ export function ChannelInfoDialog({ chat, myId, onClose, onUpdated, onRemoved }:
               )}
             </>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Channel search dialog.
-interface SearchChannelsDialogProps {
-  onClose: () => void;
-  onSelect: (chatId: string) => void;
-}
-
-export function SearchChannelsDialog({ onClose, onSelect }: SearchChannelsDialogProps): JSX.Element {
-  const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{
-    chatId: string;
-    title: string;
-    username: string;
-    description: string;
-    subscriberCount: number;
-  }>>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (query.trim().length === 0) {
-      setResults([]);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setLoading(true);
-      searchChannels(query)
-        .then((res) => setResults(res.chats))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  return (
-    <div
-      className="members-backdrop"
-      data-testid="search-channels-dialog"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="profile-dialog">
-        <div className="profile-head">
-          <span className="profile-title">{t('channelInfo.findTitle')}</span>
-          <button type="button" className="members-close" onClick={onClose} data-testid="search-channels-close" aria-label={t('common.close')}>
-            <IconX />
-          </button>
-        </div>
-        <div className="profile-body">
-          <input
-            className="search-input"
-            placeholder={t('channelInfo.searchPlaceholder')}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
-          {loading && <div className="search-loading">{t('channelInfo.searching')}</div>}
-          <div className="search-results">
-            {results.map((ch) => (
-              <button
-                key={ch.chatId}
-                type="button"
-                className="search-result-item"
-                onClick={() => { onSelect(ch.chatId); onClose(); }}
-              >
-                <div className="search-result-avatar">
-                  {ch.title ? ch.title.charAt(0).toUpperCase() : '#'}
-                </div>
-                <div className="search-result-info">
-                  <div className="search-result-title">{ch.title || ch.username}</div>
-                  {ch.username && <div className="search-result-subtitle">@{ch.username}</div>}
-                  <div className="search-result-meta">
-                  {t('channelInfo.subscribers', { count: ch.subscriberCount })}
-                </div>
-                </div>
-              </button>
-            ))}
-            {!loading && query && results.length === 0 && (
-              <div className="search-empty">{t('channelInfo.notFound')}</div>
-            )}
-          </div>
         </div>
       </div>
     </div>
