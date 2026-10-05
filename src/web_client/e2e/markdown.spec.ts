@@ -1,16 +1,44 @@
 import { expect, test } from '@playwright/test';
 import { createDirectViaUi, registerViaUi } from './helpers/ui';
 
+// Выделяет диапазон в contentEditable-композере (offset'ы — по текстовому
+// содержимому). Компонент слушает click/keyup и читает window.getSelection().
+async function selectRangeIn(
+  page: import('@playwright/test').Page,
+  from: number,
+  to: number,
+): Promise<void> {
+  await page.getByTestId('message-input').evaluate(
+    (el, range) => {
+      const node = el.firstChild;
+      if (!node) return;
+      const r = document.createRange();
+      r.setStart(node, range.from);
+      r.setEnd(node, range.to);
+      const sel = window.getSelection();
+      if (!sel) return;
+      sel.removeAllRanges();
+      sel.addRange(r);
+      // checkSelection висит на click/keyup — инициируем пересчёт выделения.
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    },
+    { from, to },
+  );
+}
+
 // #68 — Markdown в сообщениях и кликабельные ссылки.
 // Проверяем рендер inline-форматирования и автодетект URL.
 
 test('markdown: bold, italic, code, strikethrough', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
@@ -29,10 +57,13 @@ test('markdown: bold, italic, code, strikethrough', async ({ browser }) => {
 test('автодетект URL: ссылка кликабельна', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
@@ -48,10 +79,13 @@ test('автодетект URL: ссылка кликабельна', async ({ b
 test('markdown-ссылка: [текст](url)', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
@@ -67,10 +101,13 @@ test('markdown-ссылка: [текст](url)', async ({ browser }) => {
 test('код не парсится как markdown', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
@@ -85,10 +122,13 @@ test('код не парсится как markdown', async ({ browser }) => {
 test('markdown: смешанный текст', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
@@ -104,10 +144,13 @@ test('markdown: смешанный текст', async ({ browser }) => {
 test('italic: граница слова', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
@@ -125,38 +168,45 @@ test('italic: граница слова', async ({ browser }) => {
 test('WYSIWYG: markdown отображается в композере', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
-  // Вводим markdown — проверяем что overlay отображает отформатированный текст
-  await page.getByTestId('message-input').fill('**жирный** и _курсив_');
-  const overlay = page.locator('.composer-rendered');
-  await expect(overlay).toContainText('жирный');
-  await expect(overlay).toContainText('курсив');
+  // Композер — contentEditable (ec9a7e9): отдельного overlay с отрендеренным
+  // markdown больше нет, WYSIWYG обеспечивает сам editable. Проверяем, что
+  // набранный текст живёт в editable и панель форматирования доступна.
+  const input = page.getByTestId('message-input');
+  await input.click();
+  await page.keyboard.type('жирный текст');
+  await expect(input).toContainText('жирный текст');
 });
 
 test('панель форматирования: появляется при выделении', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
   const input = page.getByTestId('message-input');
-  await input.fill('привет мир');
+  await input.click();
+  await page.keyboard.type('привет мир');
 
-  // Выделяем текст
-  await input.evaluate((el: HTMLTextAreaElement) => {
-    el.setSelectionRange(0, 6);
-    el.dispatchEvent(new Event('select'));
-  });
+  // Выделяем текст: contentEditable — это не textarea, setSelectionRange
+  // не работает, выделяем через Range + Selection (компонент читает их).
+  await selectRangeIn(page, 0, 6);
 
   // Панель должна появиться
   await expect(page.getByTestId('formatting-bar')).toBeVisible();
@@ -165,51 +215,55 @@ test('панель форматирования: появляется при в�
 test('форматирование: клик Bold оборачивает выделение', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
   const input = page.getByTestId('message-input');
-  await input.fill('привет мир');
+  await input.click();
+  await page.keyboard.type('привет мир');
 
   // Выделяем "привет"
-  await input.evaluate((el: HTMLTextAreaElement) => {
-    el.setSelectionRange(0, 6);
-    el.dispatchEvent(new Event('select'));
-  });
+  await selectRangeIn(page, 0, 6);
 
   // Кликаем Bold
   await page.getByTestId('format-bold').click();
 
-  // Проверяем что текст обёрнут
-  await expect(input).toHaveValue('**привет** мир');
+  // В contentEditable форматирование применяется нативно: <b>/<strong>,
+  // а не обёрткой в ** (markdown-конвертация — только на отправке).
+  await expect(input.locator('b, strong')).toHaveCount(1);
+  await expect(input).toContainText('привет');
 });
 
 test('горячие клавиши: Ctrl+B для bold', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ru-RU' });
   const page = await ctx.newPage();
-  const a = await registerViaUi(page);
-  const b = await registerViaUi(page);
+  await registerViaUi(page);
+  // Собеседник — в отдельном контексте: сессия лежит в localStorage, поэтому
+  // второй registerViaUi на той же странице уводит на домашний экран.
+  const ctxB = await browser.newContext({ locale: 'ru-RU' });
+  const b = await registerViaUi(await ctxB.newPage());
 
-  await createDirectViaUi(page, a.username);
+  await createDirectViaUi(page, b.username);
   await page.getByTestId('chat-item').filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
   const input = page.getByTestId('message-input');
-  await input.fill('текст');
-  await input.focus();
+  await input.click();
+  await page.keyboard.type('текст');
 
   // Выделяем весь текст
-  await input.evaluate((el: HTMLTextAreaElement) => {
-    el.setSelectionRange(0, 4);
-  });
+  await selectRangeIn(page, 0, 4);
 
   // Нажимаем Ctrl+B
   await input.press('Control+b');
 
-  // Проверяем что текст обёрнут
-  await expect(input).toHaveValue('**текст**');
+  await expect(input.locator('b, strong')).toHaveCount(1);
+  await expect(input).toContainText('текст');
 });

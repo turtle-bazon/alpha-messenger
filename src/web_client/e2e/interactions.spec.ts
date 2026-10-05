@@ -34,14 +34,14 @@ test('edit, delete, read и typing между двумя пользовател�
   await expect(pageB.getByTestId('typing-indicator')).toBeVisible();
   await pageA.getByTestId('message-input').fill('');
 
-  // edit: A правит своё сообщение -> B видит новый текст и пометку «ред.»
+  // edit: A правит своё сообщение -> B видит новый текст и иконку правки
   const ownBubble = pageA.getByTestId('message').filter({ hasText: 'исходное' });
   await ownBubble.hover();
   await ownBubble.getByTestId('msg-edit').click();
   await pageA.getByTestId('message-input').fill('исправленное');
   await pageA.getByTestId('message-send').click();
   await expect(pageB.getByTestId('messages')).toContainText('исправленное');
-  await expect(pageB.getByTestId('messages')).toContainText('ред.');
+  await expect(pageB.getByTestId('msg-edited')).toBeVisible();
 
   // delete: A удаляет -> B видит «Сообщение удалено»
   const edited = pageA.getByTestId('message').filter({ hasText: 'исправленное' });

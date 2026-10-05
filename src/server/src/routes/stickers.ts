@@ -15,11 +15,29 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: 'title too long' });
     }
 
-    const res = await pool.query(
-      'INSERT INTO sticker_packs(user_id, title) VALUES ($1, $2) RETURNING pack_id, created_at',
-      [userId, title.trim()],
-    );
-    const pack = res.rows[0];
+    // Создаём пак и сразу ставим его владельцу: GET /sticker-packs отдаёт
+    // только то, что есть в user_sticker_packs, иначе свежий пак не виден
+    // ни в пикере, ни в панели стикеров до ручной установки.
+    const client = await pool.connect();
+    let pack: { pack_id: string; created_at: Date };
+    try {
+      await client.query('BEGIN');
+      const ins = await client.query(
+        'INSERT INTO sticker_packs(user_id, title) VALUES ($1, $2) RETURNING pack_id, created_at',
+        [userId, title.trim()],
+      );
+      pack = ins.rows[0];
+      await client.query(
+        'INSERT INTO user_sticker_packs(pack_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [pack.pack_id, userId],
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
     return reply.code(201).send({
       packId: pack.pack_id,
       title: title.trim(),

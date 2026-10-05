@@ -54,7 +54,12 @@ async function request<T>(
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    handleAuthFailure(path);
+    // Только 401 означает потерю сессии. На любой другой ошибке (404 «нет
+    // такого пользователя», 400 валидация, 403 права, 5xx) разлогинивать нельзя:
+    // клиент показывает ошибку в своём диалоге. Раньше здесь стоял вызов на
+    // каждый !res.ok — любой неудачный запрос стирал сессию и перезагружал
+    // страницу, из-за чего пропадала ошибка в форме.
+    if (res.status === 401) handleAuthFailure(path);
     throw new ApiError(res.status, data);
   }
   return data as T;

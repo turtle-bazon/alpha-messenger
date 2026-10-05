@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { registerViaApi } from './helpers/api';
-import { registerViaUi } from './helpers/ui';
+import { loginViaUi, registerViaUi } from './helpers/ui';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000';
 
@@ -33,7 +33,7 @@ test('channels: create channel via UI', async ({ page }) => {
 
   // There should be a "New channel" option — for now it's in the group flow
   // with channelUsername field. Close dialog.
-  await page.getByTestId('new-chat-dialog-close').click();
+  await page.getByTestId('new-chat-close').click();
 });
 
 // Subscribe and unsubscribe
@@ -45,12 +45,16 @@ test('channels: subscribe and unsubscribe', async ({ page }) => {
   const channelName = `testch_${Date.now()}`;
   await createChannelViaApi(user.token, 'Test Channel', channelName);
 
-  // Reload to see the channel
-  await page.reload();
-  await page.waitForTimeout(500);
+  // Публичный канал попадает в список только после подписки, а найти его можно
+  // по ссылке /channel/@handle/ — открываем её и жмём «Подписаться».
+  await page.goto(`/channel/${channelName}/`);
+  const banner = page.getByTestId('channel-subscribe-banner');
+  await expect(banner).toBeVisible();
+  await banner.getByRole('button', { name: 'Подписаться' }).click();
 
-  // Open the channel
-  await page.getByTestId('chat-item').first().click();
+  // Теперь канал в списке.
+  await expect(page.getByTestId('chat-item').filter({ hasText: 'Test Channel' })).toBeVisible();
+  await page.getByTestId('chat-item').filter({ hasText: 'Test Channel' }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
 
   // Open channel info
@@ -76,21 +80,25 @@ test('channels: subscriber cannot send messages', async ({ browser }) => {
   const owner = await registerViaApi();
   const sub = await registerViaApi();
 
-  await registerViaUi(pageOwner);
-  await registerViaUi(pageSub);
+  // В браузере заходим под теми же API-пользователями, что участвуют в сценарии
+  // (иначе в списке не того подписчика и канала там нет).
+  await loginViaUi(pageOwner, owner.username, owner.password);
+  await loginViaUi(pageSub, sub.username, sub.password);
 
   // Owner creates a channel
   const channelName = `subtest_${Date.now()}`;
   const chatId = await createChannelViaApi(owner.token, 'Sub Test', channelName);
 
-  // Sub subscribes via API
-  await fetch(`${API}/api/chats/${chatId}/subscribe`, {
+  // Sub subscribes via API (проверяем ответ: иначе падение ниже не объясняет
+  // себе причину — подписчика в списке не будет).
+  const subRes = await fetch(`${API}/api/chats/${chatId}/subscribe`, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${sub.token}`,
-    },
+    // Без content-type: тело пустое, а Fastify отвергает запрос с
+    // application/json без тела (FST_ERR_CTP_EMPTY_JSON_BODY). Клиент
+    // приложения заголовок ставит только когда тело есть.
+    headers: { authorization: `Bearer ${sub.token}` },
   });
+  expect(subRes.status, `subscribe failed: ${await subRes.text()}`).toBe(201);
 
   // Reload both
   await pageOwner.reload();

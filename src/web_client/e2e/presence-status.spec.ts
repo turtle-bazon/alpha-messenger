@@ -25,11 +25,14 @@ test('ChatList: кружок присутствия в личном чате (о
     'online',
   );
 
-  // B уходит (закрываем вкладку) → presence offline → серый кружок.
+  // B уходит (закрываем вкладку) → сервер регистрирует обрыв WS и шлёт
+  // presence по со-участникам. Это асинхронный обмен с БД, поэтому под
+  // нагрузкой полного прогона 5 секунд не хватает — ждём с запасом.
   await ctxB.close();
   await expect(aItem.getByTestId('avatar-status')).toHaveAttribute(
     'data-status',
     'offline',
+    { timeout: 20_000 },
   );
 
   await ctxA.close();

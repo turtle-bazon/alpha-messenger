@@ -102,6 +102,9 @@ export function HomeScreen({
   const isNarrowPane = (): boolean => window.matchMedia('(max-width: 600px)').matches;
   const [theme, setThemeState] = useState<Theme>(getTheme);
   const selectedRef = useRef<string | null>(null);
+  // Флаг: запись истории съедается по нажатию кнопки «назад» в шапке (#92),
+  // а не системным back — обработчик popstate различает эти случаи.
+  const closingViaHistoryRef = useRef(false);
   // Notification permission request banner: shown only on first visit (no keys
   // in localStorage) and if permission is not yet granted/blocked.
   const [showNotifBanner, setShowNotifBanner] = useState(false);
@@ -117,10 +120,31 @@ export function HomeScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // #92: Back-навигация закрывает открытый чат.
+  // #92: Back-навигация закрывает открытый чат. Корневая запись-«страж» не даёт
+  // системному back выйти из приложения, когда история чата исчерпана: вместо
+  // выхода она перевзводится, и пользователь остаётся в списке.
   useEffect(() => {
-    const onPopState = (): void => {
-      if (selectedRef.current) setSelectedId(null);
+    if (!isNarrowPane()) return;
+    if (!history.state?.alphaSentinel && !history.state?.alphaChat) {
+      history.pushState({ alphaSentinel: true }, '');
+    }
+    const onPopState = (e: PopStateEvent): void => {
+      // Back, запрошенный самим приложением (кнопка «назад» в шапке).
+      if (closingViaHistoryRef.current) {
+        closingViaHistoryRef.current = false;
+        setSelectedId(null);
+        return;
+      }
+      // Открыт чат — любой back закрывает его (в том числе системный).
+      if (selectedRef.current) {
+        setSelectedId(null);
+        return;
+      }
+      // Мы в корне (список чатов): не выходим из приложения, а перевзводим
+      // запись-страж, чтобы следующий back снова остался внутри.
+      if (e.state?.alphaSentinel) {
+        history.pushState({ alphaSentinel: true }, '');
+      }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -129,8 +153,12 @@ export function HomeScreen({
   // Закрытие чата: в одноколоночном режиме съедаем свою запись истории,
   // чтобы стек не рос; на десктопе просто сбрасываем выбор.
   function closeChat(): void {
-    if (isNarrowPane() && history.state?.alphaChat) history.back();
-    else setSelectedId(null);
+    if (isNarrowPane() && history.state?.alphaChat) {
+      closingViaHistoryRef.current = true;
+      history.back();
+    } else {
+      setSelectedId(null);
+    }
   }
 
   // Peer display name for the call overlay: look up the participant across
@@ -179,8 +207,13 @@ export function HomeScreen({
     // Explicitly persist notification defaults to localStorage (known issue
     // #29) so storage and UI don't diverge.
     initNotifDefaults();
-    // On Android, request POST_NOTIFICATIONS permission
-    void ensureBrowserPermission();
+    // On Android, request POST_NOTIFICATIONS permission. On web the permission
+    // is requested only from the explicit prompt (notif-overlay): a browser
+    // requires a user gesture for requestPermission(), and calling it on every
+    // mount fired the request without one (twice, under StrictMode).
+    if ((window as any).Capacitor?.isNativePlatform?.()) {
+      void ensureBrowserPermission();
+    }
     // If browser notifications are enabled (default '1' or enabled by the user)
     // but system permission hasn't been requested yet (permission = 'default'),
     // show the banner. The request happens on click (user gesture); otherwise

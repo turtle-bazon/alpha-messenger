@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import { createInvite } from './db';
+import { registerViaApi, type ApiUser } from './api';
 
 // Регистрация нового пользователя через UI и вход в приложение.
 // Возвращает креды для последующего повторного входа в сценарии.
@@ -58,4 +59,17 @@ export async function createGroupViaUi(
   }
   await page.getByTestId('new-group-submit').click();
   await expect(page.getByTestId('new-chat-dialog')).toHaveCount(0);
+}
+
+// Открывает direct-чат с собеседником, зарегистрированным через REST.
+// Нужен там, где сценарий работает с композером/панелью эмодзи: без открытого
+// чата переписки на экране нет, а значит нет и композера.
+export async function openDirectWithApiPeer(
+  page: Page,
+  peer?: ApiUser,
+): Promise<ApiUser> {
+  const other = peer ?? (await registerViaApi());
+  await createDirectViaUi(page, other.username);
+  await expect(page.getByTestId('conversation-open')).toBeVisible();
+  return other;
 }

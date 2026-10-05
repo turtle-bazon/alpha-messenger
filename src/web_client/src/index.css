@@ -2570,15 +2570,18 @@ body {
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,.25);
-  opacity: 0;
-  transform: scale(0.7);
+  /* Кнопка «новый чат» всегда интерактивна: показ по наведению делал её
+     недоступной на тач-устройствах (там нет hover) и ломал автотесты —
+     проверка hit-target в Playwright происходит до наведения мыши, и клик
+     перехватывал список чатов. */
+  opacity: 1;
+  transform: scale(1);
   transition: opacity .2s, transform .2s;
-  pointer-events: none;
 }
 
 .chat-list:hover .chat-fab {
   opacity: 1;
-  transform: scale(1);
+  transform: scale(1.06);
   pointer-events: auto;
 }
 

@@ -182,7 +182,7 @@ test('изображение рендерится стандартной мед�
   for (const page of [pageA, pageB]) {
     const img = page.getByTestId('message-image');
     await expect(img).toHaveAttribute('src', /^data:image\//);
-    const box = (await img.boundingBox())!;
+    const box = await boxOf(img);
     assertBox(box, 480, 300);
   }
 });
@@ -211,9 +211,28 @@ test('маленькое изображение растягивается до 
   for (const page of [pageA, pageB]) {
     const img = page.getByTestId('message-image');
     await expect(img).toHaveAttribute('src', /^data:image\//);
-    assertBox((await img.boundingBox())!, 480, 384);
+    const box = await boxOf(img);
+    assertBox(box, 480, 384);
   }
 });
+
+// Ждёт, пока картинка будет отрисована, и отдаёт её бокс: сразу после
+// появления элемента boundingBox() ещё null, а размеры финальны после декодирования.
+async function boxOf(
+  img: import('@playwright/test').Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  let box: { x: number; y: number; width: number; height: number } | null = null;
+  await expect
+    .poll(
+      async () => {
+        box = await img.boundingBox();
+        return box !== null;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true);
+  return box!;
+}
 
 function assertBox(
   box: { x: number; y: number; width: number; height: number },

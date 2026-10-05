@@ -81,8 +81,11 @@ test('пак эмодзи доступен в пикере и отправляе
   await expect(tile).toBeVisible();
   await tile.click();
 
-  await expect(pageA.getByTestId('message-image')).toHaveCount(1);
-  await expect(pageB.getByTestId('message-image')).toHaveCount(1);
+  // Наборы картинок-эмодзи переиспользуют стикерную инфраструктуру
+  // (sticker_packs + отправка стикером) — полноценные кастомные эмодзи
+  // как отдельная сущность остаются в бэклоге (#62).
+  await expect(pageA.getByTestId('message-sticker')).toHaveCount(1);
+  await expect(pageB.getByTestId('message-sticker')).toHaveCount(1);
 
   // Панель закрылась после выбора.
   await expect(pageA.getByTestId('media-panel')).toHaveCount(0);

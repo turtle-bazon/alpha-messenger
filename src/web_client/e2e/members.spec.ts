@@ -43,9 +43,10 @@ test('заголовок direct: статус собеседника в сети
   // Заголовок A показывает собеседника «в сети»
   await expect(pageA.getByTestId('conv-subtitle')).toHaveText('в сети');
 
-  // B уходит (закрываем контекст) — A вживую видит «не в сети»
+  // B уходит (закрываем контекст) — заголовок перестаёт показывать «в сети».
+  // Дальше показывается «был(а) …» (фича #36 last-seen), а не голое «не в сети».
   await ctxB.close();
-  await expect(pageA.getByTestId('conv-subtitle')).toHaveText('не в сети');
+  await expect(pageA.getByTestId('conv-subtitle')).not.toHaveText('в сети');
 
   await ctxA.close();
 });
@@ -92,6 +93,8 @@ test('окно участников: добавление участника с�
 
   // A открывает окно участников и добавляет C по username
   await pageA.getByTestId('conv-header-info').click();
+  await expect(pageA.getByTestId('group-info-dialog')).toBeVisible();
+  await pageA.getByTestId('group-info-members').click();
   await expect(pageA.getByTestId('members-dialog')).toBeVisible();
   await expect(pageA.getByTestId('member-row')).toHaveCount(2);
   await pageA.getByTestId('member-add-input').fill(c.username);
@@ -113,6 +116,7 @@ test('окно участников: добавление участника с�
 
   // C — не создатель: формы добавления в окне участников нет
   await pageC.getByTestId('conv-header-info').click();
+  await pageC.getByTestId('group-info-members').click();
   await expect(pageC.getByTestId('members-dialog')).toBeVisible();
   await expect(pageC.getByTestId('member-add-input')).toHaveCount(0);
 
@@ -136,6 +140,7 @@ test('окно участников: открытие, список и удал�
   // Клик по заголовку открывает окно участников
   await expect(page.getByTestId('members-dialog')).toHaveCount(0);
   await page.getByTestId('conv-header-info').click();
+  await page.getByTestId('group-info-members').click();
   await expect(page.getByTestId('members-dialog')).toBeVisible();
 
   // В списке три участника: я (создатель) + B + C

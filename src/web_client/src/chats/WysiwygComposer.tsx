@@ -89,7 +89,13 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
   ): JSX.Element {
     const { t } = useTranslation();
     const ph = placeholder ?? t('conv.message');
-    const skipNextInputRef = useRef(false);
+    // Текст, который мы сами записали в editable (setMarkdown / внешняя синхронизация).
+  // Событие input нужно игнорировать только если оно соответствует нашей же
+  // записи. Раньше здесь стоял флаг «пропустить следующий input», но он съедал
+  // первое же нажатие клавиши после отправки сообщения (композер чистили
+  // программно) — символ попадал в DOM, но не в состояние, и кнопка отправки
+  // не появлялась, пока пользователь не набирал следующий символ.
+  const programmaticTextRef = useRef<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       getMarkdown(): string {
@@ -100,7 +106,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       setMarkdown(md: string): void {
         const el = divRef.current;
         if (!el) return;
-        skipNextInputRef.current = true;
+        programmaticTextRef.current = md;
         el.innerHTML = md ? markdownToHtml(md) : '';
       },
     }));
@@ -113,7 +119,7 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       if (el === document.activeElement) return;
       const html = value ? markdownToHtml(value) : '';
       if (el.innerHTML !== html) {
-        skipNextInputRef.current = true;
+        programmaticTextRef.current = value;
         el.innerHTML = html;
       }
     }, [value, divRef]);
@@ -121,11 +127,16 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
     // Text input — pass plain text outward (for @mention detection,
     // drafts, etc.). Markdown is converted only on send.
     const handleInput = useCallback(() => {
-      if (skipNextInputRef.current) { skipNextInputRef.current = false; return; }
       const el = divRef.current;
       if (!el) return;
       // innerText preserves \n for <br>/<div>, but produces no markdown syntax.
       const text = el.innerText.replace(/\n+$/, '');
+      // Ignore the event only if it merely echoes our own programmatic write.
+      if (programmaticTextRef.current !== null) {
+        const wasEcho = text === programmaticTextRef.current;
+        programmaticTextRef.current = null;
+        if (wasEcho) return;
+      }
       onChange(text);
     }, [divRef, onChange]);
 

@@ -60,7 +60,7 @@ function renderChannelHtml(opts: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(title)} — @${esc(username)}</title>
   <meta name="description" content="${esc(description || title)}">
-  <link rel="alternate" type="application/rss+xml" title="${esc(title)}" href="${channelUrl}/feed">
+  <link rel="alternate" type="application/rss+xml" title="${esc(title)}" href="${channelUrl}/rss">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #000; max-width: 680px; margin: 0 auto; padding: 20px; }
@@ -87,7 +87,7 @@ function renderChannelHtml(opts: {
     ${postsHtml || '<p style="color:#888;text-align:center;padding:40px 0">No posts yet.</p>'}
   </main>
   <footer class="footer">
-    <a href="${channelUrl}/feed" style="color:#3396d4;text-decoration:none">RSS</a>
+    <a href="${channelUrl}/rss" style="color:#3396d4;text-decoration:none">RSS</a>
   </footer>
 </body>
 </html>`;
@@ -198,20 +198,17 @@ function renderRssFeed(opts: {
 }
 
 export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
-  // Channel page: /channel/:id/ — accepts both @handle and numeric chatId.
+  // Channel page: /channel/:id/ — accepts @handle, numeric id and chat UUID
+  // (channels created through the API have a UUID chat_id).
   app.get('/channel/:id/', async (req, reply) => {
     const { id } = req.params as { id: string };
 
-    const chat = /^\d+$/.test(id)
-      ? await pool.query(
-          `SELECT chat_id, title, description, username FROM chats WHERE chat_id = $1`,
-          [id],
-        )
-      : await pool.query(
-          `SELECT chat_id, title, description, username FROM chats
-           WHERE username = $1 AND username IS NOT NULL`,
-          [id],
-        );
+    const chat = await pool.query(
+      `SELECT chat_id, title, description, username FROM chats
+        WHERE username = $1 OR chat_id::text = $1
+        LIMIT 1`,
+      [id],
+    );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
     const { chat_id: chatId, title, description, username } = chat.rows[0];
 
@@ -252,16 +249,12 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     const { id, postId } = req.params as { id: string; postId: string };
     if (!/^\d+$/.test(postId)) return reply.code(404).send('Not found');
 
-    const chat = /^\d+$/.test(id)
-      ? await pool.query(
-          `SELECT chat_id, title, username FROM chats WHERE chat_id = $1`,
-          [id],
-        )
-      : await pool.query(
-          `SELECT chat_id, title, username FROM chats
-           WHERE username = $1 AND username IS NOT NULL`,
-          [id],
-        );
+    const chat = await pool.query(
+      `SELECT chat_id, title, username FROM chats
+        WHERE username = $1 OR chat_id::text = $1
+        LIMIT 1`,
+      [id],
+    );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');
     const { chat_id: chatId, title, username } = chat.rows[0];
     if (!username) return reply.code(404).send('Private channel');
@@ -303,13 +296,14 @@ export async function channelWebRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(html);
   });
 
-  // RSS feed: /channel/:chatId/rss
+  // RSS feed: /channel/:chatId/rss (chatId is a UUID, as everywhere else)
   app.get('/channel/:chatId/rss', async (req, reply) => {
     const { chatId } = req.params as { chatId: string };
-    if (!/^\d+$/.test(chatId)) return reply.code(404).send('Not found');
 
     const chat = await pool.query(
-      `SELECT chat_id, title, description, username FROM chats WHERE chat_id = $1`,
+      `SELECT chat_id, title, description, username FROM chats
+        WHERE chat_id::text = $1 OR username = $1
+        LIMIT 1`,
       [chatId],
     );
     if (chat.rowCount === 0) return reply.code(404).send('Channel not found');

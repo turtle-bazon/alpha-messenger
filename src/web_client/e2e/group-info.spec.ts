@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { registerViaApi } from './helpers/api';
-import { createDirectViaUi, registerViaUi } from './helpers/ui';
+import { createDirectViaUi, loginViaUi, registerViaUi } from './helpers/ui';
 
 async function createGroupViaUi(
   page: import('@playwright/test').Page,
@@ -67,7 +67,8 @@ test('group info: non-owner sees read-only view', async ({ browser }) => {
 
   const b = await registerViaApi();
   await registerViaUi(pageA);
-  await registerViaUi(pageB);
+  // B входит под тем же аккаунтом, что состоит в группе (иначе её не видно).
+  await loginViaUi(pageB, b.username, b.password);
 
   // A создаёт группу с B
   await createGroupViaUi(pageA, 'My Group', [b.username]);

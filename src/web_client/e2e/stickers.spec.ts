@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { registerViaApi } from './helpers/api';
-import { registerViaUi } from './helpers/ui';
+import { openDirectWithApiPeer, registerViaUi } from './helpers/ui';
 
 // Создание пака, добавление стикеров
 test('stickers: create pack and add stickers', async ({ page }) => {
-  await registerViaApi();
+  const peer = await registerViaApi();
   await registerViaUi(page);
+  await openDirectWithApiPeer(page, peer);
 
   // Открываем панель через одну кнопку
   await page.getByTestId('emoji-btn').click();
@@ -31,6 +32,7 @@ test('stickers: create pack and add stickers', async ({ page }) => {
 // Панель: открытие/закрытие
 test('media panel: open and close', async ({ page }) => {
   await registerViaUi(page);
+  await openDirectWithApiPeer(page);
 
   await expect(page.getByTestId('media-panel')).toHaveCount(0);
 
@@ -44,6 +46,7 @@ test('media panel: open and close', async ({ page }) => {
 // Вкладки переключаются
 test('media panel: tabs switch', async ({ page }) => {
   await registerViaUi(page);
+  await openDirectWithApiPeer(page);
 
   await page.getByTestId('emoji-btn').click();
   await expect(page.getByTestId('media-panel')).toBeVisible();

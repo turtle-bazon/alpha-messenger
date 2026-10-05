@@ -17,19 +17,22 @@ test('композер: кнопка всегда видна, Enter/Shift+Enter,
   const input = pageA.getByTestId('message-input');
   const send = pageA.getByTestId('message-send');
 
-  // #19: кнопка отправки всегда видна; при пустом поле — выключена.
-  await expect(send).toBeVisible();
-  await expect(send).toBeDisabled();
+  // #34: при пустом поле на месте кнопки отправки показывается микрофон
+  // (как в Telegram) — отдельной «выключенной» кнопки отправки больше нет.
+  const mic = pageA.getByTestId('mic-btn');
+  await expect(mic).toBeVisible();
+  await expect(send).toHaveCount(0);
   await input.fill('привет');
-  await expect(send).toBeEnabled();
+  await expect(send).toBeVisible();
+  await expect(mic).toHaveCount(0);
 
-  // #25: Enter отправляет; поле очищается, кнопка снова выключена.
+  // #25: Enter отправляет; поле очищается, микрофон возвращается.
   await input.press('Enter');
   await expect(
     pageA.getByTestId('message').filter({ hasText: 'привет' }),
   ).toBeVisible();
-  await expect(input).toHaveValue('');
-  await expect(send).toBeDisabled();
+  await expect(input).toHaveText('');
+  await expect(mic).toBeVisible();
 
   // #24: у отправленного (ещё не прочитанного) — статус «sent» c SVG-галочкой.
   const status = pageA
@@ -47,7 +50,7 @@ test('композер: кнопка всегда видна, Enter/Shift+Enter,
   await input.fill('строка');
   await input.press('Shift+Enter');
   await input.pressSequentially('вторая');
-  await expect(input).toHaveValue('строка\nвторая');
+  await expect(input).toHaveText('строка\nвторая');
   // Поле выросло по высоте (минимум на одну строку).
   const h2 = await input.evaluate((el) => (el as HTMLElement).clientHeight);
   expect(h2).toBeGreaterThan(h1);

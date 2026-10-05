@@ -128,56 +128,55 @@ test('при входе предлагает включить уведомлен
 });
 
 // Настройки уведомлений: тумблеры звука/браузера сохраняются между сессиями.
+// Живут в экране настроек (settings-sound / settings-browser) — колокольчик с
+// выпадающим меню в шапке больше нет.
 test('настройки уведомлений переключаются и сохраняются', async ({ page }) => {
   await registerViaUi(page);
 
-  // По умолчанию всё включено: меню показывает оба чекбокса отмеченными.
-  await page.getByTestId('notif-toggle').click();
-  await expect(page.getByTestId('notif-menu')).toBeVisible();
-  await expect(page.getByTestId('notif-sound')).toBeChecked();
+  // По умолчанию всё включено.
+  await page.getByTestId('settings-btn').click();
+  await expect(page.getByTestId('settings-screen')).toBeVisible();
+  // Экран уведомлений — отдельный подэкран настроек.
+  await page.getByTestId('settings-notifications').click();
+  await expect(page.getByTestId('settings-sound')).toBeChecked();
 
   // Выключаем звук — пишется в localStorage.
-  await page.getByTestId('notif-sound').uncheck();
+  await page.getByTestId('settings-sound').uncheck();
   await expect
     .poll(() =>
       page.evaluate(() => localStorage.getItem('alpha.notif.sound')),
     )
     .toBe('0');
 
-  // Клик вне меню закрывает его.
-  await page.getByTestId('home-username').click();
-  await expect(page.getByTestId('notif-menu')).toHaveCount(0);
-
   // После перезагрузки настройка сохранилась.
   await page.reload();
   await expect(page.getByTestId('app-home')).toBeVisible();
-  await page.getByTestId('notif-toggle').click();
-  await expect(page.getByTestId('notif-sound')).not.toBeChecked();
+  await page.getByTestId('settings-btn').click();
+  await page.getByTestId('settings-notifications').click();
+  await expect(page.getByTestId('settings-sound')).not.toBeChecked();
 
   await page.close();
 });
 
-// Известная проблема №11: меню колокольчика обрезалось слева (вылезало за
-// .app-shell с overflow: hidden), текст был нечитаем. Меню должно целиком
-// помещаться во вьюпорт и не обрезаться.
-test('меню уведомлений не обрезается и помещается во вьюпорт', async ({
-  page,
-}) => {
+// Известная проблема №11: панель уведомлений обрезалась по краю экрана, текст
+// был нечитаем. Экран настроек должен целиком помещаться во вьюпорт.
+test('экран настроек уведомлений помещается во вьюпорт', async ({ page }) => {
   await registerViaUi(page);
-  await page.getByTestId('notif-toggle').click();
-  const menu = page.getByTestId('notif-menu');
-  await expect(menu).toBeVisible();
+  await page.getByTestId('settings-btn').click();
+  await expect(page.getByTestId('settings-screen')).toBeVisible();
+  await page.getByTestId('settings-notifications').click();
+  const screen = page.getByTestId('settings-screen');
 
-  // Геометрия меню в пределах вьюпорта (left ≥ 0, right ≤ ширины окна).
-  const box = await menu.boundingBox();
+  // Геометрия в пределах вьюпорта (left ≥ 0, right ≤ ширины окна).
+  const box = await screen.boundingBox();
   const vw = page.viewportSize()!.width;
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(vw);
 
-  // Тексты строк видны и читаемы целиком (не обрезаны клиппингом контейнера).
-  await expect(menu.getByText('Звук')).toBeVisible();
-  await expect(menu.getByText('Уведомления браузера')).toBeVisible();
+  // Строки читаемы целиком (не обрезаны клиппингом контейнера).
+  await expect(screen.getByText('Звук')).toBeVisible();
+  await expect(screen.getByText('Уведомления браузера')).toBeVisible();
 
   await page.close();
 });

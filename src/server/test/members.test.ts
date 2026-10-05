@@ -225,5 +225,11 @@ test('presence endpoint returns array', async () => {
     headers: auth(a.token),
   });
   assert.equal(res.statusCode, 200);
-  assert.ok(Array.isArray(res.json().online));
+  // Shape: { presence: { <userId>: { online, away, lastActiveAt? } } } — co-members
+  // with an online flag. (Was `{ online: [...] }` before the away/lastSeen rework.)
+  const body = res.json() as {
+    presence: Record<string, { online: boolean; away: boolean }>;
+  };
+  assert.equal(typeof body.presence, 'object');
+  assert.ok(body.presence !== null && !Array.isArray(body.presence));
 });

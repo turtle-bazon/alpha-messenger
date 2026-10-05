@@ -21,15 +21,18 @@ interface FCMMessage {
   };
 }
 
-async function sendFCM(token: string, chatId?: string): Promise<boolean> {
+async function sendFCM(token: string, chatId?: string): Promise<PushOutcome> {
   if (!FCM_PROJECT_ID || !FCM_SERVICE_ACCOUNT_KEY) {
+    // Not configured — this deployment just doesn't use FCM. Deliver nothing,
+    // but keep the subscription: deleting it here used to wipe every device
+    // token on an FCM-less instance.
     console.log('FCM not configured, skipping');
-    return false;
+    return 'retry';
   }
 
   try {
     const accessToken = await getFCMAccessToken();
-    if (!accessToken) return false;
+    if (!accessToken) return 'retry';
 
     const url = `https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`;
     const body: FCMMessage = {
@@ -50,19 +53,19 @@ async function sendFCM(token: string, chatId?: string): Promise<boolean> {
     });
 
     if (res.status === 404 || res.status === 410) {
-      // Token invalid — subscription will be removed by the caller
-      return false;
+      // Provider rejected the token — the only case that justifies removal.
+      return 'invalid';
     }
 
     if (!res.ok) {
       console.error(`FCM error: ${res.status} ${await res.text()}`);
-      return false;
+      return 'retry';
     }
 
-    return true;
+    return 'sent';
   } catch (err) {
     console.error('FCM send failed:', err);
-    return false;
+    return 'retry';
   }
 }
 
@@ -109,16 +112,16 @@ async function getFCMAccessToken(): Promise<string | null> {
 
 // --- UnifiedPush (ntfy) ---
 
-async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boolean> {
+async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<PushOutcome> {
   try {
     console.log(`UP: sending to ${endpoint}`);
-    
+
     // Message format for ntfy: JSON or plain text
     // Use JSON to carry chatId
     const message = chatId
       ? JSON.stringify({ type: 'wake-up', chatId })
       : 'wake-up';
-    
+
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -129,23 +132,30 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<boole
     });
 
     console.log(`UP: response ${res.status} ${res.statusText}`);
-    if (!res.ok) {
-      const body = await res.text();
-      console.error(`UP error: ${res.status} ${body}`);
-    }
-
     if (res.status === 404 || res.status === 410) {
-      return false;
+      // ntfy says the topic is gone — the token is dead, drop the subscription.
+      return 'invalid';
     }
 
-    return res.ok;
+    if (!res.ok) {
+      console.error(`UP error: ${res.status} ${await res.text()}`);
+      return 'retry';
+    }
+
+    return 'sent';
   } catch (err) {
     console.error('UP send failed:', err);
-    return false;
+    return 'retry';
   }
 }
 
 // --- Main function ---
+
+// Delivery outcome of a single push attempt. Only 'invalid' (the provider
+// explicitly rejected the token) justifies deleting the subscription:
+// a transient network error or an unconfigured provider must keep it, or the
+// device would silently lose push until it re-registers.
+type PushOutcome = 'sent' | 'invalid' | 'retry';
 
 export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, chatId?: string): Promise<number> {
   const { rows } = await pool.query(
@@ -165,31 +175,31 @@ export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, 
   console.log(`Push: sendWakeUp for ${userId}, ${toNotify.length}/${rows.length} offline subscriptions`);
 
   let sent = 0;
-  const failedSubscriptions: string[] = [];
+  const invalidSubscriptions: string[] = [];
 
   for (const r of toNotify) {
     console.log(`Push: ${r.provider} endpoint=${r.endpoint} device=${r.device_id}`);
-    let ok = false;
+    let outcome: PushOutcome = 'retry';
 
     if (r.provider === 'fcm') {
-      ok = await sendFCM(r.endpoint, chatId);
+      outcome = await sendFCM(r.endpoint, chatId);
     } else if (r.provider === 'unifiedpush') {
-      ok = await sendUnifiedPush(r.endpoint, chatId);
+      outcome = await sendUnifiedPush(r.endpoint, chatId);
     }
 
-    if (ok) {
+    if (outcome === 'sent') {
       sent++;
-    } else {
-      failedSubscriptions.push(r.subscription_id);
+    } else if (outcome === 'invalid') {
+      invalidSubscriptions.push(r.subscription_id);
     }
   }
 
-  if (failedSubscriptions.length > 0) {
+  if (invalidSubscriptions.length > 0) {
     await pool.query(
       `DELETE FROM push_subscriptions WHERE subscription_id = ANY($1)`,
-      [failedSubscriptions],
+      [invalidSubscriptions],
     );
-    console.log(`Cleaned up ${failedSubscriptions.length} invalid push subscriptions`);
+    console.log(`Cleaned up ${invalidSubscriptions.length} invalid push subscriptions`);
   }
 
   return sent;

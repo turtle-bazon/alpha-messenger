@@ -1832,7 +1832,7 @@ export function Conversation({
                             )}
                           </span>
                         ) : a.kind === 'sticker' ? (
-                          <span className="bubble-sticker" key={ai}>
+                          <span className="bubble-sticker" key={ai} data-testid="message-sticker">
                             <StickerImage blobId={a.blobId} />
                           </span>
                         ) : a.kind === 'audio' ? (
@@ -1935,7 +1935,11 @@ export function Conversation({
                       </span>
                     )}
                     <span className="bubble-meta">
-                    {m.edited && <IconEdit size={14} className="bubble-edited-icon" />}
+                    {m.edited && (
+                      <span data-testid="msg-edited" title={t('conv.edited')}>
+                        <IconEdit size={14} className="bubble-edited-icon" />
+                      </span>
+                    )}
                     <span className="bubble-time">{formatTime(m.ts)}</span>
                     {chat.username && m.viewCount > 0 && (
                       <span className="bubble-views">👁 {m.viewCount}</span>
@@ -2305,6 +2309,9 @@ export function Conversation({
               }
             }}
             onSelectSticker={async (blobId) => {
+              // Отправка стикера закрывает панель (как в Telegram): выбрали —
+              // отправили, дальше в переписке.
+              setMediaOpen(false);
               const clientMessageId = crypto.randomUUID();
               const content = { text: '', attachments: [{ kind: 'sticker' as const, blobId }] };
               try {

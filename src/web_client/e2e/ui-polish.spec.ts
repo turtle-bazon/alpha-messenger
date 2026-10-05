@@ -40,12 +40,13 @@ test('переключатель темы, поиск чатов, кнопка �
   await page.getByTestId('chat-search').fill('');
   await expect(items).toHaveCount(2);
 
-  // --- Кнопка отправки: выключена без текста, включается с текстом ---
+  // --- Композер: без текста — микрофон (#34), с текстом — кнопка отправки ---
   await items.filter({ hasText: b.username }).click();
   await expect(page.getByTestId('conversation-open')).toBeVisible();
-  await expect(page.getByTestId('message-send')).toBeDisabled();
+  await expect(page.getByTestId('mic-btn')).toBeVisible();
   await page.getByTestId('message-input').fill('Привет');
-  await expect(page.getByTestId('message-send')).toBeEnabled();
+  await expect(page.getByTestId('message-send')).toBeVisible();
+  await expect(page.getByTestId('mic-btn')).toHaveCount(0);
 
   // --- Разделитель дат: после отправки появляется «Сегодня» ---
   await page.getByTestId('message-send').click();

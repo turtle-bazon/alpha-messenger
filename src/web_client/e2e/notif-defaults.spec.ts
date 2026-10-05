@@ -58,9 +58,10 @@ test('при default permission показывается диалог и зап�
   );
   expect(browserAfter).toBe('1');
 
-  // Тумблер показывает включён (prefs.browser = true, perm = default)
-  await page.getByTestId('notif-toggle').click();
-  await expect(page.getByTestId('notif-browser')).toBeChecked();
+  // Тумблер показывает включён (настройки живут в экране настроек)
+  await page.getByTestId('settings-btn').click();
+  await page.getByTestId('settings-notifications').click();
+  await expect(page.getByTestId('settings-browser')).toBeChecked();
 });
 
 // Разрешение ещё не запрашивалось, но пользователь нажал «Не сейчас»:
@@ -132,10 +133,12 @@ test('при denied браузерные уведомления остаются
   expect(sound).toBe('1');
   expect(browser).toBe('1');
 
-  // В меню: звук включён, браузерные — включены, но недоступны, есть подсказка.
-  await page.getByTestId('notif-toggle').click();
-  await expect(page.getByTestId('notif-sound')).toBeChecked();
-  await expect(page.getByTestId('notif-browser')).toBeChecked();
-  await expect(page.getByTestId('notif-browser')).toBeDisabled();
-  await expect(page.getByTestId('notif-denied')).toBeVisible();
+  // В настройках: звук включён, браузерные — включены, но недоступны (denied),
+  // есть подсказка.
+  await page.getByTestId('settings-btn').click();
+  await page.getByTestId('settings-notifications').click();
+  await expect(page.getByTestId('settings-sound')).toBeChecked();
+  await expect(page.getByTestId('settings-browser')).toBeChecked();
+  await expect(page.getByTestId('settings-browser')).toBeDisabled();
+  await expect(page.getByTestId('settings-denied')).toBeVisible();
 });
