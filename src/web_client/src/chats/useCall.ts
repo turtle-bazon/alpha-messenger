@@ -5,13 +5,15 @@ import type { WsClient } from '../api/ws';
 //
 // Flow: caller startCall() → getUserMedia → createOffer → signal {kind:'offer'}
 // → callee shows incoming UI → accept() → getUserMedia → setRemote(offer) →
-// createAnswer → signal {kind:'answer'} → ICE exchange ({kind:'ice'}) →
+// createAnswer → signal {kind:'answer', video} → ICE exchange ({kind:'ice'}) →
 // pc connected → phase 'active'. Either side hangup() / reject() / busy.
 //
 // One active call per client; a second incoming call during an active one gets
-// an automatic {kind:'busy'}. Outgoing ring times out after RING_TIMEOUT.
+// an automatic {kind:'busy'}. Outgoing ring times out after RING_TIMEOUT,
+// connecting — after CONNECT_TIMEOUT (ICE may never complete otherwise).
 
 const RING_TIMEOUT = 45_000;
+const CONNECT_TIMEOUT = 30_000;
 
 export type CallPhase = 'idle' | 'outgoing' | 'incoming' | 'connecting' | 'active';
 
@@ -50,24 +52,51 @@ export function useCall(ws: WsClient) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localRef = useRef<MediaStream | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+  // ICE candidates that arrived before the peer connection existed or before
+  // its remote description was set — dropped candidates would leave ICE with no
+  // viable pairs, so they are buffered and replayed after setRemoteDescription.
+  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const phaseRef = useRef<CallPhase>('idle');
   const peerRef = useRef('');
+  const mountedRef = useRef(true);
 
   const setPhase = (p: CallPhase): void => {
     phaseRef.current = p;
     setCall((c) => ({ ...c, phase: p }));
   };
 
+  // Replays candidates buffered before the remote description was in place.
+  const flushIce = async (pc: RTCPeerConnection): Promise<void> => {
+    const queued = pendingIceRef.current;
+    pendingIceRef.current = [];
+    for (const c of queued) {
+      try {
+        await pc.addIceCandidate(c);
+      } catch {
+        // Stale candidate (e.g. from a discarded generation) — safe to drop.
+      }
+    }
+  };
+
   // Tears down media + connection. Does not change phase by itself.
   const teardown = useCallback((): void => {
     if (ringTimerRef.current) clearTimeout(ringTimerRef.current);
     ringTimerRef.current = null;
+    if (connectTimerRef.current) clearTimeout(connectTimerRef.current);
+    connectTimerRef.current = null;
     pcRef.current?.close();
     pcRef.current = null;
     localRef.current?.getTracks().forEach((t) => t.stop());
     localRef.current = null;
     pendingOfferRef.current = null;
+    pendingIceRef.current = [];
+    if (!mountedRef.current) {
+      // Unmounted: skip state updates, only release resources.
+      phaseRef.current = 'idle';
+      return;
+    }
     setLocalStream(null);
     setRemoteStream(null);
     setCall({ phase: 'idle', peerId: '', video: false, muted: false, cameraOff: false });
@@ -101,16 +130,34 @@ export function useCall(ws: WsClient) {
     pc.onicecandidate = (e) => {
       if (e.candidate) signal(peerId, { kind: 'ice', candidate: e.candidate.toJSON() });
     };
-    pc.ontrack = (e) => setRemoteStream(e.streams[0] ?? null);
+    pc.ontrack = (e) => {
+      if (!mountedRef.current) return;
+      setRemoteStream(e.streams[0] ?? null);
+    };
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') setPhase('active');
-      else if (
+      if (pc.connectionState === 'connected') {
+        if (connectTimerRef.current) clearTimeout(connectTimerRef.current);
+        connectTimerRef.current = null;
+        setPhase('active');
+      } else if (
         pc.connectionState === 'failed' ||
         pc.connectionState === 'closed'
       ) {
         if (phaseRef.current !== 'idle') teardown();
       }
     };
+  }
+
+  // If ICE does not complete in time, give up instead of hanging on
+  // "Connecting…" forever (possible with symmetric NATs and no TURN).
+  function armConnectTimeout(peerId: string): void {
+    if (connectTimerRef.current) clearTimeout(connectTimerRef.current);
+    connectTimerRef.current = setTimeout(() => {
+      if (phaseRef.current === 'connecting' || phaseRef.current === 'outgoing') {
+        signal(peerId, { kind: 'hangup' });
+        teardown();
+      }
+    }, CONNECT_TIMEOUT);
   }
 
   // Outgoing call.
@@ -133,6 +180,9 @@ export function useCall(ws: WsClient) {
           teardown();
         }
       }, RING_TIMEOUT);
+      // Covers "answered but ICE never completed" — the ring timer above is
+      // cleared by nothing once the phase leaves 'outgoing' on the callee side.
+      armConnectTimeout(peerId);
     },
     [signal, teardown],
   );
@@ -148,9 +198,13 @@ export function useCall(ws: WsClient) {
       const pc = pcRef.current;
       if (!pc) return;
       await pc.setRemoteDescription(offer);
+      // Candidates the caller sent while we were still ringing.
+      await flushIce(pc);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      signal(peerId, { kind: 'answer', sdp: answer });
+      // video flag tells the caller whether to expect a video track.
+      signal(peerId, { kind: 'answer', sdp: answer, video: withVideo });
+      armConnectTimeout(peerId);
     },
     [signal, teardown],
   );
@@ -204,9 +258,22 @@ export function useCall(ws: WsClient) {
       if (from !== peerRef.current) return;
       const pc = pcRef.current;
       if (data.kind === 'answer' && pc && data.sdp) {
-        void pc.setRemoteDescription(data.sdp).catch(() => {});
-      } else if (data.kind === 'ice' && pc && data.candidate) {
-        void pc.addIceCandidate(data.candidate).catch(() => {});
+        // The callee may have accepted with video even if we offered audio:
+        // adopt its flag so the overlay shows the remote video.
+        if (data.video) setCall((c) => ({ ...c, video: true }));
+        void pc
+          .setRemoteDescription(data.sdp)
+          .then(() => flushIce(pc))
+          .catch(() => {});
+      } else if (data.kind === 'ice' && data.candidate) {
+        // Buffer until there is a connection with a remote description:
+        // candidates that arrive during ringing would otherwise be lost and
+        // never re-sent, leaving ICE with no viable pairs.
+        if (pc && pc.remoteDescription) {
+          void pc.addIceCandidate(data.candidate).catch(() => {});
+        } else {
+          pendingIceRef.current.push(data.candidate);
+        }
       } else if (data.kind === 'hangup' || data.kind === 'reject' || data.kind === 'busy') {
         teardown();
       }
@@ -214,8 +281,14 @@ export function useCall(ws: WsClient) {
     return off;
   }, [ws, teardown]);
 
-  // Unmount cleanup.
-  useEffect(() => teardown, [teardown]);
+  // Unmount: release camera/mic and the peer connection.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      teardown();
+    };
+  }, [teardown]);
 
   return { call, remoteStream, localStream, startCall, accept, reject, hangup, toggleMute, toggleCamera };
 }
