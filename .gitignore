@@ -153,3 +153,9 @@ src/desktop_client/dist/
 src/desktop_client/web_client_dist/
 src/desktop_client/node_modules/
 src/desktop_client/package-lock.json
+
+# JetBrains IDE
+.idea/
+
+# Local compose overrides (e.g. host ports taken by other stacks)
+*.local.yaml

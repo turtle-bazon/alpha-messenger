@@ -13,6 +13,8 @@ import {
   type NotifPrefs,
 } from './util/notifications';
 import { DevicesScreen } from './DevicesScreen';
+import { PushTestRow } from './notifications/PushTestRow';
+import { disableWebPush, isIos, isStandalone, syncWebPush } from './notifications/webpush';
 import { LANGS, switchLanguage, type Lang } from './i18n';
 
 type SettingsView = 'main' | 'notifications' | 'devices';
@@ -49,6 +51,7 @@ export function SettingsScreen({
     if (prefs.browser) {
       setNotifBrowser(false);
       setPrefs((p: NotifPrefs) => ({ ...p, browser: false }));
+      void disableWebPush();
       return;
     }
     // On Android push goes through native UnifiedPush/FCM; browser permission not needed
@@ -65,6 +68,7 @@ export function SettingsScreen({
     if (permission === 'granted') {
       setNotifBrowser(true);
       setPrefs((p: NotifPrefs) => ({ ...p, browser: true }));
+      void syncWebPush();
     }
   }
 
@@ -128,13 +132,24 @@ export function SettingsScreen({
                   {t('settings.denied')}
                 </div>
               )}
-              {!notificationsSupported() && (
+              {!notificationsSupported() && !(isIos() && !isStandalone()) && (
                 <div className="settings-hint">
                   {t('settings.notSupported')}
                 </div>
               )}
+              {isIos() && !isStandalone() && (
+                <div className="settings-hint" data-testid="settings-ios-install">
+                  {t('pushTest.needsInstall')}
+                </div>
+              )}
             </>
           )}
+          <PushTestRow
+            onPermission={(p) => {
+              setPerm(p);
+              if (p === 'granted') setPrefs((x: NotifPrefs) => ({ ...x, browser: true }));
+            }}
+          />
         </div>
       </div>
     );

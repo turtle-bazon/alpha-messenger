@@ -34,3 +34,25 @@ export async function deleteSessions(username: string): Promise<void> {
     await client.end();
   }
 }
+
+// Push-подписки пользователя (провайдер + endpoint) — проверить, что клиент
+// передал серверу подписку браузера (web push).
+export async function pushSubscriptions(
+  username: string,
+): Promise<{ provider: string; endpoint: string }[]> {
+  const client = new Client({ connectionString: DATABASE_URL });
+  await client.connect();
+  try {
+    const r = await client.query(
+      `SELECT ps.provider, ps.endpoint
+         FROM push_subscriptions ps
+         JOIN devices d ON d.device_id = ps.device_id
+         JOIN accounts a ON a.user_id = d.user_id
+        WHERE a.username = $1`,
+      [username],
+    );
+    return r.rows;
+  } finally {
+    await client.end();
+  }
+}

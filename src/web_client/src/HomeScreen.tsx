@@ -41,6 +41,13 @@ import {
   setNotifBrowser,
   setUnreadBadge,
 } from './util/notifications';
+import {
+  isTouchOnlyDevice,
+  publishWorkerStrings,
+  serviceWorkerSupported,
+  syncWebPush,
+  webPushActive,
+} from './notifications/webpush';
 
 // The freshest preview from a set of candidates (by ascending message_id). Keeps
 // the list preview from getting stuck on an early message when several parallel
@@ -221,6 +228,36 @@ export function HomeScreen({
     if (getNotifPrefs().browser && getPermission() === 'default') {
       setShowNotifBanner(true);
     }
+    // Web Push (browser / home screen app): keep this browser's subscription
+    // known to the server — it is the only way notifications reach an iPhone.
+    if (getNotifPrefs().browser && getPermission() === 'granted') {
+      void syncWebPush();
+    }
+  }, []);
+
+  // Notification clicks handled by the service worker, and the worker's UI
+  // strings kept in the current language.
+  useEffect(() => {
+    if (!serviceWorkerSupported()) return;
+    const onMessage = (e: MessageEvent): void => {
+      const d = e.data as { type?: string; chatId?: string } | null;
+      if (d?.type === 'open-chat' && d.chatId) setSelectedId(d.chatId);
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    // Opened from a notification while the app was closed: ?chat=<id>.
+    const url = new URL(window.location.href);
+    const chatParam = url.searchParams.get('chat');
+    if (chatParam) {
+      setSelectedId(chatParam);
+      url.searchParams.delete('chat');
+      window.history.replaceState(null, '', url.href);
+    }
+    const onLang = (): void => void publishWorkerStrings();
+    i18n.on('languageChanged', onLang);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      i18n.off('languageChanged', onLang);
+    };
   }, []);
 
   // Global focus of the input field on keypress or paste (issue #40).
@@ -518,6 +555,7 @@ export function HomeScreen({
       const reactorName = reactor?.username ?? i18n.t('common.user');
       notifyReaction({
         title,
+        chatId,
         reactor: reactorName,
         emoji: p.emoji,
         onOpen: () => setSelectedId(chatId),
@@ -659,7 +697,25 @@ export function HomeScreen({
       refreshSnapshot();
     };
     window.addEventListener('app-foreground', onForeground);
-    const offForeground = () => window.removeEventListener('app-foreground', onForeground);
+    // Mobile browser / home screen app with Web Push: close the WS when the
+    // page goes to the background. iOS freezes the page within seconds, and a
+    // frozen socket keeps the device "online" on the server, so new messages
+    // would go into the dead socket instead of a push. Closed — the server
+    // pushes at once; back to the foreground — reconnect and resync. Desktop
+    // keeps the socket: its hidden tab still runs and notifies by itself.
+    const onVisibility = (): void => {
+      if (!webPushActive() || !isTouchOnlyDevice()) return;
+      if (document.visibilityState === 'hidden') {
+        ws.close();
+      } else {
+        onForeground();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    const offForeground = () => {
+      window.removeEventListener('app-foreground', onForeground);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
 
     return () => {
       alive = false;
@@ -786,6 +842,7 @@ export function HomeScreen({
     const result = await requestPermission();
     setNotifBrowser(result === 'granted');
     setShowNotifBanner(false);
+    if (result === 'granted') void syncWebPush();
   }
 
   function handleNotifSkip(): void {

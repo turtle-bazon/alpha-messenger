@@ -4919,3 +4919,16 @@ body {
 .nav-back-btn:hover {
   background: var(--bg-hover);
 }
+
+/* "Check notifications" result (web push) */
+.push-test-result--ok {
+  color: #2e9d4f;
+}
+
+.push-test-result--warn {
+  color: #c98a00;
+}
+
+.push-test-result--fail {
+  color: #e05252;
+}

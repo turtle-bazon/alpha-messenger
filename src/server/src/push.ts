@@ -1,8 +1,16 @@
+import webpush from 'web-push';
 import { pool } from './db';
 
-// Push is a transport-independent "wake up the client" channel, without message
-// content (see doc/architecture.md). On wake-up the client reopens the WS and
-// re-syncs via hello/lastSeq — the push itself carries nothing from the outbox.
+// Push is a transport-independent "wake up the client" channel (see
+// doc/architecture.md). FCM / UnifiedPush carry no message content: on wake-up
+// the native client reopens the WS and re-syncs via hello/lastSeq.
+//
+// Web Push (browsers, the iOS home screen app) is different: a service worker
+// can't hold a WS, and Safari revokes the subscription of a page that receives
+// a push without showing a notification. So a web push is sent only for what
+// must be shown (a new message from someone else, a test) and carries what the
+// worker needs to draw it — the same opaque ciphertext the WS would deliver,
+// encrypted end-to-end for the browser (RFC 8291), plus chat/sender names.
 
 // --- Configuration ---
 
@@ -149,6 +157,148 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<PushO
   }
 }
 
+// --- Web Push (VAPID) ---
+
+// Contact of the sender, required in the VAPID JWT. Apple rejects the token
+// (403 BadJwtToken) when it points to localhost, so the default is a real URL.
+const VAPID_SUBJECT =
+  process.env.VAPID_SUBJECT || 'https://github.com/turtle-bazon/alpha-messenger';
+// Apple, FCM and Mozilla all accept up to 4096 bytes of encrypted record; keep
+// the plaintext well below (encryption adds ~100 bytes, JSON wraps the rest).
+const WEBPUSH_MAX_CIPHERTEXT = 2800;
+const WEBPUSH_TTL_SECONDS = 24 * 3600;
+
+interface VapidKeys {
+  publicKey: string;
+  privateKey: string;
+}
+
+let vapidKeys: Promise<VapidKeys> | null = null;
+
+// VAPID key pair: from VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY if given, otherwise
+// generated once and stored in server_secrets — so a fresh deployment works
+// without configuration and keeps its key (and thus every browser subscription)
+// across restarts. Rotating the key invalidates all web subscriptions; clients
+// notice the new key and resubscribe.
+export function getVapidKeys(): Promise<VapidKeys> {
+  if (!vapidKeys) {
+    vapidKeys = loadVapidKeys().catch((err) => {
+      vapidKeys = null;
+      throw err;
+    });
+  }
+  return vapidKeys;
+}
+
+async function loadVapidKeys(): Promise<VapidKeys> {
+  const envPublic = process.env.VAPID_PUBLIC_KEY;
+  const envPrivate = process.env.VAPID_PRIVATE_KEY;
+  if (envPublic && envPrivate) return { publicKey: envPublic, privateKey: envPrivate };
+  const generated = webpush.generateVAPIDKeys();
+  // ON CONFLICT DO NOTHING + re-read: replicas starting at once agree on one pair.
+  await pool.query(
+    `INSERT INTO server_secrets(name, value) VALUES ('vapid', $1)
+     ON CONFLICT (name) DO NOTHING`,
+    [JSON.stringify(generated)],
+  );
+  const { rows } = await pool.query(
+    "SELECT value FROM server_secrets WHERE name = 'vapid'",
+  );
+  return JSON.parse(rows[0].value) as VapidKeys;
+}
+
+// What the service worker gets (see web_client/public/sw.js).
+export type WebPushPayload =
+  | {
+      type: 'message';
+      chatId: string;
+      messageId: string;
+      title: string; // chat title for groups/channels, sender name for direct chats
+      sender: string | null; // prefix for group messages ("sender: text"), null otherwise
+      ciphertext: string | null; // null when too large for a push record
+      isReply: boolean;
+    }
+  | { type: 'test'; testId: string; title: string; body: string };
+
+interface DeliveryResult {
+  outcome: PushOutcome;
+  statusCode?: number;
+  message?: string;
+}
+
+async function sendWebPush(subscriptionJson: string, payload: WebPushPayload): Promise<DeliveryResult> {
+  let subscription: webpush.PushSubscription;
+  try {
+    subscription = JSON.parse(subscriptionJson);
+  } catch {
+    return { outcome: 'invalid', message: 'malformed subscription' };
+  }
+  try {
+    const keys = await getVapidKeys();
+    const res = await webpush.sendNotification(subscription, JSON.stringify(payload), {
+      vapidDetails: { subject: VAPID_SUBJECT, ...keys },
+      TTL: WEBPUSH_TTL_SECONDS,
+      // Without high urgency Android holds the push until it leaves Doze.
+      urgency: 'high',
+      // No Topic header on purpose: Apple base64-decodes it and rejects
+      // anything that isn't valid base64url of the right length.
+    });
+    return { outcome: 'sent', statusCode: res.statusCode, message: res.body || undefined };
+  } catch (err) {
+    const e = err as { statusCode?: number; body?: string; message?: string };
+    const statusCode = e.statusCode;
+    // The body matters: Apple names the rejected header in it (e.g. BadJwtToken).
+    const message = (e.body || e.message || String(err)).slice(0, 500);
+    console.error(`WebPush error: ${statusCode ?? '-'} ${message}`);
+    // 404/410 — the subscription is gone; 403 — signed with a key the
+    // subscription wasn't made for (VAPID rotated): resubscribing is the only fix.
+    if (statusCode === 404 || statusCode === 410 || statusCode === 403) {
+      return { outcome: 'invalid', statusCode, message };
+    }
+    return { outcome: 'retry', statusCode, message };
+  }
+}
+
+// Builds the notification for a new message. Returns null when there is
+// nothing to show (message gone, own message).
+async function buildMessagePayload(
+  userId: string,
+  messageId: string,
+): Promise<WebPushPayload | null> {
+  const { rows } = await pool.query(
+    `SELECT m.chat_id, m.sender_id, m.ciphertext, m.deleted, m.reply_to_message_id,
+            c.type, c.title, c.username AS channel_username, a.username AS sender_name
+       FROM messages m
+       JOIN chats c ON c.chat_id = m.chat_id
+       JOIN accounts a ON a.user_id = m.sender_id
+      WHERE m.message_id = $1`,
+    [messageId],
+  );
+  const r = rows[0];
+  if (!r || r.sender_id === userId || r.deleted) return null;
+  const isGroup = r.type === 'group';
+  const isChannel = isGroup && !!r.channel_username;
+  const ciphertext = (r.ciphertext as Buffer).toString('base64');
+  return {
+    type: 'message',
+    chatId: r.chat_id,
+    messageId: String(messageId),
+    title: isGroup ? (r.title ?? '') : r.sender_name,
+    sender: isGroup && !isChannel ? r.sender_name : null,
+    ciphertext: ciphertext.length <= WEBPUSH_MAX_CIPHERTEXT ? ciphertext : null,
+    isReply: !!r.reply_to_message_id,
+  };
+}
+
+async function recordStatus(subscriptionId: string, statusCode?: number): Promise<void> {
+  if (statusCode === undefined) return;
+  await pool.query(
+    `UPDATE push_subscriptions SET last_status_code = $2, last_status_at = now()
+      WHERE subscription_id = $1`,
+    [subscriptionId, statusCode],
+  );
+}
+
 // --- Main function ---
 
 // Delivery outcome of a single push attempt. Only 'invalid' (the provider
@@ -157,13 +307,31 @@ async function sendUnifiedPush(endpoint: string, chatId?: string): Promise<PushO
 // device would silently lose push until it re-registers.
 type PushOutcome = 'sent' | 'invalid' | 'retry';
 
-export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, chatId?: string): Promise<number> {
+// The outbox event that triggered the wake-up (see events.ts).
+export interface WakeUpEvent {
+  type?: string;
+  messageId?: string;
+  senderId?: string;
+}
+
+export async function sendWakeUp(
+  userId: string,
+  onlineDeviceIds?: Set<string>,
+  chatId?: string,
+  event?: WakeUpEvent,
+): Promise<number> {
+  // FCM / UnifiedPush: one (the newest) subscription per provider — a wake-up
+  // per provider is enough. Web push: every browser has its own subscription.
   const { rows } = await pool.query(
-    `SELECT DISTINCT ON (ps.provider) ps.subscription_id, ps.provider, ps.endpoint, ps.device_id
+    `SELECT DISTINCT ON (CASE WHEN ps.provider = 'webpush'
+                              THEN ps.subscription_id::text ELSE ps.provider END)
+            ps.subscription_id, ps.provider, ps.endpoint, ps.device_id
        FROM push_subscriptions ps
        JOIN devices d ON d.device_id = ps.device_id
       WHERE d.user_id = $1
-      ORDER BY ps.provider, ps.subscription_id DESC`,
+      ORDER BY CASE WHEN ps.provider = 'webpush'
+                    THEN ps.subscription_id::text ELSE ps.provider END,
+               ps.subscription_id DESC`,
     [userId],
   );
 
@@ -171,36 +339,111 @@ export async function sendWakeUp(userId: string, onlineDeviceIds?: Set<string>, 
   const toNotify = onlineDeviceIds
     ? rows.filter((r) => !onlineDeviceIds.has(r.device_id))
     : rows;
+  if (toNotify.length === 0) return 0;
 
-  console.log(`Push: sendWakeUp for ${userId}, ${toNotify.length}/${rows.length} offline subscriptions`);
+  // A web push must always end in a visible notification, so it goes only for
+  // a new message from someone else; every other event is a silent no-op there.
+  let webPayload: WebPushPayload | null | undefined;
+  const webPayloadFor = async (): Promise<WebPushPayload | null> => {
+    if (webPayload === undefined) {
+      webPayload =
+        event?.type === 'message.new' && event.messageId && event.senderId !== userId
+          ? await buildMessagePayload(userId, event.messageId)
+          : null;
+    }
+    return webPayload;
+  };
 
   let sent = 0;
   const invalidSubscriptions: string[] = [];
 
   for (const r of toNotify) {
-    console.log(`Push: ${r.provider} endpoint=${r.endpoint} device=${r.device_id}`);
-    let outcome: PushOutcome = 'retry';
+    let result: DeliveryResult = { outcome: 'retry' };
 
     if (r.provider === 'fcm') {
-      outcome = await sendFCM(r.endpoint, chatId);
+      console.log(`Push: fcm device=${r.device_id}`);
+      result = { outcome: await sendFCM(r.endpoint, chatId) };
     } else if (r.provider === 'unifiedpush') {
-      outcome = await sendUnifiedPush(r.endpoint, chatId);
+      console.log(`Push: unifiedpush endpoint=${r.endpoint} device=${r.device_id}`);
+      result = { outcome: await sendUnifiedPush(r.endpoint, chatId) };
+    } else if (r.provider === 'webpush') {
+      const payload = await webPayloadFor();
+      if (!payload) continue;
+      result = await sendWebPush(r.endpoint, payload);
+      await recordStatus(r.subscription_id, result.statusCode);
+      console.log(`Push: webpush device=${r.device_id} -> ${result.statusCode ?? result.outcome}`);
     }
 
-    if (outcome === 'sent') {
+    if (result.outcome === 'sent') {
       sent++;
-    } else if (outcome === 'invalid') {
+    } else if (result.outcome === 'invalid') {
       invalidSubscriptions.push(r.subscription_id);
     }
   }
 
-  if (invalidSubscriptions.length > 0) {
-    await pool.query(
-      `DELETE FROM push_subscriptions WHERE subscription_id = ANY($1)`,
-      [invalidSubscriptions],
-    );
-    console.log(`Cleaned up ${invalidSubscriptions.length} invalid push subscriptions`);
-  }
-
+  await removeSubscriptions(invalidSubscriptions);
   return sent;
+}
+
+async function removeSubscriptions(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await pool.query(
+    `DELETE FROM push_subscriptions WHERE subscription_id = ANY($1)`,
+    [ids],
+  );
+  console.log(`Cleaned up ${ids.length} invalid push subscriptions`);
+}
+
+// --- Test notification ---
+
+export interface TestPushResult {
+  subscriptionId: string;
+  provider: string;
+  success: boolean; // the push service accepted it (2xx)
+  statusCode?: number; // HTTP status of the push service's answer
+  message?: string; // push service answer / error, for logs and tooltips
+  removed: boolean; // the push service declared the subscription dead
+}
+
+// Sends a test notification to every push subscription of one device of the
+// user, regardless of whether the device is online, and answers with what
+// each push service said. Whether it actually reached the device is reported
+// by the client itself (the service worker echoes testId back to the page).
+export async function sendTestPush(
+  userId: string,
+  deviceId: string,
+  opts: { testId: string; title: string; body: string },
+): Promise<TestPushResult[]> {
+  const { rows } = await pool.query(
+    `SELECT ps.subscription_id, ps.provider, ps.endpoint
+       FROM push_subscriptions ps
+       JOIN devices d ON d.device_id = ps.device_id
+      WHERE d.user_id = $1 AND d.device_id = $2
+      ORDER BY ps.subscription_id`,
+    [userId, deviceId],
+  );
+  const results: TestPushResult[] = [];
+  const invalid: string[] = [];
+  for (const r of rows) {
+    let result: DeliveryResult;
+    if (r.provider === 'webpush') {
+      result = await sendWebPush(r.endpoint, { type: 'test', ...opts });
+      await recordStatus(r.subscription_id, result.statusCode);
+    } else if (r.provider === 'fcm') {
+      result = { outcome: await sendFCM(r.endpoint) };
+    } else {
+      result = { outcome: await sendUnifiedPush(r.endpoint) };
+    }
+    if (result.outcome === 'invalid') invalid.push(r.subscription_id);
+    results.push({
+      subscriptionId: r.subscription_id,
+      provider: r.provider,
+      success: result.outcome === 'sent',
+      statusCode: result.statusCode,
+      message: result.message,
+      removed: result.outcome === 'invalid',
+    });
+  }
+  await removeSubscriptions(invalid);
+  return results;
 }

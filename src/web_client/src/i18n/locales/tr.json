@@ -97,6 +97,21 @@
     "repliedTo": "Mesajınıza yanıt verdi: {{text}}",
     "reacted": "{{name}} tepki verdi {{emoji}}"
   },
+  "pushTest": {
+    "button": "Bildirimleri test et",
+    "running": "Test bildirimi gönderiliyor…",
+    "received": "✓ Bildirim bu cihaza ulaştı",
+    "acceptedNotReceived": "Push hizmeti bildirimi kabul etti, ancak bildirim 20 saniye içinde bu cihaza ulaşmadı",
+    "rejected": "Push hizmeti bildirimi reddetti ({{code}})",
+    "removed": "Push hizmeti aboneliğin geçersiz olduğunu bildirdi ({{code}}). Yeniden abone olmak için “Bildirimleri test et”e tekrar basın",
+    "noChannel": "Bu cihazın push kanalı yok",
+    "nativeAccepted": "Push hizmeti bildirimi kabul etti. Görünüp görünmediğini kontrol edin",
+    "needsInstall": "iPhone ve iPad’de bildirimler yalnızca Ana Ekrana eklenen uygulamada çalışır: Paylaş → Ana Ekrana Ekle, ardından oradan açın",
+    "subscribeFailed": "Bu cihaz push bildirimlerine abone edilemedi",
+    "error": "Bildirim testi başarısız oldu",
+    "notifTitle": "Test bildirimi",
+    "notifBody": "Bu cihazda bildirimler çalışıyor"
+  },
   "time": {
     "today": "Bugün",
     "yesterday": "Dün",

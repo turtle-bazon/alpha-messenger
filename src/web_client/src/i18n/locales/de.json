@@ -97,6 +97,21 @@
     "repliedTo": "Hat auf deine Nachricht geantwortet: {{text}}",
     "reacted": "{{name}} hat reagiert {{emoji}}"
   },
+  "pushTest": {
+    "button": "Benachrichtigungen testen",
+    "running": "Testbenachrichtigung wird gesendet…",
+    "received": "✓ Die Benachrichtigung hat dieses Gerät erreicht",
+    "acceptedNotReceived": "Der Push-Dienst hat die Benachrichtigung angenommen, sie hat dieses Gerät aber nicht innerhalb von 20 Sekunden erreicht",
+    "rejected": "Der Push-Dienst hat die Benachrichtigung abgelehnt ({{code}})",
+    "removed": "Laut Push-Dienst ist das Abonnement ungültig ({{code}}). Tippe erneut auf „Benachrichtigungen testen“, um es zu erneuern",
+    "noChannel": "Dieses Gerät hat keinen Push-Kanal",
+    "nativeAccepted": "Der Push-Dienst hat die Benachrichtigung angenommen. Prüfe, ob sie angezeigt wurde",
+    "needsInstall": "Auf iPhone und iPad funktionieren Benachrichtigungen nur in der zum Home-Bildschirm hinzugefügten App: Teilen → Zum Home-Bildschirm, dann von dort öffnen",
+    "subscribeFailed": "Das Gerät konnte nicht für Push-Benachrichtigungen registriert werden",
+    "error": "Benachrichtigungstest fehlgeschlagen",
+    "notifTitle": "Testbenachrichtigung",
+    "notifBody": "Benachrichtigungen auf diesem Gerät funktionieren"
+  },
   "time": {
     "today": "Heute",
     "yesterday": "Gestern",

@@ -97,6 +97,21 @@
     "repliedTo": "회원님의 메시지에 답장했습니다: {{text}}",
     "reacted": "{{name}} 님이 반응했습니다 {{emoji}}"
   },
+  "pushTest": {
+    "button": "알림 테스트",
+    "running": "테스트 알림을 보내는 중…",
+    "received": "✓ 알림이 이 기기에 도착했습니다",
+    "acceptedNotReceived": "푸시 서비스가 알림을 수락했지만 20초 안에 이 기기에 도착하지 않았습니다",
+    "rejected": "푸시 서비스가 알림을 거부했습니다 ({{code}})",
+    "removed": "푸시 서비스에 따르면 구독이 더 이상 유효하지 않습니다 ({{code}}). 다시 구독하려면 “알림 테스트”를 한 번 더 누르세요",
+    "noChannel": "이 기기에는 푸시 채널이 없습니다",
+    "nativeAccepted": "푸시 서비스가 알림을 수락했습니다. 알림이 표시되었는지 확인하세요",
+    "needsInstall": "iPhone과 iPad에서는 홈 화면에 추가한 앱에서만 알림이 작동합니다: 공유 → 홈 화면에 추가 후 그곳에서 여세요",
+    "subscribeFailed": "이 기기를 푸시 알림에 구독하지 못했습니다",
+    "error": "알림 확인에 실패했습니다",
+    "notifTitle": "테스트 알림",
+    "notifBody": "이 기기에서 알림이 작동합니다"
+  },
   "time": {
     "today": "오늘",
     "yesterday": "어제",

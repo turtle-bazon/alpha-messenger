@@ -97,6 +97,21 @@
     "repliedTo": "Replied to your message: {{text}}",
     "reacted": "{{name}} reacted {{emoji}}"
   },
+  "pushTest": {
+    "button": "Check notifications",
+    "running": "Sending a test notification…",
+    "received": "✓ The notification reached this device",
+    "acceptedNotReceived": "The push service accepted the notification, but it did not reach this device within 20 seconds",
+    "rejected": "The push service rejected the notification ({{code}})",
+    "removed": "The push service reports the subscription is gone ({{code}}). Press “Check notifications” again to resubscribe",
+    "noChannel": "This device has no push channel",
+    "nativeAccepted": "The push service accepted the notification. Check that it appeared",
+    "needsInstall": "On iPhone and iPad notifications work only in the app added to the Home Screen: Share → Add to Home Screen, then open it from there",
+    "subscribeFailed": "Could not subscribe this device to push notifications",
+    "error": "Notification check failed",
+    "notifTitle": "Test notification",
+    "notifBody": "Notifications on this device work"
+  },
   "time": {
     "today": "Today",
     "yesterday": "Yesterday",

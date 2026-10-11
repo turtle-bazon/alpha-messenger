@@ -5,6 +5,7 @@ import { RegisterScreen } from './auth/RegisterScreen';
 import { SetupScreen } from './auth/SetupScreen';
 import { HomeScreen } from './HomeScreen';
 import { PushWarningBanner } from './notifications/PushWarningBanner';
+import { disableWebPush } from './notifications/webpush';
 import { initPlatform } from './util/platform';
 
 type View = 'login' | 'register';
@@ -62,6 +63,8 @@ export function App(): JSX.Element {
         <PushWarningBanner />
         <HomeScreen
           onLogout={() => {
+            // Before clearSession: the unsubscribe request still needs the token.
+            void disableWebPush();
             clearSession();
             setAuthed(false);
             setView('login');

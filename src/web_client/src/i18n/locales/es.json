@@ -97,6 +97,21 @@
     "repliedTo": "Respondió a tu mensaje: {{text}}",
     "reacted": "{{name}} reaccionó {{emoji}}"
   },
+  "pushTest": {
+    "button": "Probar notificaciones",
+    "running": "Enviando una notificación de prueba…",
+    "received": "✓ La notificación llegó a este dispositivo",
+    "acceptedNotReceived": "El servicio push aceptó la notificación, pero no llegó a este dispositivo en 20 segundos",
+    "rejected": "El servicio push rechazó la notificación ({{code}})",
+    "removed": "El servicio push indica que la suscripción ya no es válida ({{code}}). Pulsa «Probar notificaciones» otra vez para volver a suscribirte",
+    "noChannel": "Este dispositivo no tiene canal push",
+    "nativeAccepted": "El servicio push aceptó la notificación. Comprueba que apareció",
+    "needsInstall": "En iPhone y iPad las notificaciones solo funcionan en la app añadida a la pantalla de inicio: Compartir → Añadir a pantalla de inicio, y ábrela desde allí",
+    "subscribeFailed": "No se pudo suscribir este dispositivo a las notificaciones push",
+    "error": "No se pudo comprobar las notificaciones",
+    "notifTitle": "Notificación de prueba",
+    "notifBody": "Las notificaciones funcionan en este dispositivo"
+  },
   "time": {
     "today": "Hoy",
     "yesterday": "Ayer",

@@ -10,6 +10,11 @@
 
 import { decodeContent, previewText } from './content';
 import i18n from '../i18n';
+import {
+  getRegistration,
+  preferWorkerNotifications,
+  serviceWorkerSupported,
+} from '../notifications/webpush';
 
 export interface NotifPrefs {
   sound: boolean;
@@ -161,6 +166,7 @@ function showBrowserNotification(
   title: string,
   body: string,
   onOpen: () => void,
+  chatId?: string,
 ): void {
   // In Electron, use native notifications via IPC
   if (window.electronAPI) {
@@ -173,7 +179,38 @@ function showBrowserNotification(
     cap.Plugins.AlphaNotification.showNotification({ title, body });
     return;
   }
-  // In the browser — Web Notifications
+  // In the browser. Phones (iOS home screen app, Chrome on Android) have no
+  // working Notification constructor — only registration.showNotification of a
+  // service worker; its click goes to the worker, which posts 'open-chat' back
+  // (HomeScreen listens). Desktop keeps the page notification with its onclick,
+  // and falls back to the worker if the constructor throws.
+  if (serviceWorkerSupported() && preferWorkerNotifications()) {
+    showWorkerNotification(title, body, chatId);
+    return;
+  }
+  showPageNotification(title, body, onOpen, chatId);
+}
+
+function showWorkerNotification(title: string, body: string, chatId?: string): void {
+  void getRegistration()
+    .then((reg) => {
+      if (!reg) return;
+      return reg.showNotification(title, {
+        body,
+        tag: 'alpha-message',
+        icon: 'icons/icon-192.png',
+        data: chatId ? { chatId } : {},
+      });
+    })
+    .catch(() => undefined);
+}
+
+function showPageNotification(
+  title: string,
+  body: string,
+  onOpen: () => void,
+  chatId?: string,
+): void {
   try {
     const n = new Notification(title, { body, tag: 'alpha-message' });
     n.onclick = () => {
@@ -182,7 +219,8 @@ function showBrowserNotification(
       n.close();
     };
   } catch {
-    /* constructor may throw on some platforms — ignore */
+    // "Illegal constructor" (mobile browsers) — through the worker.
+    if (serviceWorkerSupported()) showWorkerNotification(title, body, chatId);
   }
 }
 
@@ -231,7 +269,7 @@ export function notifyIncoming(opts: {
         window.electronAPI?.focus();
       });
     }
-    showBrowserNotification(opts.title, body, opts.onOpen);
+    showBrowserNotification(opts.title, body, opts.onOpen, opts.chatId);
   }
 }
 
@@ -239,6 +277,7 @@ export function notifyIncoming(opts: {
 // Call only for others' reactions — own reactions are filtered out by the caller.
 export function notifyReaction(opts: {
   title: string;
+  chatId?: string;
   reactor: string;
   emoji: string;
   onOpen: () => void;
@@ -257,6 +296,6 @@ export function notifyReaction(opts: {
         window.electronAPI?.focus();
       });
     }
-    showBrowserNotification(opts.title, body, opts.onOpen);
+    showBrowserNotification(opts.title, body, opts.onOpen, opts.chatId);
   }
 }

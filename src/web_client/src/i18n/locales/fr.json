@@ -97,6 +97,21 @@
     "repliedTo": "A répondu à votre message : {{text}}",
     "reacted": "{{name}} a réagi {{emoji}}"
   },
+  "pushTest": {
+    "button": "Tester les notifications",
+    "running": "Envoi d’une notification de test…",
+    "received": "✓ La notification est arrivée sur cet appareil",
+    "acceptedNotReceived": "Le service push a accepté la notification, mais elle n’est pas arrivée sur cet appareil en 20 secondes",
+    "rejected": "Le service push a refusé la notification ({{code}})",
+    "removed": "Le service push indique que l’abonnement n’est plus valide ({{code}}). Appuyez à nouveau sur « Tester les notifications » pour vous réabonner",
+    "noChannel": "Cet appareil n’a aucun canal push",
+    "nativeAccepted": "Le service push a accepté la notification. Vérifiez qu’elle s’est affichée",
+    "needsInstall": "Sur iPhone et iPad, les notifications ne fonctionnent que dans l’app ajoutée à l’écran d’accueil : Partager → Sur l’écran d’accueil, puis ouvrez-la depuis là",
+    "subscribeFailed": "Impossible d’abonner cet appareil aux notifications push",
+    "error": "Échec du test des notifications",
+    "notifTitle": "Notification de test",
+    "notifBody": "Les notifications fonctionnent sur cet appareil"
+  },
   "time": {
     "today": "Aujourd'hui",
     "yesterday": "Hier",

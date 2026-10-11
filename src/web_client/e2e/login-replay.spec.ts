@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { registerViaApi } from './helpers/api';
 import { registerViaUi, createDirectViaUi } from './helpers/ui';
 
-const API = 'http://localhost:3000';
+const API = process.env.E2E_API_URL ?? 'http://localhost:3000';
 
 function envelope(text: string): string {
   const json = JSON.stringify({ t: 'text', text });

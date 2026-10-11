@@ -97,6 +97,21 @@
     "repliedTo": "回复了您的消息：{{text}}",
     "reacted": "{{name}} 发表了回应 {{emoji}}"
   },
+  "pushTest": {
+    "button": "测试通知",
+    "running": "正在发送测试通知…",
+    "received": "✓ 通知已送达此设备",
+    "acceptedNotReceived": "推送服务已接受通知，但 20 秒内未送达此设备",
+    "rejected": "推送服务拒绝了通知（{{code}}）",
+    "removed": "推送服务表示订阅已失效（{{code}}）。再次点击“测试通知”以重新订阅",
+    "noChannel": "此设备没有推送通道",
+    "nativeAccepted": "推送服务已接受通知。请检查它是否已显示",
+    "needsInstall": "在 iPhone 和 iPad 上，通知仅在添加到主屏幕的应用中有效：分享 → 添加到主屏幕，然后从那里打开",
+    "subscribeFailed": "无法为此设备订阅推送通知",
+    "error": "通知检查失败",
+    "notifTitle": "测试通知",
+    "notifBody": "此设备上的通知正常"
+  },
   "time": {
     "today": "今天",
     "yesterday": "昨天",

@@ -5,7 +5,7 @@ import { config } from './config';
 import { pool } from './db';
 import { lookupSession } from './auth';
 import { getMemberIds, isMember, markRead, touchActivity } from './chat-helpers';
-import { sendWakeUp } from './push';
+import { sendWakeUp, WakeUpEvent } from './push';
 
 interface Conn {
   userId: string;
@@ -15,6 +15,8 @@ interface Conn {
   draining: boolean;
   pending: boolean;
 }
+
+const WS_HEARTBEAT_MS = Number(process.env.WS_HEARTBEAT_MS ?? 20_000);
 
 // Connected sockets by account (one WS connection per device, but an
 // account may have several devices).
@@ -109,7 +111,7 @@ async function drain(conn: Conn): Promise<void> {
   }
 }
 
-function notify(userId: string, chatId?: string): void {
+function notify(userId: string, chatId?: string, event?: WakeUpEvent): void {
   const set = byUser.get(userId);
   if (set && set.size > 0) {
     for (const conn of set) void drain(conn);
@@ -122,7 +124,7 @@ function notify(userId: string, chatId?: string): void {
       if (conn.deviceId) onlineDeviceIds.add(conn.deviceId);
     }
   }
-  void sendWakeUp(userId, onlineDeviceIds, chatId).catch((err) =>
+  void sendWakeUp(userId, onlineDeviceIds, chatId, event).catch((err) =>
     console.error('wake-up failed', err),
   );
 }
@@ -142,7 +144,11 @@ export function startEventListener(): Client {
     if (msg.payload) {
       try {
         const data = JSON.parse(msg.payload);
-        notify(data.userId, data.chatId);
+        notify(data.userId, data.chatId, {
+          type: data.type,
+          messageId: data.messageId,
+          senderId: data.senderId,
+        });
       } catch {
         // Backward compatibility: bare userId string
         notify(msg.payload);
@@ -180,10 +186,36 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
     const sock = ws as {
       send: (d: string) => void;
       close: () => void;
+      ping: () => void;
+      terminate: () => void;
       on: (ev: string, cb: (data: Buffer) => void) => void;
     };
 
     let conn: Conn | null = null;
+
+    // Heartbeat: a frozen client (iOS suspends a backgrounded home screen app
+    // within seconds) never closes its socket, and without this the device
+    // looks online for as long as TCP keeps the connection — and gets no push.
+    // Browsers answer protocol pings themselves, so a missing pong means the
+    // page is gone or frozen: drop it, and the next event goes out as a push.
+    let alive = true;
+    sock.on('pong', () => {
+      alive = true;
+    });
+    const heartbeat = setInterval(() => {
+      if (!alive) {
+        clearInterval(heartbeat);
+        if (conn) unregister(conn);
+        sock.terminate();
+        return;
+      }
+      alive = false;
+      try {
+        sock.ping();
+      } catch {
+        /* socket already closing */
+      }
+    }, WS_HEARTBEAT_MS);
 
     sock.on('message', (data: Buffer) => {
       void (async () => {
@@ -278,9 +310,11 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
     });
 
     sock.on('close', () => {
+      clearInterval(heartbeat);
       if (conn) unregister(conn);
     });
     sock.on('error', () => {
+      clearInterval(heartbeat);
       if (conn) unregister(conn);
     });
   });
