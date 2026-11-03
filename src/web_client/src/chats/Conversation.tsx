@@ -106,10 +106,17 @@ const MEDIA_MAX_H = 480;
 function mediaStyle(w: number, h: number): React.CSSProperties | undefined {
   if (!w || !h) return undefined;
   const scale = Math.min(MEDIA_MAX_W / w, MEDIA_MAX_H / h);
+  const width = Math.round(w * scale);
+  // Smooth, natural scaling: keep the standard media box on wide screens, but
+  // let the box shrink with the container while preserving the aspect ratio
+  // (height follows width) instead of letterboxing via object-fit:contain on a
+  // fixed-height box. aspect-ratio covers modern engines; height:auto falls back
+  // to the image's intrinsic ratio on older WebViews.
   return {
-    width: Math.round(w * scale),
-    height: Math.round(h * scale),
+    width,
     maxWidth: '100%',
+    height: 'auto',
+    aspectRatio: `${w} / ${h}`,
     objectFit: 'contain',
   };
 }
@@ -722,13 +729,6 @@ export function Conversation({
 
   // Messages mentioning the current user (@username).
   const myUsername = chat.participants.find((p) => p.userId === myId)?.username ?? '';
-  const mentionMessages = myUsername
-    ? messages.filter((m) =>
-        !m.deleted &&
-        m.content.text &&
-        m.content.text.toLowerCase().includes('@' + myUsername.toLowerCase()),
-      )
-    : [];
 
   // Jump to the next mention.
   function jumpToNextMention(): void {
@@ -1374,6 +1374,34 @@ export function Conversation({
     () => new Set(chat.participants.map((p) => p.username)),
     [chat.participants],
   );
+  // Precomputed lookups to avoid O(n^2) work on every render (typing lag, #71):
+  // messageId -> message, and the set of message ids authored by the current user.
+  const messageById = useMemo(() => {
+    const map = new Map<string, MsgVM>();
+    for (const m of messages) if (m.messageId) map.set(m.messageId, m);
+    return map;
+  }, [messages]);
+  const myMessageIds = useMemo(
+    () =>
+      new Set(
+        messages
+          .filter((m) => m.senderId === myId && m.messageId)
+          .map((m) => m.messageId as string),
+      ),
+    [messages, myId],
+  );
+  const mentionMessages = useMemo(
+    () =>
+      myUsername
+        ? messages.filter(
+            (m) =>
+              !m.deleted &&
+              !!m.content.text &&
+              m.content.text.toLowerCase().includes('@' + myUsername.toLowerCase()),
+          )
+        : [],
+    [messages, myUsername],
+  );
   // Subtitle under the title: for groups "N members, M online",
   // for direct chats the peer's status. Self counts as online (we're connected).
   const onlineCount = chat.participants.filter(
@@ -1624,7 +1652,7 @@ export function Conversation({
                   (groupEnd ? ' is-tail' : '') +
                   (m.pending ? ' bubble-pending' : '') +
                   (m.failed ? ' bubble-failed' : '') +
-                  (m.replyToMessageId && messages.some((x) => x.messageId === m.replyToMessageId && x.senderId === myId) ? ' bubble-reply-to-me' : '') +
+                  (m.replyToMessageId && myMessageIds.has(m.replyToMessageId) ? ' bubble-reply-to-me' : '') +
                   (m.content.attachments.some((a) => a.kind === 'image') ? ' bubble--media' : '')
                 }
                 style={swipeMsgId === m.messageId ? { transform: `translateX(${swipeX}px)` } : undefined}
@@ -1721,7 +1749,7 @@ export function Conversation({
                     <>
                       {/* Preview of the message being replied to (#33) */}
                       {m.replyToMessageId && (() => {
-                        const ref = messages.find((x) => x.messageId === m.replyToMessageId);
+                        const ref = m.replyToMessageId ? messageById.get(m.replyToMessageId) : undefined;
                         const refName = ref
                           ? chat.participants.find((p) => p.userId === ref.senderId)?.username ?? '—'
                           : '';
