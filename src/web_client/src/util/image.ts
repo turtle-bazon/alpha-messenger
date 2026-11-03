@@ -5,8 +5,8 @@
 
 const FULL_MAX_DIM = 2560; // cap for the longer side of the full-size variant
 const FULL_QUALITY = 0.85;
-const THUMB_MAX_DIM = 320; // cap for the thumbnail's longer side
-const THUMB_QUALITY = 0.5;
+const THUMB_MAX_DIM = 480; // cap for the thumbnail's longer side (match media box for smooth scaling)
+const THUMB_QUALITY = 0.75;
 
 export interface PreparedImage {
   full: Blob; // full-size JPEG for blob upload
