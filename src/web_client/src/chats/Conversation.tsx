@@ -105,7 +105,10 @@ const MEDIA_MAX_W = 480;
 const MEDIA_MAX_H = 480;
 function mediaStyle(w: number, h: number): React.CSSProperties | undefined {
   if (!w || !h) return undefined;
-  const scale = Math.min(MEDIA_MAX_W / w, MEDIA_MAX_H / h);
+  // Natural scaling: never upscale beyond the source resolution — only downscale
+  // large images to the standard media box. Small photos keep their native size
+  // instead of being blown up into a blocky 480px bubble.
+  const scale = Math.min(1, MEDIA_MAX_W / w, MEDIA_MAX_H / h);
   const width = Math.round(w * scale);
   // Smooth, natural scaling: keep the standard media box on wide screens, but
   // let the box shrink with the container while preserving the aspect ratio
