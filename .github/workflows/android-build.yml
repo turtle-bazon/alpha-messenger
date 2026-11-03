@@ -28,7 +28,13 @@ jobs:
         java-version: '17'
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      run: |
+        echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        SDKMGR=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -1)
+        yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
+        "$SDKMGR" "platforms;android-35" "build-tools;35.0.0" || true
+        ls "$ANDROID_SDK_ROOT/platforms" || true
 
     - name: Decode keystore
       if: env.KEYSTORE_BASE64 != ''
