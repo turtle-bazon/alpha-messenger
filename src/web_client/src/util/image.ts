@@ -62,19 +62,48 @@ function renderCanvas(
     1,
     maxDim / Math.max(img.naturalWidth, img.naturalHeight),
   );
-  const w = Math.max(1, Math.round(img.naturalWidth * scale));
-  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const targetW = Math.max(1, Math.round(img.naturalWidth * scale));
+  const targetH = Math.max(1, Math.round(img.naturalHeight * scale));
+
+  // High-quality downscaling: a single drawImage step with bilinear resampling
+  // produces moiré/aliasing on large ratios. Downscale in ~2x steps (each pass
+  // halves dimensions) with smoothing, which approximates Lanczos and keeps
+  // edges crisp. Stepwise only when actually downscaling.
+  let src: CanvasImageSource = img;
+  let srcW = img.naturalWidth;
+  let srcH = img.naturalHeight;
+  if (scale < 1) {
+    const steps = Math.ceil(Math.log2(Math.max(srcW, srcH) / Math.max(targetW, targetH)));
+    for (let i = 0; i < Math.max(1, steps - 1); i++) {
+      const nextW = Math.max(targetW, Math.round(srcW / 2));
+      const nextH = Math.max(targetH, Math.round(srcH / 2));
+      if (nextW === srcW && nextH === srcH) break;
+      const c = document.createElement('canvas');
+      c.width = nextW;
+      c.height = nextH;
+      const cx = c.getContext('2d');
+      if (!cx) break;
+      cx.imageSmoothingEnabled = true;
+      cx.imageSmoothingQuality = 'high';
+      cx.drawImage(src, 0, 0, srcW, srcH, 0, 0, nextW, nextH);
+      src = c;
+      srcW = nextW;
+      srcH = nextH;
+      if (srcW <= targetW && srcH <= targetH) break;
+    }
+  }
 
   const canvas = document.createElement('canvas');
-  canvas.width = swap ? h : w;
-  canvas.height = swap ? w : h;
+  canvas.width = swap ? targetH : targetW;
+  canvas.height = swap ? targetW : targetH;
   const ctx = canvas.getContext('2d');
   if (ctx) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    // Apply rotation around center.
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((rot * Math.PI) / 180);
-    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    ctx.drawImage(src, -targetW / 2, -targetH / 2, targetW, targetH);
   }
   return canvas;
 }
