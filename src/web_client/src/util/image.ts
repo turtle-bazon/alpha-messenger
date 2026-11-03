@@ -6,7 +6,7 @@
 const FULL_MAX_DIM = 2560; // cap for the longer side of the full-size variant
 const FULL_QUALITY = 0.85;
 const THUMB_MAX_DIM = 480; // cap for the thumbnail's longer side (match media box for smooth scaling)
-const THUMB_QUALITY = 0.75;
+const THUMB_QUALITY = 0.9;
 
 export interface PreparedImage {
   full: Blob; // full-size JPEG for blob upload
@@ -70,6 +70,8 @@ function renderCanvas(
   canvas.height = swap ? w : h;
   const ctx = canvas.getContext('2d');
   if (ctx) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((rot * Math.PI) / 180);
     ctx.drawImage(img, -w / 2, -h / 2, w, h);
