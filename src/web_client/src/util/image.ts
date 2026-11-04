@@ -6,7 +6,6 @@
 const FULL_MAX_DIM = 2560; // cap for the longer side of the full-size variant
 const FULL_QUALITY = 0.85;
 const THUMB_MAX_DIM = 480; // cap for the thumbnail's longer side (match media box for smooth scaling)
-const THUMB_QUALITY = 0.9;
 
 export interface PreparedImage {
   full: Blob; // full-size JPEG for blob upload
@@ -119,7 +118,6 @@ function toJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
 }
 
 const LINK_THUMB_MAX_DIM = 320; // cap for the link preview image (#32)
-const LINK_THUMB_QUALITY = 0.6;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -141,7 +139,7 @@ export async function imageBytesToThumb(
   try {
     const img = await loadImage(`data:${mime};base64,${dataBase64}`);
     const canvas = renderCanvas(img, 0, LINK_THUMB_MAX_DIM);
-    const url = canvas.toDataURL('image/jpeg', LINK_THUMB_QUALITY);
+    const url = canvas.toDataURL('image/png');
     return url.slice(url.indexOf(',') + 1);
   } catch {
     return '';
@@ -161,13 +159,14 @@ export async function prepareImage(
 
   const thumbCanvas = renderCanvas(img, rotation, THUMB_MAX_DIM);
   drawStrokes(thumbCanvas, strokes);
-  const url = thumbCanvas.toDataURL('image/jpeg', THUMB_QUALITY);
+  // Lossless PNG so the inline preview keeps sharp edges (no JPEG blocking).
+  const url = thumbCanvas.toDataURL('image/png');
   const thumb = url.slice(url.indexOf(',') + 1);
 
   return {
     full,
     thumb,
-    mime: 'image/jpeg',
+    mime: 'image/png',
     width: fullCanvas.width,
     height: fullCanvas.height,
   };
