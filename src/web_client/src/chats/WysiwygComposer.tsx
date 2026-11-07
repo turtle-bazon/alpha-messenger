@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useLayoutEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // ─── Markdown → HTML (for setMarkdown — restore draft) ──────────────
@@ -111,9 +111,12 @@ export const WysiwygComposer = forwardRef<WysiwygComposerHandle, WysiwygComposer
       },
     }));
 
-    // External sync (restore draft, clear after send).
+    // External sync (restore draft, clear after send, edit).
+    // useLayoutEffect so programmatic text is written (and measured) before paint:
+    // otherwise the auto-grow layout effect in Conversation reads stale height
+    // and the composer doesn't expand for a long edited message.
     // While focused — do NOT touch innerHTML.
-    useEffect(() => {
+    useLayoutEffect(() => {
       const el = divRef.current;
       if (!el) return;
       if (el === document.activeElement) return;
