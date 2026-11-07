@@ -293,6 +293,17 @@ body {
   z-index: 1; /* чтобы тень легла поверх области переписки */
 }
 
+/* Базовое выравнивание содержимого любой кнопки: иконка/эмодзи/текст
+   центрируются по вертикали и горизонтали. Классы с собственным display
+   (grid/flex-строки) переопределяют это правило по специфичности. */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: inherit;
+}
+
 .home-header {
   display: flex;
   align-items: center;
@@ -2681,6 +2692,7 @@ body {
   color: var(--text);
   cursor: pointer;
   border-bottom: 1px solid var(--divider);
+  justify-content: flex-start;
 }
 
 .new-group-option:last-child {
