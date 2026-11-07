@@ -15,9 +15,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Трей
   setTrayTooltip: (tooltip: string) => ipcRenderer.invoke('tray:tooltip', tooltip),
   setTrayBadge: (count: number) => ipcRenderer.invoke('tray:badge', count),
+  setTrayBadgeColor: (color: 'red' | 'blue' | null) =>
+    ipcRenderer.invoke('tray:setBadgeColor', color),
 
   // Badge на иконке приложения (непрочитанные)
   setBadgeCount: (count: number) => ipcRenderer.invoke('app:setBadgeCount', count),
+  setBadgeColor: (color: 'red' | 'blue' | null) =>
+    ipcRenderer.invoke('app:setBadgeColor', color),
 
   // Информация о приложении
   getVersion: () => ipcRenderer.invoke('app:version'),

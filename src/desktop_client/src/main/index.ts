@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, nativeImage } from 'electron';
 import path from 'path';
 import { setupTray } from './tray';
 import { setupNotifications } from './notifications';
@@ -91,16 +91,47 @@ ipcMain.handle('show-setup', () => {
   }
 });
 
-// IPC: установить badge на иконке (вызывается из renderer при обновлении unread)
-ipcMain.handle('app:setBadgeCount', (_event, count: number) => {
-  // Linux/Unity
-  if (process.platform !== 'win32') {
-    app.setBadgeCount(count);
+// IPC: цветовой бейдж на иконке (red/blue/null) — known issue #42
+ipcMain.handle('app:setBadgeColor', (_event, color: 'red' | 'blue' | null) => {
+  // Windows: overlay icon на taskbar
+  if (mainWindow) {
+    if (!color) {
+      mainWindow.setOverlayIcon(null, '');
+    } else {
+      const overlayPath = path.join(
+        __dirname,
+        `../../resources/badge-${color}.png`,
+      );
+      const img = nativeImage.createFromPath(overlayPath);
+      if (!img.isEmpty()) {
+        mainWindow.setOverlayIcon(img, color === 'red' ? 'Новые сообщения' : 'Новые сообщения в группах');
+      }
+    }
+    const baseTitle = 'Alpha Messenger';
+    mainWindow.setTitle(color ? `● ${baseTitle}` : baseTitle);
   }
-  // Обновляем title окна как fallback
+  // macOS/Linux: числовой badge (цвет на системном badge недоступен — используем 1/0)
+  if (process.platform !== 'win32') {
+    app.setBadgeCount(color ? 1 : 0);
+  }
+});
+
+// Обратная совместимость
+ipcMain.handle('app:setBadgeCount', (_event, count: number) => {
   if (mainWindow) {
     const baseTitle = 'Alpha Messenger';
     mainWindow.setTitle(count > 0 ? `(${count}) ${baseTitle}` : baseTitle);
+  }
+  if (process.platform !== 'win32') {
+    app.setBadgeCount(count);
+  }
+  if (mainWindow && count > 0) {
+    mainWindow.setOverlayIcon(
+      nativeImage.createFromPath(path.join(__dirname, '../../resources/badge-red.png')),
+      'Новые сообщения',
+    );
+  } else if (mainWindow) {
+    mainWindow.setOverlayIcon(null, '');
   }
 });
 
