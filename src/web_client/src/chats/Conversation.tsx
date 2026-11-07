@@ -1218,9 +1218,15 @@ export function Conversation({
   // Enter sends, Shift+Enter inserts a newline (issue #25). isComposing filters
   // out the Enter confirming IME input (CJK characters etc.).
   function onInputKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
-    if (e.key === 'Escape' && replyTo) {
-      setReplyTo(null);
-      return;
+    if (e.key === 'Escape') {
+      if (editing) {
+        cancelEdit();
+        return;
+      }
+      if (replyTo) {
+        setReplyTo(null);
+        return;
+      }
     }
     // Formatting shortcuts (#69)
     if ((e.ctrlKey || e.metaKey) && !e.altKey) {
