@@ -542,6 +542,7 @@ button {
 /* Заголовок чата: название + подзаголовок (участники/онлайн). Для группы —
    кликабельный (открывает окно участников). */
 .conv-headline {
+  justify-content: flex-start;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -2301,6 +2302,7 @@ button {
 }
 
 .forward-item {
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4047,6 +4049,7 @@ button {
 }
 
 .context-menu-item {
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4329,6 +4332,7 @@ button {
 }
 
 .mention-item {
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4705,6 +4709,7 @@ button {
 }
 
 .settings-row {
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 12px;
