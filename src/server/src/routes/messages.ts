@@ -73,18 +73,20 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       // Validate replyToMessageId: numeric message ID from this chat.
       let replyToId: string | null = null;
+      let replyToSenderId: string | null = null;
       if (replyToMessageId !== undefined) {
         if (!/^\d+$/.test(replyToMessageId)) {
           return reply.code(400).send({ error: 'invalid replyToMessageId' });
         }
         const refMsg = await pool.query(
-          'SELECT message_id FROM messages WHERE message_id = $1 AND chat_id = $2',
+          'SELECT message_id, sender_id FROM messages WHERE message_id = $1 AND chat_id = $2',
           [replyToMessageId, chatId],
         );
         if (refMsg.rowCount === 0) {
           return reply.code(400).send({ error: 'replyToMessageId not found' });
         }
         replyToId = replyToMessageId;
+        replyToSenderId = refMsg.rows[0].sender_id;
       }
 
       const client = await pool.connect();
@@ -127,6 +129,10 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         await client.query('UPDATE chats SET updated_at = now() WHERE chat_id = $1', [
           chatId,
         ]);
+        const chatRow = await client.query(
+          'SELECT type FROM chats WHERE chat_id = $1',
+          [chatId],
+        );
         await emitToMembers(client, chatId, 'message.new', {
           messageId,
           senderId: userId,
@@ -135,6 +141,8 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           blobIds: attachIds,
           ts: ts.toISOString(),
           replyToMessageId: replyToId,
+          replyToSenderId,
+          chatType: chatRow.rows[0]?.type ?? null,
           isReply: !!replyToId,
         });
         await client.query('COMMIT');

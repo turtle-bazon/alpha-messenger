@@ -20,7 +20,9 @@ interface ElectronAPI {
   focus: () => Promise<void>;
   setTrayTooltip: (tooltip: string) => Promise<void>;
   setTrayBadge: (count: number) => Promise<void>;
+  setTrayBadgeColor: (color: 'red' | 'blue' | null) => Promise<void>;
   setBadgeCount: (count: number) => Promise<void>;
+  setBadgeColor: (color: 'red' | 'blue' | null) => Promise<void>;
   getVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
   loadWebClient: (serverUrl?: string) => Promise<void>;

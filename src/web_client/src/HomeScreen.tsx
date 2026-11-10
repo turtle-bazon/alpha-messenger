@@ -290,8 +290,18 @@ export function HomeScreen({
   useEffect(() => {
     const total = chats.reduce((sum, c) => sum + c.unreadCount, 0);
     setUnreadBadge(total);
-    // Badge on the tray icon (Electron desktop)
-    window.electronAPI?.setBadgeCount(total);
+
+    // Desktop color badge (#42): red = DM unread or reply-to-me in group;
+    // blue = unread only in groups.
+    const hasRed = chats.some(
+      (c) => c.unreadCount > 0 && (c.type === 'direct' || c.unreadMentions > 0),
+    );
+    const hasBlue = chats.some(
+      (c) => c.unreadCount > 0 && c.type === 'group' && c.unreadMentions === 0,
+    );
+    const color = hasRed ? 'red' : hasBlue ? 'blue' : null;
+    window.electronAPI?.setBadgeColor?.(color);
+    window.electronAPI?.setTrayBadgeColor?.(color);
   }, [chats]);
   useEffect(() => () => setUnreadBadge(0), []);
 
@@ -438,6 +448,8 @@ export function HomeScreen({
         ciphertext: string;
         ts: string;
         replyToMessageId?: string;
+        replyToSenderId?: string;
+        chatType?: 'direct' | 'group' | null;
         isReply?: boolean;
       };
       const chatId = ev.chatId;
@@ -508,6 +520,11 @@ export function HomeScreen({
           },
           updatedAt: p.ts,
           unreadCount: keepUnread ? chat.unreadCount : chat.unreadCount + 1,
+          unreadMentions:
+            keepUnread
+              ? chat.unreadMentions
+              : chat.unreadMentions +
+                (p.replyToSenderId === myId && p.chatType === 'group' ? 1 : 0),
         };
         return [updated, ...prev.filter((c) => c.chatId !== chatId)];
       });
@@ -574,7 +591,7 @@ export function HomeScreen({
         // Another device read the messages — sync unreadCount
         setChats((prev) =>
           prev.map((c) =>
-            c.chatId === chatId ? { ...c, unreadCount: 0 } : c,
+            c.chatId === chatId ? { ...c, unreadCount: 0, unreadMentions: 0 } : c,
           ),
         );
         return;
@@ -827,7 +844,7 @@ export function HomeScreen({
     // reset local unread counter on open (read marker — item 16)
     setChats((prev) =>
       prev.map((c) =>
-        c.chatId === chatId ? { ...c, unreadCount: 0 } : c,
+        c.chatId === chatId ? { ...c, unreadCount: 0, unreadMentions: 0 } : c,
       ),
     );
   }
