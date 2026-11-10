@@ -19,6 +19,7 @@ import { stickerRoutes } from './routes/stickers';
 import { gifRoutes } from './routes/gifs';
 import { channelWebRoutes } from './routes/channel-web';
 import { wsRoutes } from './ws';
+import { createOidcProvider, registerOidc } from './oidc';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: true });
@@ -61,6 +62,12 @@ export function buildApp(): FastifyInstance {
   app.register(clientRoutes);
   // Public channel pages: /channel/:username/
   app.register(channelWebRoutes);
+
+  // OpenID Connect provider mounted under /oidc.
+  const issuer =
+    process.env.OIDC_ISSUER ?? `http://localhost:${process.env.PORT ?? 3000}/oidc`;
+  const oidcProvider = createOidcProvider(issuer);
+  registerOidc(app, oidcProvider);
 
   return app;
 }
