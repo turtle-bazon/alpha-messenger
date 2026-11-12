@@ -1707,10 +1707,11 @@ export function Conversation({
       >
         {loadingMore && <div className="conv-loading">{t('common.loading')}</div>}
         <div className="conv-messages" data-testid="messages">
-          {(chat.username
-            ? messages.filter((m) => !m.replyToMessageId)
-            : messages
-          ).map((m, i) => {
+          {useMemo(() => {
+            return (chat.username
+              ? messages.filter((m) => !m.replyToMessageId)
+              : messages
+            ).map((m, i) => {
             const own = m.senderId === myId;
             const read =
               own && m.messageId ? Number(m.messageId) <= readUpTo : false;
@@ -2167,7 +2168,25 @@ export function Conversation({
               </div>
               </Fragment>
             );
-          })}
+          });
+          }, [
+            messages,
+            chat.username,
+            chat.type,
+            chat.participants,
+            chat.createdBy,
+            chat.pinnedMessageId,
+            myId,
+            readUpTo,
+            swipeMsgId,
+            swipeX,
+            replyRefs,
+            myMessageIds,
+            t,
+            onShowProfile,
+            onForward,
+            isGroup,
+          ]) }
           {/* Draft bubble preview of the message being typed (#18 Live Draft) */}
           {typingUsers.size > 0 && (() => {
             // Show the draft from the first user who has text
