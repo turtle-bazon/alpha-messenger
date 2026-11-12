@@ -241,6 +241,9 @@ export function Conversation({
   // Chat media gallery (#82).
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [messages, setMessages] = useState<MsgVM[]>([]);
+  // Resolved previews for replied-to messages that are not currently in the
+  // loaded window (so a reply bubble is never empty and stays clickable).
+  const [replyRefs, setReplyRefs] = useState<Map<string, MsgVM | null>>(new Map());
   // Pinned message bar preview (#86): resolved from history or a targeted fetch.
   const [pinnedPreview, setPinnedPreview] = useState<{
     id: string;
@@ -923,6 +926,43 @@ export function Conversation({
     if (stack.length === 0) setShowBackBtn(false);
   }
 
+  // Scroll to an existing (or just-loaded) message and highlight it.
+  function jumpToMessage(targetId: string): void {
+    const el = scrollRef.current;
+    if (!el) return;
+    const target = el.querySelector(`[data-message-id="${targetId}"]`);
+    if (!target) return;
+    pushNavStack();
+    atBottomRef.current = false;
+    const doHighlight = () => {
+      setMessages((prev) =>
+        prev.map((x) =>
+          x.messageId === targetId ? { ...x, highlighted: true } : x,
+        ),
+      );
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((x) =>
+            x.messageId === targetId ? { ...x, highlighted: false } : x,
+          ),
+        );
+      }, 2000);
+    };
+    const rect = (target as HTMLElement).getBoundingClientRect();
+    const scrollRect = el.getBoundingClientRect();
+    if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
+      doHighlight();
+    } else {
+      const targetTop =
+        (target as HTMLElement).offsetTop -
+        el.offsetTop -
+        el.clientHeight / 2 +
+        (target as HTMLElement).clientHeight / 2;
+      el.scrollTo({ top: targetTop, behavior: 'smooth' });
+      el.addEventListener('scrollend', () => doHighlight(), { once: true });
+    }
+  }
+
   // Common send path (text and/or images): the optimistic message is queued,
   // then pump() uploads blobs and sends strictly in order. Confirmation comes
   // via the WS echo and REST response by clientMessageId. Attachment att objects
@@ -1390,6 +1430,52 @@ export function Conversation({
     for (const m of messages) if (m.messageId) map.set(m.messageId, m);
     return map;
   }, [messages]);
+  // Fetch reply targets that are not in the loaded window so their preview
+  // (name + text) can be shown instead of an empty bubble.
+  useEffect(() => {
+    const ids = new Set<string>();
+    for (const m of messages) {
+      if (m.replyToMessageId) ids.add(m.replyToMessageId);
+    }
+    const missing = [...ids].filter(
+      (id) => !messageById.has(id) && !replyRefs.has(id),
+    );
+    if (missing.length === 0) return;
+    let alive = true;
+    for (const id of missing) {
+      setReplyRefs((prev) => {
+        const next = new Map(prev);
+        if (!next.has(id)) next.set(id, null);
+        return next;
+      });
+      void getMessages(chatId, {
+        before: String(BigInt(id) + BigInt(1)),
+        limit: 1,
+      })
+        .then((page) => {
+          if (!alive) return;
+          const found = page.messages.find((x) => x.messageId === id);
+          setReplyRefs((prev) => {
+            const next = new Map(prev);
+            next.set(id, found ? fromHistory(found) : null);
+            return next;
+          });
+          if (found) putMessages(chatId, [found]).catch(() => undefined);
+        })
+        .catch(() => {
+          if (!alive) return;
+          setReplyRefs((prev) => {
+            const next = new Map(prev);
+            next.set(id, null);
+            return next;
+          });
+        });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [messages, messageById, replyRefs, chatId]);
+
   const myMessageIds = useMemo(
     () =>
       new Set(
@@ -1758,7 +1844,11 @@ export function Conversation({
                     <>
                       {/* Preview of the message being replied to (#33) */}
                       {m.replyToMessageId && (() => {
-                        const ref = m.replyToMessageId ? messageById.get(m.replyToMessageId) : undefined;
+                        const ref = m.replyToMessageId
+                          ? (messageById.get(m.replyToMessageId) ??
+                             replyRefs.get(m.replyToMessageId) ??
+                             undefined)
+                          : undefined;
                         const refName = ref
                           ? chat.participants.find((p) => p.userId === ref.senderId)?.username ?? '—'
                           : '';
@@ -1770,50 +1860,45 @@ export function Conversation({
                         return (
                           <span
                             className="bubble-reply"
-                            onClick={() => {
-                              if (!ref) return;
+                            onClick={async () => {
+                              const replyId = m.replyToMessageId;
+                              if (!replyId) return;
+                              // If the replied-to message is not in the loaded
+                              // window, fetch it (and insert it) so the preview
+                              // is populated and the jump has a target.
+                              if (!messageById.has(replyId)) {
+                                try {
+                                  const page = await getMessages(chatId, {
+                                    before: String(BigInt(replyId) + BigInt(1)),
+                                    limit: 1,
+                                  });
+                                  const found = page.messages.find(
+                                    (x) => x.messageId === replyId,
+                                  );
+                                  if (found) {
+                                    const vm = fromHistory(found);
+                                    setMessages((prev) =>
+                                      prev.some((x) => x.messageId === replyId)
+                                        ? prev
+                                        : [...prev, vm].sort(order),
+                                    );
+                                    setReplyRefs((prev) => {
+                                      const next = new Map(prev);
+                                      next.set(replyId, vm);
+                                      return next;
+                                    });
+                                    putMessages(chatId, [found]).catch(() => undefined);
+                                  }
+                                } catch {
+                                  return;
+                                }
+                              }
                               const el = scrollRef.current;
                               if (!el) return;
-                              const target = el.querySelector(
-                                `[data-message-id="${m.replyToMessageId}"]`,
-                              );
-                              if (!target) return;
-                              pushNavStack();
-                              // Reset atBottom so auto-scroll doesn't pull back down
-                              atBottomRef.current = false;
-                              const doHighlight = () => {
-                                setMessages((prev) =>
-                                  prev.map((x) =>
-                                    x.messageId === m.replyToMessageId
-                                      ? { ...x, highlighted: true }
-                                      : x,
-                                  ),
-                                );
-                                setTimeout(() => {
-                                  setMessages((prev) =>
-                                    prev.map((x) =>
-                                      x.messageId === m.replyToMessageId
-                                        ? { ...x, highlighted: false }
-                                        : x,
-                                    ),
-                                  );
-                                }, 2000);
-                              };
-                              // Message already visible — highlight right away
-                              const rect = target.getBoundingClientRect();
-                              const scrollRect = el.getBoundingClientRect();
-                              if (rect.top >= scrollRect.top && rect.bottom <= scrollRect.bottom) {
-                                doHighlight();
+                              if (el.querySelector(`[data-message-id="${replyId}"]`)) {
+                                jumpToMessage(replyId);
                               } else {
-                                // Manual position math instead of scrollIntoView —
-                                // on Android WebView scrollIntoView may scroll
-                                // the wrong container.
-                                const targetTop = (target as HTMLElement).offsetTop
-                                  - el.offsetTop
-                                  - el.clientHeight / 2
-                                  + (target as HTMLElement).clientHeight / 2;
-                                el.scrollTo({ top: targetTop, behavior: 'smooth' });
-                                el.addEventListener('scrollend', () => doHighlight(), { once: true });
+                                setTimeout(() => jumpToMessage(replyId), 0);
                               }
                             }}
                           >
