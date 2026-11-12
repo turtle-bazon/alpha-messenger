@@ -301,7 +301,6 @@ export function HomeScreen({
     );
     const color = hasRed ? 'red' : hasBlue ? 'blue' : null;
     window.electronAPI?.setBadgeColor?.(color);
-    window.electronAPI?.setTrayBadgeColor?.(color);
   }, [chats]);
   useEffect(() => () => setUnreadBadge(0), []);
 

@@ -1,6 +1,6 @@
 import { app, BrowserWindow, shell, ipcMain, nativeImage } from 'electron';
 import path from 'path';
-import { setupTray } from './tray';
+import { setupTray, applyTrayBadge } from './tray';
 import { setupNotifications } from './notifications';
 
 let mainWindow: BrowserWindow | null = null;
@@ -114,6 +114,8 @@ ipcMain.handle('app:setBadgeColor', (_event, color: 'red' | 'blue' | null) => {
   if (process.platform !== 'win32') {
     app.setBadgeCount(color ? 1 : 0);
   }
+  // Keep the tray icon in sync even if setupTray ran later.
+  applyTrayBadge(color);
 });
 
 // Обратная совместимость
