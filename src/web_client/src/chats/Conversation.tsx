@@ -1498,6 +1498,15 @@ export function Conversation({
       const ce = ev as unknown as ClipboardEvent;
       if (editing) return;
       if (document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"], [data-testid="context-menu"]')) return;
+      // When the composer itself is focused, its own onPaste handler takes care of
+      // the payload (including indirect file URLs) — avoid a duplicate fetch.
+      if (
+        inputRef.current &&
+        ce.target instanceof Node &&
+        inputRef.current.contains(ce.target)
+      ) {
+        return;
+      }
       const items = ce.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
