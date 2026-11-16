@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, nativeImage } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, nativeImage, clipboard } from 'electron';
 import path from 'path';
 import { setupTray, applyTrayBadge } from './tray';
 import { setupNotifications } from './notifications';
@@ -169,6 +169,16 @@ ipcMain.handle('app:platform', () => {
 });
 
 // Готово к работе — настраиваем трей и уведомления
+// Синхронное чтение картинки из системного буфера (для вставки Ctrl+V).
+ipcMain.on('clipboard:readImageSync', (event) => {
+  try {
+    const img = clipboard.readImage();
+    event.returnValue = img.isEmpty() ? null : img.toDataURL();
+  } catch {
+    event.returnValue = null;
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
   if (mainWindow) {

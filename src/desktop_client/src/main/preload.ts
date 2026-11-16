@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: () => ipcRenderer.invoke('app:version'),
   getPlatform: () => ipcRenderer.invoke('app:platform'),
 
+  // Буфер обмена: синхронное чтение картинки (для вставки Ctrl+V).
+  readClipboardImageSync: () => ipcRenderer.sendSync('clipboard:readImageSync') as string | null,
+
   // Настройка сервера
   loadWebClient: (serverUrl?: string) => ipcRenderer.invoke('load-web-client', serverUrl),
   showSetup: () => ipcRenderer.invoke('show-setup'),

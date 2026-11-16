@@ -280,6 +280,34 @@ function imageFileFromUrl(url: string): Promise<File | null> {
 }
 
 
+function dataUrlToFile(dataUrl: string): File | null {
+  const m = dataUrl.match(/^data:(image\/[a-zA-Z0-9+.+-]+);base64,(.*)$/);
+  if (!m) return null;
+  const mime = m[1];
+  const b64 = m[2].replace(/\s/g, '');
+  try {
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const ext = (mime.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    return new File([arr], `pasted-image.${ext}`, { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+function electronClipboardImageFile(): File | null {
+  const api = (window as any).electronAPI;
+  if (!api || typeof api.readClipboardImageSync !== 'function') return null;
+  try {
+    const dataUrl = api.readClipboardImageSync();
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
+    return dataUrlToFile(dataUrl);
+  } catch {
+    return null;
+  }
+}
+
 function imageSourceFromClipboard(cd: DataTransfer | null): string | null {
   if (!cd) return null;
   const candidates: string[] = [];
@@ -1464,6 +1492,13 @@ export function Conversation({
   // fall through to plain text paste.
   function onPaste(e: ClipboardEvent<HTMLDivElement>): void {
     if (editing) return;
+    const electronFile = electronClipboardImageFile();
+    if (electronFile) {
+      e.preventDefault();
+      setPendingImage(electronFile);
+      inputRef.current?.focus();
+      return;
+    }
     const items = e.clipboardData?.items;
     if (items) {
       for (let i = 0; i < items.length; i++) {
@@ -1505,6 +1540,13 @@ export function Conversation({
         ce.target instanceof Node &&
         inputRef.current.contains(ce.target)
       ) {
+        return;
+      }
+      const electronFile = electronClipboardImageFile();
+      if (electronFile) {
+        ce.preventDefault();
+        setPendingImage(electronFile);
+        inputRef.current?.focus();
         return;
       }
       const items = ce.clipboardData?.items;
