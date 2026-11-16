@@ -1439,6 +1439,34 @@ export function Conversation({
         return;
       }
     }
+    // Pressing ArrowUp (with the cursor at the top of the composer, or when the
+    // composer is empty) opens editing of the last message we sent (#99).
+    if (e.key === 'ArrowUp' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !mentionOpen && !editing) {
+      const sel = window.getSelection();
+      const composer = inputRef.current;
+      const atTopStart =
+        !!composer &&
+        !!sel &&
+        sel.isCollapsed &&
+        ((sel.anchorNode === composer && sel.anchorOffset === 0) ||
+          (composer.firstChild !== null && sel.anchorNode === composer.firstChild && sel.anchorOffset === 0));
+      if (input.trim() === '' || atTopStart) {
+        const lastOwn = [...messages]
+          .reverse()
+          .find(
+            (m) =>
+              m.senderId === myId &&
+              !!m.messageId &&
+              !m.deleted &&
+              m.content.attachments.length === 0,
+          );
+        if (lastOwn) {
+          e.preventDefault();
+          startEdit(lastOwn);
+          return;
+        }
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       void doSubmit();
