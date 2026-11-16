@@ -1375,6 +1375,33 @@ export function Conversation({
     }
   }
 
+  // Handle image paste even when the composer isn't focused: the browser
+  // delivers the paste event to whatever element had focus, so a document-level
+  // listener is required to catch clipboard images reliably (issue #17).
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const ce = ev as unknown as ClipboardEvent;
+      if (editing) return;
+      if (document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"], [data-testid="context-menu"]')) return;
+      const items = ce.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (it.kind === 'file' && it.type.startsWith('image/')) {
+          const file = it.getAsFile();
+          if (file) {
+            ce.preventDefault();
+            setPendingImage(file);
+            inputRef.current?.focus();
+            return;
+          }
+        }
+      }
+    };
+    document.addEventListener('paste', handler as EventListener);
+    return () => document.removeEventListener('paste', handler as EventListener);
+  }, [editing]);
+
   function startEdit(m: MsgVM): void {
     // Only plain-text messages (no attachments) are editable.
     if (!m.messageId || m.content.attachments.length > 0) return;
