@@ -206,6 +206,110 @@ function upsert(list: MsgVM[], vm: Partial<MsgVM> & { senderId: string }): MsgVM
   return next;
 }
 
+// Resolve a clipboard payload to an image File. Handles real image files in the
+// clipboard as well as text/URI-list entries that point at an image (e.g. a
+// file:/// URL produced by tools such as KDE Connect) — those are fetched and
+// converted so the normal image editor flow can run.
+async function fetchImageFileFromSource(src: string): Promise<File | null> {
+  let url = src.trim();
+  if (!url) return null;
+  if (/^data:image\//i.test(url)) {
+    // data: URL — fetch() handles it in modern browsers.
+  } else if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+    // Plain filesystem path → file:// URL.
+    const normalized = url.replace(/\\/g, '/');
+    url = normalized.startsWith('/')
+      ? `file://${normalized}`
+      : `file:///${normalized}`;
+  }
+
+  // Try a direct fetch first (works for http(s) and data: URLs when CORS allows).
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const blob = await res.blob();
+      if (blob.type.startsWith('image/')) {
+        const name =
+          decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'pasted-image.png') ||
+          'pasted-image.png';
+        return new File([blob], name, { type: blob.type });
+      }
+    }
+  } catch {
+    // Fall through to image+canvas, which can read file:// URLs in Electron.
+  }
+
+  // Fallback: load via <img> and read pixels from a canvas. This is what makes
+  // local file:// URLs (e.g. KDE Connect temp files) usable in Electron even
+  // though fetch() does not support the file: scheme.
+  return await imageFileFromUrl(url);
+}
+
+function imageFileFromUrl(url: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    if (/^https?:/i.test(url)) img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx || canvas.width === 0 || canvas.height === 0) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          const name =
+            decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'pasted-image.png') ||
+            'pasted-image.png';
+          resolve(new File([blob], name, { type: blob.type || 'image/png' }));
+        }, 'image/png');
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+
+function imageSourceFromClipboard(cd: DataTransfer | null): string | null {
+  if (!cd) return null;
+  const candidates: string[] = [];
+  for (const type of ['text/uri-list', 'text/plain']) {
+    const value = cd.getData(type);
+    if (value) {
+      for (const line of value.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        candidates.push(trimmed);
+      }
+    }
+  }
+  for (const c of candidates) {
+    // Only treat the entry as an image when it is clearly a locator (URL or
+    // path), not an arbitrary sentence that happens to end in an extension.
+    const isLocator =
+      /^data:image\//i.test(c) ||
+      /^[a-z][a-z0-9+.-]*:/i.test(c) ||
+      /[\\/]/.test(c);
+    if (!isLocator) continue;
+    if (/^data:image\//i.test(c)) return c;
+    if (/^file:\/\//i.test(c)) {
+      if (/\.(png|jpe?g|gif|webp|bmp|svg)([?#].*)?$/i.test(c)) return c;
+    }
+    if (/\.(png|jpe?g|gif|webp|bmp|svg)([?#].*)?$/i.test(c)) return c;
+  }
+  return null;
+}
+
 export function Conversation({
   chat,
   ws,
@@ -1361,17 +1465,28 @@ export function Conversation({
   function onPaste(e: ClipboardEvent<HTMLDivElement>): void {
     if (editing) return;
     const items = e.clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
-      if (it.kind === 'file' && it.type.startsWith('image/')) {
-        const file = it.getAsFile();
-        if (file) {
-          e.preventDefault(); // don't also paste accompanying text into the input
-          setPendingImage(file);
-          return;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (it.kind === 'file' && it.type.startsWith('image/')) {
+          const file = it.getAsFile();
+          if (file) {
+            e.preventDefault(); // don't also paste accompanying text into the input
+            setPendingImage(file);
+            return;
+          }
         }
       }
+    }
+    // Clipboard may carry an image indirectly (e.g. a file:/// URL produced by
+    // KDE Connect) instead of raw image bytes — resolve it asynchronously.
+    const source = imageSourceFromClipboard(e.clipboardData);
+    if (source) {
+      e.preventDefault();
+      inputRef.current?.focus();
+      void fetchImageFileFromSource(source).then((file) => {
+        if (file) setPendingImage(file);
+      });
     }
   }
 
@@ -1384,18 +1499,27 @@ export function Conversation({
       if (editing) return;
       if (document.querySelector('[class*="-backdrop"], [data-testid="emoji-picker"], [data-testid="context-menu"]')) return;
       const items = ce.clipboardData?.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        const it = items[i];
-        if (it.kind === 'file' && it.type.startsWith('image/')) {
-          const file = it.getAsFile();
-          if (file) {
-            ce.preventDefault();
-            setPendingImage(file);
-            inputRef.current?.focus();
-            return;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          if (it.kind === 'file' && it.type.startsWith('image/')) {
+            const file = it.getAsFile();
+            if (file) {
+              ce.preventDefault();
+              setPendingImage(file);
+              inputRef.current?.focus();
+              return;
+            }
           }
         }
+      }
+      const source = imageSourceFromClipboard(ce.clipboardData);
+      if (source) {
+        ce.preventDefault();
+        inputRef.current?.focus();
+        void fetchImageFileFromSource(source).then((file) => {
+          if (file) setPendingImage(file);
+        });
       }
     };
     document.addEventListener('paste', handler as EventListener);
